@@ -1,4 +1,4 @@
-# Prompt — Add Loop Engineering Support
+# Prompt - Add Loop Engineering Support
 
 Read `AGENTS.md` first. Then read:
 
@@ -7,7 +7,7 @@ Read `AGENTS.md` first. Then read:
 - `skills/agent-worker-pipeline/SKILL.md`
 - `harness/CONTRACT.md`
 
-Implement loop evidence for the product agent. Loop Engineering means bounded autonomous control with durable evidence, not a new UI or simulated environment.
+Implement loop evidence for the product agent.
 
 Requirements:
 

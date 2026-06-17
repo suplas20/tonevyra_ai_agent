@@ -9,7 +9,7 @@ Then read:
 - `skills/lightroom-bridge/SKILL.md`
 - `harness/CONTRACT.md`
 
-Implement only the minimum project code needed for the harness smoke pipeline. The goal is to prove skill compliance with deterministic evidence, not to connect real services.
+Implement only the minimum project code needed for the harness smoke pipeline.
 
 Requirements:
 

@@ -1,0 +1,23 @@
+{
+  "schema_version": "t019.lightroom_apply.result.v1",
+  "request_id": "lr-apply-fixture-0002",
+  "request_origin": "lightroom_plugin",
+  "command": "APPLY_LIGHTROOM_SETTINGS",
+  "task_id": "task-fixture-0002",
+  "status": "failed",
+  "source_path": "C:/Tonevyra/input/missing.dng",
+  "applied_settings": {},
+  "skipped_settings": {},
+  "error": {
+    "code": "SOURCE_PATH_NOT_FOUND",
+    "message": "The source path from folder watcher does not exist.",
+    "recoverable": true
+  },
+  "lightroom_result": {
+    "plugin_loaded": true,
+    "worker_running": true,
+    "source_photo_found": false,
+    "source_photo_imported": false,
+    "develop_settings_applied": false
+  }
+}

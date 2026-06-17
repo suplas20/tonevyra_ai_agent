@@ -1,13 +1,48 @@
-.venv/
-__pycache__/
-*.pyc
-.env
+# Tonevyra AI local-only files
 
-runtime/*
+# Python environments, caches, and build outputs
+.venv/
+venv/
+ENV/
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.tmp_*/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Local environment, credentials, and machine-specific config
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.csr
+*.pgpass
+pgpass.conf
+*credentials*
+*secret*
+
+# Local runtime data: input photos, previews, artifacts, exports, bridge payloads
+runtime/**
+!runtime/
 !runtime/.gitkeep
 !runtime/input/
 !runtime/input/.gitkeep
 !runtime/output/
+!runtime/output/.gitkeep
+!runtime/output/temp/
+!runtime/output/temp/.gitkeep
 !runtime/output/pass/
 !runtime/output/pass/.gitkeep
 !runtime/output/review_required/
@@ -19,6 +54,7 @@ runtime/*
 !runtime/previews/
 !runtime/previews/.gitkeep
 !runtime/bridge/
+!runtime/bridge/.gitkeep
 !runtime/bridge/requests/
 !runtime/bridge/requests/.gitkeep
 !runtime/bridge/processing/
@@ -28,16 +64,67 @@ runtime/*
 !runtime/bridge/errors/
 !runtime/bridge/errors/.gitkeep
 
-logs/*
+# Logs and local debug traces
+logs/**
+!logs/
 !logs/.gitkeep
+*.log
+*.trace
 
-models/*
+# Local model weights and model-runtime caches
+models/**
+!models/
 !models/.gitkeep
+*.safetensors
+*.gguf
+*.ckpt
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.bin
+.cache/
+huggingface/
+hf_cache/
+transformers_cache/
 
-/docs
-.docs/*
-/.docs/*
-/docs/*
-.docs
-/.docs
-/docs
+# User photos, Lightroom sidecars, and catalog data
+*.cr3
+*.cr2
+*.nef
+*.arw
+*.dng
+*.raf
+*.rw2
+*.orf
+*.raw
+*.xmp
+*.lrcat
+*.lrcat-data/
+*.lrdata/
+*.lrtemplate
+
+# Database dumps and local database files
+*.sql
+*.sql.gz
+*.dump
+*.backup
+*.bak
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+dumps/
+backups/
+
+# Local planning/private docs kept off GitHub for this workspace
+.docs/
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo

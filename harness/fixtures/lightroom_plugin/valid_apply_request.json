@@ -1,0 +1,26 @@
+{
+  "schema_version": "t019.lightroom_apply.request.v1",
+  "request_id": "lr-apply-fixture-0001",
+  "request_origin": "tonevyra_agent",
+  "command": "APPLY_LIGHTROOM_SETTINGS",
+  "task_id": "task-fixture-0001",
+  "source_path": "C:/Tonevyra/input/fixture.dng",
+  "correction_plan_id": "plan-fixture-0001",
+  "created_at": "2026-06-17T15:30:00+09:00",
+  "develop_settings": {
+    "exposure": 0.25,
+    "contrast": 10,
+    "highlights": -15,
+    "shadows": 20,
+    "vibrance": 8,
+    "clarity": 4
+  },
+  "safety": {
+    "clamped": true,
+    "non_destructive_required": true
+  },
+  "runtime_context": {
+    "input_folder": "C:/Tonevyra/input",
+    "runtime_dir": "C:/Tonevyra/runtime"
+  }
+}

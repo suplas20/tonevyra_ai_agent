@@ -1,0 +1,15 @@
+{
+  "schema_version": "t019.lightroom_apply.request.v1",
+  "request_origin": "lightroom_plugin",
+  "command": "APPLY_LIGHTROOM_SETTINGS",
+  "request_id": "invalid-origin-flow",
+  "task_id": "task-invalid-origin-flow",
+  "source_path": "C:/Tonevyra/input/example.dng",
+  "created_at": "2026-06-17T15:30:00+09:00",
+  "develop_settings": {
+    "exposure": 0.2
+  },
+  "safety": {
+    "non_destructive_required": true
+  }
+}

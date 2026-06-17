@@ -18,17 +18,14 @@ Input folder
 → quality gate                  (quality-gate)
 → PASS / REVIEW_REQUIRED / FAILED
 → 전 구간 영속화 + 아티팩트     (postgresql-persistence, artifact-storage)
-→ loop evidence / feedback 준비 (loop-engineering, feedback-learning)
 ```
 
 ## MVP must include
 
 folder watcher, 파일 안정화, PostgreSQL 영속화, 로컬 아티팩트 저장,
 1024px sRGB JPEG preview, MockVisionBackend, 교체 가능한 vision backend 인터페이스,
-3B/4B급 로컬 vision backend 후보 슬롯, Qwen2.5-VL-3B technical stable candidate,
-Qwen3-VL-4B commercial/default candidate 슬롯, correction planner,
-Lightroom Classic JSON bridge + 최소 Lua plugin PoC, quality gate, CLI, crash recovery,
-testing harness, loop event evidence, local-only feedback learning readiness.
+Qwen2.5-VL-3B 4bit technical stable candidate + Qwen3-VL-4B commercial/default candidate slot, correction planner,
+Lightroom Classic JSON bridge + 최소 Lua plugin PoC, quality gate, CLI, crash recovery, testing harness.
 
 ## MVP must not include
 
@@ -38,8 +35,6 @@ Full React dashboard          FastAPI-first 구현
 SaaS 계정 / 멀티유저           Redis / MinIO / NATS / Celery / Kubernetes
 complex worker pool           2048px·multi-crop 입력 기본값화
 Lightroom neutral preview 기본값화    상위 모델(7B/8B+) 기본값화
-실시간/자동 fine-tuning        외부 API 기반 보정/분석
-commercial/default 모델 자동 승격
 ```
 
 ## Decision rule
@@ -52,11 +47,8 @@ commercial/default 모델 자동 승격
 - "작은 헬퍼 서비스"도 서비스다 — 요청 없으면 거부.
 - Deferred 항목은 인터페이스/config 슬롯까지만 설계하고 선구현하지 않는다.
 - 규칙과 충돌하는 요청은 구현하지 말고 충돌을 보고한다 (AGENTS.md §10).
-- 하네스가 검증하지 못하는 기능은 MVP 완료 범위로 주장하지 않는다.
-- 모델 후보 추가는 scope 변경이 아니라 backend 슬롯 안에서만 허용한다. default 승격은 별도 decision이다.
 
 ## Acceptance criteria
 
 CLI에서 동작, mock vision + fake Lightroom으로 사진 1장 end-to-end 처리,
-PostgreSQL 상태 영속화, 로컬 아티팩트 저장, task_events loop evidence,
-대시보드 불필요, 외부 API 호출 없음, security harness 통과.
+PostgreSQL 상태 영속화, 로컬 아티팩트 저장, 대시보드 불필요, 외부 API 호출 없음.

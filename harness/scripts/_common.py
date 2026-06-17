@@ -8,7 +8,7 @@ from typing import Iterable
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_DIR = Path(
     os.environ.get("TONEVYRA_RUNTIME_DIR")
-    or os.environ.get("MW_RUNTIME_DIR")  # backward compatibility for older harness envs
+    or os.environ.get("MW_RUNTIME_DIR")
     or PROJECT_ROOT / "runtime"
 ).resolve()
 
@@ -35,23 +35,19 @@ def ensure_runtime_dirs(runtime_dir: Path = RUNTIME_DIR) -> None:
         (runtime_dir / subdir).mkdir(parents=True, exist_ok=True)
 
 
-def safe_clear_dir(path: Path, runtime_dir: Path = RUNTIME_DIR) -> None:
+def safe_clear_dir(path: Path) -> None:
     path = path.resolve()
-    runtime_root = runtime_dir.resolve()
-    try:
-        path.relative_to(runtime_root)
-    except ValueError as exc:
-        raise RuntimeError(f"Refusing to clear path outside runtime: {path}") from exc
+    if not str(path).startswith(str(RUNTIME_DIR.resolve())):
+        raise RuntimeError(f"Refusing to clear path outside runtime: {path}")
     if path.exists():
         shutil.rmtree(path)
     path.mkdir(parents=True, exist_ok=True)
 
 
 def reset_runtime(runtime_dir: Path = RUNTIME_DIR) -> None:
-    runtime_dir = runtime_dir.resolve()
     runtime_dir.mkdir(parents=True, exist_ok=True)
     for subdir in RUNTIME_SUBDIRS:
-        safe_clear_dir(runtime_dir / subdir, runtime_dir=runtime_dir)
+        safe_clear_dir(runtime_dir / subdir)
 
 
 def is_ignored_file(path: Path) -> bool:

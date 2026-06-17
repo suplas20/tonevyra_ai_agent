@@ -255,8 +255,8 @@ def benchmark_candidates(settings: Settings) -> list[BenchmarkCandidate]:
             model_path=settings.project_path(settings.qwen_model_path).resolve(),
             model_revision=settings.qwen_model_revision,
             model_sha256=settings.qwen_model_sha256,
-            commercial_policy="research_or_separate_license_required",
-            promotion_role="stable_candidate",
+            commercial_policy="technical_stable_candidate_not_commercial_default_without_license_review",
+            promotion_role="technical_stable_candidate",
         ),
         BenchmarkCandidate(
             candidate_id="qwen3_vl_4b_4bit",
@@ -264,8 +264,8 @@ def benchmark_candidates(settings: Settings) -> list[BenchmarkCandidate]:
             model_path=settings.project_path(settings.qwen3_model_path).resolve(),
             model_revision=settings.qwen3_model_revision,
             model_sha256=settings.qwen3_model_sha256,
-            commercial_policy="commercial_safe_candidate_subject_to_validation",
-            promotion_role="validation_candidate",
+            commercial_policy="commercial_default_candidate_requires_license_review_and_benchmark",
+            promotion_role="commercial_default_candidate",
         ),
     ]
 

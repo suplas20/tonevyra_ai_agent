@@ -1,0 +1,28 @@
+{
+  "schema_version": "t019.lightroom_apply.result.v1",
+  "request_id": "lr-apply-fixture-0001",
+  "request_origin": "lightroom_plugin",
+  "command": "APPLY_LIGHTROOM_SETTINGS",
+  "task_id": "task-fixture-0001",
+  "status": "applied",
+  "source_path": "C:/Tonevyra/input/fixture.dng",
+  "applied_settings": {
+    "exposure": 0.25,
+    "contrast": 10,
+    "highlights": -15,
+    "shadows": 20
+  },
+  "skipped_settings": {},
+  "lightroom_result": {
+    "plugin_loaded": true,
+    "worker_running": true,
+    "source_photo_found": true,
+    "source_photo_imported": false,
+    "develop_settings_applied": true
+  },
+  "evidence": {
+    "lightroom_catalog_photo_id": "fixture-catalog-id",
+    "applied_at": "2026-06-17T15:31:10+09:00"
+  },
+  "operator_notes": "Folder-driven live test fixture. Lightroom UI-current-photo flow was not used."
+}

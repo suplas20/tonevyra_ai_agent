@@ -1,6 +1,6 @@
 # Tonevyra AI Agent — AI Coding Agent Rules
 
-Version: v3.0-qwen3-commercial
+Version: v2.0-tonevyra-db-schema
 Target agents: Claude Code, Codex, AI coding agents
 Project type: Local AI photo correction agent
 Primary language: Python 3.11
@@ -109,7 +109,7 @@ Code identifiers, commands, file paths, logs, database object names, environment
 - EXIF/basic metadata extraction
 - VisionModelBackend interface
 - MockVisionBackend
-- commercial-safe Qwen3 candidate backend
+- Qwen candidate backend
 - Correction Planner
 - Lightroom Classic file-based JSON bridge
 - Minimal Lightroom Lua plugin PoC
@@ -281,7 +281,7 @@ Deferred improvements:
 - center crop
 - multi-view model input
 - Lightroom neutral preview
-- Qwen2.5-VL-7B or larger models as default before benchmark approval
+- Qwen 7B/8B as default
 ```
 
 These are not part of MVP default behavior.
@@ -347,34 +347,32 @@ VisionModelBackend
 
 No project code may assume Qwen is the only supported model.
 
-Commercial default candidate after mock/fake pipeline:
+Technical stable candidate after mock pipeline:
 
 ```text
-Qwen3-VL-4B-Instruct 4bit/GGUF
+Qwen2.5-VL-3B 4bit
 ```
 
-Commercial quality candidate, not automatic default:
+Commercial/default candidate:
 
 ```text
-Qwen2.5-VL-7B-Instruct 4bit
+Qwen3-VL-4B 4bit
 ```
 
-Research-only / non-commercial reference:
+Qwen2.5-VL-3B is a technical stable candidate and must not be treated as the commercial default unless a separate license review explicitly approves it.
+
+Qwen3-VL-4B is the commercial/default candidate, but promotion to a default runtime backend still requires explicit local benchmark evidence, license review, rollback documentation, and human approval. No code may silently promote it.
+
+Quality profile, not MVP default:
 
 ```text
-Qwen2.5-VL-3B-Instruct 4bit
+Qwen2.5-VL-7B 4bit
+Qwen3-VL-8B 4bit
 ```
 
-Commercial license rule:
+Commercial/default candidates must pass benchmark with Lightroom Classic running before becoming default.
 
-```text
-Qwen2.5-VL-3B-Instruct must not be used as Tonevyra AI's commercial default model unless a separate commercial license is obtained.
-```
-
-Qwen3-VL-4B-Instruct is the commercial default candidate only after benchmark validation. It must pass local-only security checks, JSON schema validity checks, memory/speed checks, Lightroom simultaneous-operation stability checks, 10-photo stability checks, and 100-photo batch stability checks before production promotion.
-
-The default model must never be silently replaced. Any model promotion requires benchmark evidence, a recorded model_benchmark_result artifact, and a documented rollback path.
-
+---
 
 ## 11. Local Model Security Requirements
 
@@ -392,7 +390,6 @@ Required runtime behavior:
 - Pin model revision/version.
 - Store model files under models/ or configured local model root.
 - Record model file hash/checksum.
-- Record model ID, model revision, model license, quantization format, and commercial_allowed flag.
 - Disable Hugging Face / hub online behavior at runtime.
 - Disable telemetry where possible.
 - Keep model worker network-blockable at OS firewall level.
@@ -1031,13 +1028,13 @@ Implement in this order:
 16. Crash recovery
 17. Feedback data capture
 18. Loop event recording
-19. Qwen3 commercial-safe local backend
+19. Qwen local backend
 20. Model benchmark loop
 21. Quality testing
 22. Dashboard later
 ```
 
-Do not attach Qwen3 or any real local model before the mock model pipeline works.
+Do not attach Qwen before the mock model pipeline works.
 
 ---
 

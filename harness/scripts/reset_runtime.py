@@ -7,7 +7,11 @@ from _common import RUNTIME_DIR, ensure_runtime_dirs, reset_runtime
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Reset Tonevyra AI Agent runtime folders for harness runs.")
-    parser.add_argument("--runtime-dir", default=str(RUNTIME_DIR), help="Runtime directory. Defaults to TONEVYRA_RUNTIME_DIR, legacy MW_RUNTIME_DIR, or ./runtime")
+    parser.add_argument(
+        "--runtime-dir",
+        default=str(RUNTIME_DIR),
+        help="Runtime directory. Defaults to TONEVYRA_RUNTIME_DIR, then MW_RUNTIME_DIR, then ./runtime",
+    )
     parser.add_argument("--keep", action="store_true", help="Only create missing folders; do not clear existing files.")
     args = parser.parse_args()
 

@@ -116,6 +116,17 @@ def _verify_payload(payload: dict[str, Any], artifact_path: Path) -> str | None:
         return "benchmark did not compare both required candidates"
     for candidate in candidates:
         metrics = candidate.get("metrics", {})
+        candidate_id = candidate.get("candidate_id")
+        if candidate_id == "qwen2_5_vl_3b_4bit":
+            if candidate.get("promotion_role") != "technical_stable_candidate":
+                return "Qwen2.5 candidate should be marked as technical_stable_candidate"
+            if "not_commercial_default" not in candidate.get("commercial_policy", ""):
+                return "Qwen2.5 candidate commercial policy should prevent commercial default use without review"
+        if candidate_id == "qwen3_vl_4b_4bit":
+            if candidate.get("promotion_role") != "commercial_default_candidate":
+                return "Qwen3 candidate should be marked as commercial_default_candidate"
+            if "license_review" not in candidate.get("commercial_policy", ""):
+                return "Qwen3 candidate commercial policy should require license review"
         missing = REQUIRED_METRICS - set(metrics)
         if missing:
             return f"candidate {candidate.get('candidate_id')} missing metrics: {sorted(missing)}"

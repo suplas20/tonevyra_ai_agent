@@ -1,0 +1,7 @@
+# T-019 folder-driven Lightroom plugin harness env
+TONEVYRA_RUNTIME_DIR=./runtime
+TONEVYRA_INPUT_DIR=./runtime/input
+TONEVYRA_LIGHTROOM_PLUGIN_DIR=./lightroom/TonevyraAI.lrplugin
+TONEVYRA_LIGHTROOM_APPLY_REQUEST_DIR=./runtime/bridge/lightroom_apply_requests
+TONEVYRA_LIGHTROOM_APPLY_RESULT_DIR=./runtime/bridge/lightroom_apply_results
+TONEVYRA_LIGHTROOM_LIVE_EVIDENCE_DIR=./runtime/bridge/lightroom_live_evidence
