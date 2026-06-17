@@ -18,7 +18,7 @@ vision_structured.json → Correction Planner → correction_plan.json → light
 
 입력: VisionAnalysisResult, EXIF 요약, (재시도 시) 이전 quality result + retry history, config 범위.
 출력: `CorrectionPlan` — base_preset, style_target, adjustments, confidence,
-**requires_review**, **clamped**, reasoning_summary.
+**requires_review**, **clamped**, reasoning_summary, optional risk_flags.
 
 ```json
 {
@@ -67,6 +67,7 @@ worker가 plan → gate로 플래그를 운반하고, gate가 강제한다 (qual
 ## Artifacts & DB
 
 아티팩트: `correction_plan.json`, 재시도 시 `retry_history.json`.
+하네스는 clamp, sticky requires_review, Lightroom 직렬화 가능성을 검증한다.
 DB 요약: `correction_plans` 행 (requires_review, clamped, adjustments_jsonb 포함).
 
 ## Forbidden
@@ -77,4 +78,4 @@ DB 요약: `correction_plans` 행 (requires_review, clamped, adjustments_jsonb �
 ## Acceptance criteria
 
 mock vision 결과로 동작; 모든 값 클램프; 저신뢰 → 보수화;
-plan이 Lightroom request로 직렬화 가능; requires_review가 게이트에 도달.
+plan이 Lightroom request로 직렬화 가능; requires_review가 게이트에 도달; `run_correction_planner_test.py` 통과.

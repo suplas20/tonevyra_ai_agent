@@ -1,4 +1,6 @@
 # Tonevyra AI Agent Harness Environment
+# Copy into .env or load as process environment before running harness scripts.
+
 TONEVYRA_ENV=harness
 TONEVYRA_RUNTIME_DIR=runtime
 TONEVYRA_INPUT_DIR=runtime/input
@@ -9,13 +11,16 @@ TONEVYRA_BRIDGE_DIR=runtime/bridge
 TONEVYRA_LOG_DIR=logs
 TONEVYRA_MODELS_DIR=models
 
-# Backend modes
+# PostgreSQL. Use project-local credentials, not the postgres superuser.
+TONEVYRA_DATABASE_URL=postgresql+psycopg://tonevyra_app:change-me@localhost:5432/tonevyra_agent
+
+# Backend modes. Mock/Fake must pass before real backend tickets.
 TONEVYRA_VISION_BACKEND=mock
 TONEVYRA_LIGHTROOM_BACKEND=fake
 TONEVYRA_MODEL_OFFLINE=true
 TONEVYRA_WORKER_CONCURRENCY=1
 
-# Model security mode: enabled even when using mock backend
+# Model security mode: enabled even when using mock backend.
 HF_HUB_OFFLINE=1
 TRANSFORMERS_OFFLINE=1
 HF_HUB_DISABLE_TELEMETRY=1
@@ -25,8 +30,8 @@ HF_HUB_DISABLE_UPDATE_CHECK=1
 # Command executed by CLI harnesses.
 TONEVYRA_HARNESS_AGENT_COMMAND=python -m tonevyra_agent.cli start
 
-# Optional: command for watcher test
+# Optional: command for watcher test.
 TONEVYRA_HARNESS_WATCHER_COMMAND=python -m tonevyra_agent.cli scan
 
-# Optional: command for recovery test
+# Optional: command for recovery test.
 TONEVYRA_HARNESS_RECOVERY_COMMAND=python -m tonevyra_agent.cli start --no-scan

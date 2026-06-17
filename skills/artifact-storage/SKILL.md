@@ -3,6 +3,8 @@
 ## Purpose
 Persist task evidence as local files and register them in PostgreSQL.
 
+Artifacts are the audit trail for the harness, recovery, quality decisions, and future learning readiness.
+
 ## Atomic Write Rule
 1. Write to a temp file in the same directory.
 2. Flush/fsync when possible.
@@ -14,7 +16,14 @@ Persist task evidence as local files and register them in PostgreSQL.
 ## Required API
 `save_json`, `save_text`, `save_bytes`, `load_json`, `load_text`, `exists`, `verify_checksum`.
 
+## Required Evidence
+Artifact rows should include type, path, version, checksum, size, task id, and stage when available.
+
 ## Do Not
 - Do not mark a stage complete before artifacts are durable.
 - Do not store image blobs in PostgreSQL.
 - Do not use remote storage for MVP.
+- Do not use logs as the only copy of recovery-critical data.
+
+## Harness Validation
+`harness/scripts/verify_artifacts.py`

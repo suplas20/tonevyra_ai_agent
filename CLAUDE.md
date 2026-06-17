@@ -137,7 +137,7 @@ Before implementing a real model backend, read:
 
 ```text
 AGENTS.md
-skills/model-security/SKILL.md
+skills/local-model-security/SKILL.md
 skills/vision-analysis/SKILL.md
 skills/testing-harness/SKILL.md
 ```
@@ -147,6 +147,10 @@ Model backend rules:
 ```text
 - MockVisionBackend must pass before QwenVisionBackend is connected.
 - Qwen is a replaceable backend candidate, not a hard dependency.
+- Commercial default candidate: Qwen3-VL-4B-Instruct 4bit/GGUF.
+- Commercial quality candidate: Qwen2.5-VL-7B-Instruct 4bit.
+- Research-only / non-commercial reference: Qwen2.5-VL-3B-Instruct 4bit.
+- Do not use Qwen2.5-VL-3B-Instruct as the commercial default unless a separate commercial license is obtained.
 - Use local model files only.
 - Use local_files_only=True.
 - Do not use trust_remote_code=True.
@@ -154,6 +158,7 @@ Model backend rules:
 - Do not call remote APIs.
 - Do not load images from external URLs.
 - Keep model worker network-blockable at OS firewall level.
+- Do not silently promote or replace the default model without benchmark evidence and rollback path.
 ```
 
 ---

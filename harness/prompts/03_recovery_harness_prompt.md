@@ -2,7 +2,7 @@
 
 Read `AGENTS.md`, `skills/recovery-error-handling/SKILL.md`, `skills/agent-worker-pipeline/SKILL.md`, and `harness/CONTRACT.md`.
 
-Implement recovery behavior so `harness/scripts/run_recovery_test.py` can validate restart scenarios.
+Implement recovery behavior so `harness/scripts/run_recovery_test.py` can validate restart scenarios with DB + artifact evidence.
 
 Required scenarios:
 
