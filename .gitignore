@@ -117,9 +117,6 @@ transformers_cache/
 dumps/
 backups/
 
-# Local planning/private docs kept off GitHub for this workspace
-.docs/
-
 # OS/editor noise
 .DS_Store
 Thumbs.db

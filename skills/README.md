@@ -60,4 +60,4 @@ The harness is an acceptance gate. It verifies implementation compliance with co
 
 ## T-019 Lightroom Plugin Gate
 
-The T-019 plugin path must remain folder-driven: input folder file detection starts the task, Python writes an apply request, and Lightroom acts only as a thin apply worker. See `docs/T-019_Lightroom_Plugin_Implementation_Work_Order.md`, `harness/CONTRACT_LIGHTROOM_PLUGIN.md`, and `plugin_scaffold/TonevyraAI.lrplugin/`.
+The T-019 plugin path must remain folder-driven: input folder file detection starts the task, Python writes an apply request, and Lightroom acts only as a thin apply worker. See `.docs/t019/T-019_Lightroom_Plugin_Implementation_Work_Order.md`, `harness/CONTRACT_LIGHTROOM_PLUGIN.md`, and `plugin_scaffold/TonevyraAI.lrplugin/`.
