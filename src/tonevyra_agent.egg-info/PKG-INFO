@@ -1,0 +1,63 @@
+Metadata-Version: 2.4
+Name: tonevyra-agent
+Version: 0.1.0
+Summary: Tonevyra AI local CLI-first photo correction agent for Lightroom Classic.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: alembic>=1.18
+Requires-Dist: loguru>=0.7
+Requires-Dist: numpy>=2.4
+Requires-Dist: opencv-python>=4.13
+Requires-Dist: pillow>=12.2
+Requires-Dist: psycopg[binary]>=3.3
+Requires-Dist: pydantic>=2.13
+Requires-Dist: pydantic-settings>=2.14
+Requires-Dist: python-dotenv>=1.2
+Requires-Dist: rich>=15.0
+Requires-Dist: SQLAlchemy>=2.0
+Requires-Dist: typer>=0.26
+Requires-Dist: watchdog>=6.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+
+# MW Photo Agent
+
+Local, CLI-first photo correction automation agent for Lightroom Classic.
+
+The MVP processes photos end-to-end without a dashboard:
+
+```text
+runtime/input
+-> file detection and stabilization
+-> PostgreSQL task registration
+-> 1024px sRGB JPEG preview
+-> vision analysis
+-> correction planning
+-> Lightroom Classic JSON bridge
+-> export
+-> quality gate
+-> PASS / REVIEW_REQUIRED / FAILED
+```
+
+## MVP Boundaries
+
+- No external image, prompt, metadata, or model-response transmission.
+- PostgreSQL stores operational state.
+- Local artifacts store detailed payloads.
+- Vision models analyze only; correction values are planned and clamped separately.
+- Lightroom integration uses the Lua plugin plus file-based JSON bridge.
+- React and FastAPI are deferred until the agent core works.
+
+## Initial Commands
+
+```bash
+mw-agent init
+mw-agent doctor
+mw-agent start
+mw-agent status
+mw-agent scan
+mw-agent retry TASK_ID
+mw-agent test-lightroom
+mw-agent test-vision
+```
+

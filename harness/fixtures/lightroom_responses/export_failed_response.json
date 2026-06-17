@@ -1,0 +1,9 @@
+{
+  "request_id": "sample_request",
+  "task_id": "sample_task",
+  "status": "failed",
+  "export_path": null,
+  "error_code": "LIGHTROOM_EXPORT_FAILED",
+  "error_message": "Fake export failed by fixture",
+  "backend": "fake_lightroom"
+}

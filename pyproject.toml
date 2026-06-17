@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tonevyra-agent"
+version = "0.1.0"
+description = "Tonevyra AI local CLI-first photo correction agent for Lightroom Classic."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "alembic>=1.18",
+  "loguru>=0.7",
+  "numpy>=2.4",
+  "opencv-python>=4.13",
+  "pillow>=12.2",
+  "psycopg[binary]>=3.3",
+  "pydantic>=2.13",
+  "pydantic-settings>=2.14",
+  "python-dotenv>=1.2",
+  "rich>=15.0",
+  "SQLAlchemy>=2.0",
+  "typer>=0.26",
+  "watchdog>=6.0",
+]
+
+[project.scripts]
+tonevyra-agent = "tonevyra_agent.cli:app"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

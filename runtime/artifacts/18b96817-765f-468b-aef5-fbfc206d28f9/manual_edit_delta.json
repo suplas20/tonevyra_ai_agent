@@ -1,0 +1,20 @@
+{
+  "ai_settings_ref": {
+    "artifact_id": "15a15ef8-a04f-42f9-b930-6576bdef5a5d",
+    "artifact_path": "runtime/artifacts/18b96817-765f-468b-aef5-fbfc206d28f9/ai_settings.json",
+    "artifact_type": "AI_SETTINGS",
+    "sha256": "c8853fd875b8b13ddd68263d4c97ee15aa594acc5d9d10f287c28ba6fe52f69a",
+    "size_bytes": 128
+  },
+  "changed": false,
+  "changed_values": {},
+  "final_settings_ref": {
+    "artifact_id": "f1186371-ee04-4af8-a4cb-e8e12fb41c8e",
+    "artifact_path": "runtime/artifacts/18b96817-765f-468b-aef5-fbfc206d28f9/final_settings.json",
+    "artifact_type": "FINAL_SETTINGS",
+    "sha256": "c8853fd875b8b13ddd68263d4c97ee15aa594acc5d9d10f287c28ba6fe52f69a",
+    "size_bytes": 128
+  },
+  "numeric_delta": {},
+  "schema_version": "1.0"
+}

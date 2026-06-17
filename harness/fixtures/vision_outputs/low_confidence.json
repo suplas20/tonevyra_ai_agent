@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "model_backend": "mock",
+  "scene_type": "underwater",
+  "main_subject": "diver",
+  "usability": "review",
+  "confidence": 0.52,
+  "issues": {
+    "exposure": "slightly_underexposed",
+    "color_cast": "blue_green",
+    "haze_turbidity": "medium",
+    "contrast": "low",
+    "sharpness": "acceptable",
+    "noise": "low"
+  },
+  "risk_flags": [
+    "low_confidence",
+    "heavy_haze"
+  ],
+  "recommendation": "Apply conservative exposure, dehaze, and white balance correction."
+}

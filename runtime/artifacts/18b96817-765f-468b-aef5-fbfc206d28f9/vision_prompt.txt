@@ -1,0 +1,5 @@
+Analyze the provided 1024px sRGB JPEG preview and EXIF/basic metadata for Tonevyra AI.
+Return JSON only with: scene_type, main_subject, usable, issues, edit_intent, confidence, risk_flags.
+Do not suggest direct Lightroom values and do not edit the image.
+Image metadata: {'format': 'JPEG', 'height': 768, 'mode': 'RGB', 'readable': True, 'width': 1024}
+Basic EXIF metadata: {}

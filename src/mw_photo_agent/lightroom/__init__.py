@@ -1,0 +1,2 @@
+"""Lightroom Classic JSON bridge."""
+

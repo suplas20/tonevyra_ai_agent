@@ -1,0 +1,9 @@
+{
+  "request_id": "sample_request",
+  "task_id": "sample_task",
+  "status": "success",
+  "export_path": "<absolute-export-path>",
+  "error_code": null,
+  "error_message": null,
+  "backend": "fake_lightroom"
+}

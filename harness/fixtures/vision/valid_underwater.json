@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0",
+  "model_backend": "mock",
+  "model_name": "mock-fixture-v1",
+  "scene_type": "underwater_portrait",
+  "main_subject": "diver",
+  "usable": true,
+  "issues": {
+    "exposure": "slightly_underexposed",
+    "color_cast": "blue_green_strong",
+    "haze": "medium",
+    "contrast": "low",
+    "sharpness": "acceptable",
+    "noise": "medium",
+    "skin_tone": "needs_recovery"
+  },
+  "edit_intent": "natural_clean_underwater_recovery",
+  "confidence": 0.86,
+  "risk_flags": [
+    "strong_color_cast",
+    "subject_shadow"
+  ],
+  "requires_review": false
+}
