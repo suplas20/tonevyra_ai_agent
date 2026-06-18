@@ -76,34 +76,80 @@ class AgentRunner:
         task_repo = ImageTaskRepository()
         event_repo = TaskEventRepository()
         with session_scope(self.settings) as session:
-            task = task_repo.create(
-                session,
-                source_path=path,
-                source_hash=source_hash,
-                file_name=path.name,
-                file_ext=path.suffix.lower(),
-                file_size_bytes=stability.size_bytes,
-                status=TaskStatus.QUEUED,
-                current_stage=Stage.WATCH,
-            )
-            event_repo.create(
-                session,
-                task_id=task.id,
-                event_type=TaskEventType.TASK_CREATED,
-                stage=Stage.WATCH,
-                message="Explicit process command queued one supported file.",
-                payload_json={
-                    "loop_name": WATCH_LOOP_NAME,
-                    "loop_iteration": 1,
-                    "event_type": TaskEventType.TASK_CREATED.value,
-                    "from_status": TaskStatus.DETECTED.value,
-                    "to_status": TaskStatus.QUEUED.value,
-                    "reason": "explicit process command queued file",
-                    "source_path": str(path),
-                    "source_hash": source_hash,
-                    "evidence_artifacts": [],
-                },
-            )
+            task = task_repo.get_by_source_path_hash(session, path, source_hash)
+            if task is None:
+                task = task_repo.create(
+                    session,
+                    source_path=path,
+                    source_hash=source_hash,
+                    file_name=path.name,
+                    file_ext=path.suffix.lower(),
+                    file_size_bytes=stability.size_bytes,
+                    status=TaskStatus.QUEUED,
+                    current_stage=Stage.WATCH,
+                )
+                event_repo.create(
+                    session,
+                    task_id=task.id,
+                    event_type=TaskEventType.TASK_CREATED,
+                    stage=Stage.WATCH,
+                    message="Explicit process command queued one supported file.",
+                    payload_json={
+                        "loop_name": WATCH_LOOP_NAME,
+                        "loop_iteration": 1,
+                        "event_type": TaskEventType.TASK_CREATED.value,
+                        "from_status": TaskStatus.DETECTED.value,
+                        "to_status": TaskStatus.QUEUED.value,
+                        "reason": "explicit process command queued file",
+                        "source_path": str(path),
+                        "source_hash": source_hash,
+                        "evidence_artifacts": [],
+                    },
+                )
+            else:
+                previous_status = TaskStatus(task.status)
+                if previous_status == TaskStatus.PASS:
+                    raise ValueError(f"file already has a PASS task: {task.id}")
+                if previous_status in {TaskStatus.REVIEW_REQUIRED, TaskStatus.FAILED, TaskStatus.SKIPPED}:
+                    task_repo.requeue_for_retry(session, task)
+                    event_repo.create(
+                        session,
+                        task_id=task.id,
+                        event_type=TaskEventType.TASK_RETRIED,
+                        stage=Stage.RECOVERY,
+                        message="Explicit process command requeued an existing task for the same file.",
+                        payload_json={
+                            "loop_name": WATCH_LOOP_NAME,
+                            "loop_iteration": 1,
+                            "event_type": TaskEventType.TASK_RETRIED.value,
+                            "from_status": previous_status.value,
+                            "to_status": TaskStatus.QUEUED.value,
+                            "reason": "explicit process command reused existing source_path/source_hash task",
+                            "source_path": str(path),
+                            "source_hash": source_hash,
+                            "retry_count": task.retry_count,
+                            "evidence_artifacts": [],
+                        },
+                    )
+                elif previous_status != TaskStatus.QUEUED:
+                    event_repo.create(
+                        session,
+                        task_id=task.id,
+                        event_type=TaskEventType.TASK_RETRIED,
+                        stage=Stage.RECOVERY,
+                        message="Explicit process command reused an existing non-terminal task for the same file.",
+                        payload_json={
+                            "loop_name": WATCH_LOOP_NAME,
+                            "loop_iteration": 1,
+                            "event_type": TaskEventType.TASK_RETRIED.value,
+                            "from_status": previous_status.value,
+                            "to_status": previous_status.value,
+                            "reason": "explicit process command reused existing source_path/source_hash task without creating a duplicate",
+                            "source_path": str(path),
+                            "source_hash": source_hash,
+                            "evidence_artifacts": [],
+                        },
+                    )
             task_id = task.id
 
         return self.worker.process_task(task_id)

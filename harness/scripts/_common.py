@@ -24,6 +24,12 @@ RUNTIME_SUBDIRS = [
     "bridge/processing",
     "bridge/responses",
     "bridge/errors",
+    "bridge/lightroom_apply_requests",
+    "bridge/lightroom_apply_processing",
+    "bridge/lightroom_apply_processed",
+    "bridge/lightroom_apply_results",
+    "bridge/lightroom_apply_errors",
+    "bridge/lightroom_live_evidence",
 ]
 
 IGNORED_NAMES = {".DS_Store"}

@@ -1,0 +1,34 @@
+{
+  "scope": "skills_and_harness_only",
+  "preserved_documents": true,
+  "removed_lightroom_classic_legacy_paths": [
+    "harness/fake_lightroom/__pycache__",
+    "harness/scripts/__pycache__",
+    "skills/lightroom-plugin-implementation",
+    "skills/lightroom-live-test",
+    "harness/CONTRACT_LIGHTROOM_PLUGIN.md",
+    "harness/HARNESS_ENV_LIGHTROOM_PLUGIN.example",
+    "harness/fixtures/lightroom_plugin",
+    "harness/prompts/06_lightroom_plugin_real_implementation_prompt.md",
+    "harness/scripts/run_lightroom_bridge_contract_test.py",
+    "harness/scripts/run_lightroom_worker_mapping_test.py",
+    "harness/scripts/verify_lightroom_live_test_evidence.py",
+    "harness/scripts/verify_lightroom_plugin_poc.py",
+    "harness/scripts/verify_lightroom_plugin_structure.py"
+  ],
+  "added_or_updated_paths": [
+    "skills/lightroom-apply-adapter/SKILL.md",
+    "skills/lightroom-bridge/SKILL.md",
+    "skills/README.md",
+    "harness/CONTRACT.md",
+    "harness/CONTRACT_LIGHTROOM_APPLY_ADAPTER.md",
+    "harness/HARNESS_ENV_LIGHTROOM_APPLY_ADAPTER.example",
+    "harness/prompts/06_lightroom_apply_adapter_role_correction_prompt.md",
+    "harness/fixtures/lightroom_apply_adapter/valid_apply_request.json",
+    "harness/fixtures/lightroom_apply_adapter/valid_apply_result.json",
+    "harness/fixtures/lightroom_apply_adapter/failed_apply_result.json",
+    "harness/fixtures/lightroom_apply_adapter/invalid_missing_source_path_request.json",
+    "harness/scripts/verify_lightroom_apply_adapter_role.py",
+    "harness/README.md"
+  ]
+}

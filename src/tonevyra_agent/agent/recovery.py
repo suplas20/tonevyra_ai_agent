@@ -395,6 +395,43 @@ class RecoveryManager:
 
     def _decide_lightroom(self, session: Session, task: ImageTask) -> RecoveryDecision:
         request = self._artifact_evidence(session, task.id, ArtifactType.LIGHTROOM_REQUEST, require_json=True)
+        if self.settings.lightroom_backend == "lightroom":
+            apply_result_path = self.lightroom_bridge.apply_result_path(str(task.id))
+            apply_result_evidence = _file_evidence("lightroom_apply_result_file", apply_result_path)
+            evidence = [request.as_payload(), apply_result_evidence]
+            if apply_result_path.exists():
+                return self._decision(
+                    task,
+                    "resume",
+                    "Lightroom apply result exists; ingest apply-adapter result",
+                    resume_from_stage=Stage.LIGHTROOM,
+                    target_status=TaskStatus.LIGHTROOM_PROCESSING,
+                    target_stage=Stage.LIGHTROOM,
+                    action="ingest_response",
+                    response_path=apply_result_path,
+                    raw_evidence=evidence,
+                )
+            if request.valid:
+                return self._decision(
+                    task,
+                    "no_action",
+                    "Lightroom apply request exists; waiting for manual apply-adapter result",
+                    target_status=TaskStatus.LIGHTROOM_REQUESTED,
+                    target_stage=Stage.LIGHTROOM,
+                    action="set_status",
+                    raw_evidence=evidence,
+                )
+            return self._decision(
+                task,
+                "fail",
+                "Lightroom apply request evidence is missing or invalid",
+                error_code=ErrorCode.LIGHTROOM_REQUEST_FAILED,
+                target_status=TaskStatus.FAILED,
+                target_stage=Stage.LIGHTROOM,
+                action="fail",
+                raw_evidence=evidence,
+            )
+
         response_path = self.lightroom_bridge.response_path(str(task.id))
         response_evidence = _file_evidence("lightroom_response_file", response_path)
         export_path = self._export_path_from_response(response_path)
@@ -572,6 +609,10 @@ class RecoveryManager:
                 return
             self.task_repository.update_status(session, task, status=TaskStatus.QUALITY_CHECK, current_stage=Stage.QUALITY)
             self.quality_gate.evaluate_export(session, task=task, export_artifact=response.export_artifact)
+            return
+
+        if decision.action == "ingest_response" and decision.response_path is not None:
+            self.lightroom_bridge.ingest_response(session, task=task, response_path=decision.response_path)
             return
 
         if decision.action == "run_quality":

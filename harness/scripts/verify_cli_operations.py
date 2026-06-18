@@ -107,14 +107,14 @@ def _run_cli(settings: Settings, *args: str) -> subprocess.CompletedProcess[str]
     return result
 
 
-def _task_id_from_process_output(output: str) -> str:
+def _task_id_and_status_from_process_output(output: str) -> tuple[str, TaskStatus]:
     match = re.search(r"task=([0-9a-fA-F-]{36}) status=([A-Z_]+)", output)
     if match is None:
         raise RuntimeError(f"could not parse task id from process output: {output}")
     status = TaskStatus(match.group(2))
     if status not in {TaskStatus.PASS, TaskStatus.REVIEW_REQUIRED, TaskStatus.FAILED}:
         raise RuntimeError(f"process ended in invalid final status: {status.value}")
-    return match.group(1)
+    return match.group(1), status
 
 
 def _fail(message: str) -> int:
@@ -136,8 +136,15 @@ def main() -> int:
             return _fail("status --json did not render counts")
 
         process_result = _run_cli(settings, "process", str(input_path))
-        task_id = _task_id_from_process_output(process_result.stdout)
+        task_id, process_status = _task_id_and_status_from_process_output(process_result.stdout)
         print(f"OK CLI process finalized task: {task_id}")
+
+        if process_status != TaskStatus.PASS:
+            duplicate_result = _run_cli(settings, "process", str(input_path))
+            duplicate_task_id, _duplicate_status = _task_id_and_status_from_process_output(duplicate_result.stdout)
+            if duplicate_task_id != task_id:
+                return _fail("duplicate process should reuse the existing source_path/source_hash task")
+            print("OK CLI duplicate process reused existing retryable task")
 
         task_result = _run_cli(settings, "task", task_id)
         if "Artifacts:" not in task_result.stdout or "Events:" not in task_result.stdout:

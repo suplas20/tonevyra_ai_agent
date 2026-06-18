@@ -23,9 +23,8 @@
 | `local-model-security` | Offline and no-network checks | Security harness or runtime model boundary work. |
 | `vision-analysis` | Preview + metadata analysis | `vision/` implementation. |
 | `correction-planning` / `correction-planner` | Safe Lightroom plans | `correction/` implementation. |
-| `lightroom-bridge` | JSON bridge and Lua plugin | `lightroom/` and fake worker implementation. |
-| `lightroom-plugin-implementation` | T-019 folder-driven real plugin | Real Lightroom Classic apply worker and plugin scaffold. |
-| `lightroom-live-test` | T-019 installed Lightroom validation | Manual/live evidence checks for installed Lightroom Classic. |
+| `lightroom-bridge` | Agent-owned JSON bridge transport | Request/result bridge, fake worker, and result ingestion. |
+| `lightroom-apply-adapter` | T-019 real Lightroom Classic plugin role | Plugin applies Agent-created correction values to `source_path` photos inside Lightroom. |
 | `agent-worker-pipeline` | Pipeline orchestration | `agent/worker.py`, `agent/runner.py`. |
 | `recovery-loop` / `recovery-error-handling` | Recovery and controlled failures | `agent/recovery.py`. |
 | `quality-gate` | Export scoring and decisions | `quality/` implementation. |
@@ -58,6 +57,14 @@
 
 The harness is an acceptance gate. It verifies implementation compliance with contracts, security, recovery, loop evidence, artifact integrity, feedback learning, and model promotion rules. It is not just a mock runtime.
 
-## T-019 Lightroom Plugin Gate
+## T-019 Lightroom Apply Adapter Gate
 
-The T-019 plugin path must remain folder-driven: input folder file detection starts the task, Python writes an apply request, and Lightroom acts only as a thin apply worker. See `.docs/t019/T-019_Lightroom_Plugin_Implementation_Work_Order.md`, `harness/CONTRACT_LIGHTROOM_PLUGIN.md`, and `plugin_scaffold/TonevyraAI.lrplugin/`.
+The T-019 Lightroom Classic plugin is **not** the input-folder watcher. The Agent watches the input folder, analyzes the photo, produces correction values, and writes an apply request. The plugin reads that request, uses `source_path` to find/import the photo in Lightroom, applies the supplied Develop settings or preset, and writes an apply result.
+
+Canonical T-019 references:
+
+```text
+skills/lightroom-apply-adapter/SKILL.md
+harness/CONTRACT_LIGHTROOM_APPLY_ADAPTER.md
+harness/scripts/verify_lightroom_apply_adapter_role.py
+```

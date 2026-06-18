@@ -109,22 +109,28 @@ Fake Lightroom과 실제 Lua Plugin은 최소한 아래 응답을 생성해야 �
 }
 ```
 
-## T-019 Folder-Driven Lightroom Plugin Contract
 
-T-019 adds a separate real-plugin apply contract while preserving the existing fake worker contract above.
+## T-019 Lightroom Apply Adapter Contract
+
+T-019 real Lightroom Classic plugin work uses a separate apply-adapter contract while preserving the existing fake worker contract above.
+
+Correct role separation:
 
 ```text
 input folder file
-→ folder watcher
-→ Python agent task
+→ Python Agent folder watcher
+→ Python Agent task
+→ vision analysis
 → correction plan
 → runtime/bridge/lightroom_apply_requests/<request_id>.json
-→ Lightroom plugin worker
+→ Lightroom Apply Adapter plugin
+→ source_path find/import in Lightroom catalog
+→ Develop settings or preset apply
 → runtime/bridge/lightroom_apply_results/<request_id>.json
-→ DB/task_events evidence
+→ Agent DB/task_events evidence
 ```
 
-The Lightroom plugin must not become the source of task creation, AI analysis, correction planning, quality scoring, DB access, or network access. Detailed rules live in `harness/CONTRACT_LIGHTROOM_PLUGIN.md`.
+The Lightroom plugin must not watch `runtime/input`, create tasks, run AI analysis, generate correction plans, compute quality scores, make DB decisions, or own lifecycle orchestration. Detailed rules live in `harness/CONTRACT_LIGHTROOM_APPLY_ADAPTER.md`.
 
 ## 5. 필수 artifact 계약
 

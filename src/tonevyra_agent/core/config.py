@@ -92,6 +92,12 @@ class Settings(BaseSettings):
             bridge_dir / "processing",
             bridge_dir / "responses",
             bridge_dir / "errors",
+            bridge_dir / "lightroom_apply_requests",
+            bridge_dir / "lightroom_apply_processing",
+            bridge_dir / "lightroom_apply_processed",
+            bridge_dir / "lightroom_apply_results",
+            bridge_dir / "lightroom_apply_errors",
+            bridge_dir / "lightroom_live_evidence",
             self.project_path(self.log_dir),
             self.project_path(self.models_dir),
         )

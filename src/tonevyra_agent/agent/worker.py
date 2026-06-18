@@ -43,7 +43,7 @@ class WorkerPipelineResult:
 
 
 class AgentWorker:
-    """Process one queued task through Mock Vision, Fake Lightroom, and Quality Gate."""
+    """Process one queued task through vision, Lightroom bridge, and quality gate."""
 
     def __init__(
         self,
@@ -78,6 +78,8 @@ class AgentWorker:
             vision_artifacts = self._run_vision(task_id, metadata_artifact=metadata_artifact, preview_artifact=preview_artifact)
             correction_plan = self._run_correction_plan(task_id, vision_artifact=vision_artifacts.structured_artifact)
             request_result = self._write_lightroom_request(task_id, correction_plan_artifact=correction_plan)
+            if self.settings.lightroom_backend == "lightroom":
+                return self._current_result(task_id, processed=True)
             response_path = self._wait_for_lightroom_response(task_id, request_id=request_result.payload.request_id)
             response_result = self._ingest_lightroom_response(task_id, response_path=response_path)
         except TonevyraError:
@@ -202,14 +204,14 @@ class AgentWorker:
                 task_id=task.id,
                 event_type=TaskEventType.LIGHTROOM_REQUESTED,
                 stage=Stage.LIGHTROOM,
-                message="Worker is waiting for a fake Lightroom response.",
+                message="Worker is waiting for a Lightroom bridge response.",
                 payload_json={
                     "loop_name": PROCESSING_LOOP_NAME,
                     "loop_iteration": 1,
                     "event_type": TaskEventType.LIGHTROOM_REQUESTED.value,
                     "from_status": from_status,
                     "to_status": TaskStatus.LIGHTROOM_PROCESSING.value,
-                    "reason": "lightroom request handed to fake worker",
+                    "reason": f"lightroom request handed to {self.settings.lightroom_backend} backend",
                     "request_id": request_id,
                     "evidence_artifacts": [],
                 },

@@ -1,0 +1,6 @@
+# T-019 Lightroom Apply Adapter harness env
+TONEVYRA_PROJECT_ROOT=F:\tonevyra_ai_agent
+TONEVYRA_LIGHTROOM_PLUGIN_DIR=F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin
+TONEVYRA_BRIDGE_DIR=F:\tonevyra_ai_agent\runtime\bridge
+TONEVYRA_LIGHTROOM_APPLY_REQUEST_DIR=F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_requests
+TONEVYRA_LIGHTROOM_APPLY_RESULT_DIR=F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_results

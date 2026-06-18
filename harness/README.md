@@ -7,30 +7,27 @@ The `harness/` directory is an acceptance gate for Tonevyra AI Agent. It does no
 Harness checks should prove that:
 
 - Mock Vision passes before real local model integration.
-- Fake Lightroom passes before real Lightroom Lua plugin integration.
+- Fake Lightroom passes before real Lightroom Classic apply-adapter integration.
 - PostgreSQL is the operational state source of truth.
 - Artifact files exist, checksums match, and large payloads stay out of the database.
 - `task_events.payload_json` contains loop evidence for autonomous product loops.
 - Feedback learning stays local and uses `feedback_records`, `learning_samples`, and `training_sample_manifest.json`.
 - Model code remains local-only, offline, and network-blockable.
 - T-018 benchmark evidence does not automatically promote any model.
+- T-019 keeps the Lightroom Classic plugin as a thin apply adapter, not an input folder watcher.
 
 ## Core Harnesses
 
 | Harness | File | Purpose |
 |---|---|---|
 | Runtime reset | `harness/scripts/reset_runtime.py` | Create or clear runtime test folders safely. |
-| Watcher | `harness/scripts/run_watcher_test.py` | Verify file detection, ignore rules, stabilization, and watch loop evidence. |
+| Watcher | `harness/scripts/run_watcher_test.py` | Verify Agent-owned file detection, ignore rules, stabilization, and watch loop evidence. |
 | Metadata/preview | `harness/scripts/run_metadata_preview_test.py` | Verify EXIF/basic metadata and 1024px sRGB preview artifacts. |
 | Mock vision | `harness/scripts/run_vision_mock_test.py` | Verify schema-validated mock analysis and vision artifacts. |
 | Qwen backend | `harness/scripts/run_qwen_backend_test.py` | Verify local-only Qwen backend boundaries with fake runtime. |
 | Correction planner | `harness/scripts/run_correction_planner_test.py` | Verify clamped Lightroom adjustment plans. |
-| Fake Lightroom | `harness/scripts/run_fake_lightroom_test.py` | Verify file-based bridge request/response/export behavior. |
-| Lightroom plugin PoC | `harness/scripts/verify_lightroom_plugin_poc.py` | Verify real plugin files and bridge protocol boundaries. |
-| T-019 plugin structure | `harness/scripts/verify_lightroom_plugin_structure.py` | Verify folder-driven plugin identity, bridge tokens, and forbidden implementation patterns. |
-| T-019 bridge contract | `harness/scripts/run_lightroom_bridge_contract_test.py` | Verify apply request/result schemas and folder-driven fixture contract. |
-| T-019 worker mapping | `harness/scripts/run_lightroom_worker_mapping_test.py` | Verify allowed Develop parameter clamp/skipped behavior. |
-| T-019 live evidence | `harness/scripts/verify_lightroom_live_test_evidence.py` | Verify real or fixture apply-result evidence from the Lightroom plugin. |
+| Fake Lightroom | `harness/scripts/run_fake_lightroom_test.py` | Verify file-based fake request/response/export behavior. |
+| T-019 Apply Adapter role | `harness/scripts/verify_lightroom_apply_adapter_role.py` | Verify that the real Lightroom plugin is an apply adapter and not a folder watcher, AI runner, quality gate, or selected-photo workflow. |
 | Quality gate | `harness/scripts/run_quality_gate_test.py` | Verify scoring, decision, quality artifacts, and DB rows. |
 | Worker pipeline | `harness/scripts/run_worker_pipeline_test.py` | Verify one task reaches a terminal status through the pipeline. |
 | Smoke pipeline | `harness/scripts/run_smoke_pipeline.py` | Verify end-to-end mock/fake processing and required evidence. |
@@ -45,6 +42,7 @@ Harness checks should prove that:
 Run harnesses sequentially because several scripts use local runtime and database fixtures.
 
 ```powershell
+cd F:\tonevyra_ai_agent
 .\.venv\Scripts\python.exe -m compileall src harness tests
 .\.venv\Scripts\python.exe harness/scripts/run_security_check.py
 .\.venv\Scripts\python.exe -m pytest tests/test_security_harness.py
@@ -55,11 +53,7 @@ Run harnesses sequentially because several scripts use local runtime and databas
 .\.venv\Scripts\python.exe harness/scripts/run_qwen_backend_test.py
 .\.venv\Scripts\python.exe harness/scripts/run_correction_planner_test.py
 .\.venv\Scripts\python.exe harness/scripts/run_fake_lightroom_test.py
-.\.venv\Scripts\python.exe harness/scripts/verify_lightroom_plugin_poc.py
-.\.venv\Scripts\python.exe harness/scripts/verify_lightroom_plugin_structure.py --plugin-dir plugin_scaffold/TonevyraAI.lrplugin
-.\.venv\Scripts\python.exe harness/scripts/run_lightroom_bridge_contract_test.py
-.\.venv\Scripts\python.exe harness/scripts/run_lightroom_worker_mapping_test.py
-.\.venv\Scripts\python.exe harness/scripts/verify_lightroom_live_test_evidence.py --evidence harness/fixtures/lightroom_plugin/valid_apply_result.json
+.\.venv\Scripts\python.exe harness/scripts/verify_lightroom_apply_adapter_role.py --project-root F:\tonevyra_ai_agent --plugin-dir F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin
 .\.venv\Scripts\python.exe harness/scripts/run_model_benchmark_test.py
 .\.venv\Scripts\python.exe harness/scripts/run_quality_gate_test.py
 .\.venv\Scripts\python.exe harness/scripts/run_worker_pipeline_test.py
@@ -70,6 +64,12 @@ Run harnesses sequentially because several scripts use local runtime and databas
 .\.venv\Scripts\python.exe harness/scripts/verify_loop_events.py
 .\.venv\Scripts\python.exe harness/scripts/verify_feedback_learning.py
 .\.venv\Scripts\python.exe harness/scripts/verify_cli_operations.py
+```
+
+If the real Lightroom plugin has not been implemented yet, run the T-019 role harness without `--plugin-dir` to validate contracts and fixtures only:
+
+```powershell
+.\.venv\Scripts\python.exe harness/scripts/verify_lightroom_apply_adapter_role.py --project-root F:\tonevyra_ai_agent
 ```
 
 ## Environment
@@ -91,6 +91,10 @@ HF_HUB_DISABLE_UPDATE_CHECK=1
 ```
 
 Legacy `MW_*` variables may remain as compatibility fallbacks in old harness helpers, but new documentation and new harness code should prefer `TONEVYRA_*`.
+
+## T-019 Lightroom Apply Adapter Position
+
+The Agent is responsible for input folder watching, analysis, correction planning, quality gates, DB evidence, and request creation. The Lightroom Classic plugin is responsible only for consuming an Agent-created apply request, locating/importing `source_path` in the Lightroom catalog, applying the supplied Develop settings or preset, and writing a result.
 
 ## Model Policy Gate
 

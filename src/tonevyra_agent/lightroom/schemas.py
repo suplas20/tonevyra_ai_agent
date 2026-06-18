@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -12,8 +12,29 @@ from tonevyra_agent.core.enums import ErrorCode
 
 LIGHTROOM_COMMAND_PING = "PING"
 LIGHTROOM_COMMAND_APPLY_ADJUSTMENTS_AND_EXPORT = "APPLY_ADJUSTMENTS_AND_EXPORT"
+LIGHTROOM_COMMAND_APPLY_SETTINGS = "APPLY_LIGHTROOM_SETTINGS"
 LIGHTROOM_RESPONSE_SUCCESS = "success"
 LIGHTROOM_RESPONSE_FAILED = "failed"
+LIGHTROOM_APPLY_REQUEST_SCHEMA = "t019.lightroom_apply.request.v1"
+LIGHTROOM_APPLY_RESULT_SCHEMA = "t019.lightroom_apply.result.v1"
+
+LIGHTROOM_APPLY_ALLOWED_SETTINGS = {
+    "exposure",
+    "contrast",
+    "highlights",
+    "shadows",
+    "whites",
+    "blacks",
+    "temp",
+    "tint",
+    "vibrance",
+    "saturation",
+    "texture",
+    "clarity",
+    "dehaze",
+    "sharpening",
+    "noise_reduction",
+}
 
 
 class LightroomExportSettings(BaseModel):
@@ -119,4 +140,127 @@ class LightroomResponsePayload(BaseModel):
             raise ValueError("success response requires export_path")
         if self.status == LIGHTROOM_RESPONSE_FAILED and self.error_code is None:
             raise ValueError("failed response requires error_code")
+        return self
+
+
+class LightroomApplyRequestPayload(BaseModel):
+    """T-019 folder-driven request written by Python for the real Lightroom plugin."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["t019.lightroom_apply.request.v1"] = LIGHTROOM_APPLY_REQUEST_SCHEMA
+    request_id: str
+    request_origin: Literal["tonevyra_agent"] = "tonevyra_agent"
+    command: Literal["APPLY_LIGHTROOM_SETTINGS"] = LIGHTROOM_COMMAND_APPLY_SETTINGS
+    operation: Literal["apply_develop_settings"] = "apply_develop_settings"
+    task_id: str
+    source_path: str
+    correction_plan_id: str | None = None
+    created_at: str
+    develop_settings: dict[str, float]
+    safety: dict[str, Any] = Field(default_factory=lambda: {"non_destructive_required": True})
+    runtime_context: dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("request_id", "task_id", "created_at")
+    @classmethod
+    def non_empty_apply_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("field must not be empty")
+        return value
+
+    @field_validator("source_path")
+    @classmethod
+    def absolute_source_path(cls, value: str) -> str:
+        path = Path(value)
+        if not path.is_absolute():
+            raise ValueError("source_path must be absolute")
+        return str(path.resolve())
+
+    @field_validator("develop_settings")
+    @classmethod
+    def supported_develop_settings(cls, value: dict[str, float]) -> dict[str, float]:
+        if not value:
+            raise ValueError("develop_settings must not be empty")
+        unsupported = set(value) - LIGHTROOM_APPLY_ALLOWED_SETTINGS
+        if unsupported:
+            raise ValueError(f"unsupported develop setting: {sorted(unsupported)}")
+        return value
+
+    @model_validator(mode="after")
+    def validate_safety(self) -> "LightroomApplyRequestPayload":
+        if self.safety.get("non_destructive_required") is not True:
+            raise ValueError("safety.non_destructive_required must be true")
+        return self
+
+
+class LightroomApplyResultPayload(BaseModel):
+    """T-019 Lightroom apply-adapter result written by the Lightroom plugin."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: str = LIGHTROOM_APPLY_RESULT_SCHEMA
+    request_id: str
+    request_origin: Literal["lightroom_plugin"] = "lightroom_plugin"
+    command: Literal["APPLY_LIGHTROOM_SETTINGS"] = LIGHTROOM_COMMAND_APPLY_SETTINGS
+    task_id: str
+    status: Literal["applied", "partial", "failed", "skipped"]
+    source_path: str
+    catalog_action: Literal["found_existing", "imported", "not_imported", "unknown"] = "unknown"
+    applied_parameters: dict[str, float] = Field(default_factory=dict)
+    skipped_parameters: dict[str, Any] = Field(default_factory=dict)
+    applied_settings: dict[str, float] = Field(default_factory=dict)
+    skipped_settings: dict[str, Any] = Field(default_factory=dict)
+    error_code: str | None = None
+    message: str = ""
+    completed_at: str | None = None
+    lightroom_result: dict[str, Any] = Field(default_factory=dict)
+    evidence: dict[str, Any] = Field(default_factory=dict)
+    error: dict[str, Any] | None = None
+
+    @field_validator("request_id", "task_id")
+    @classmethod
+    def non_empty_result_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("field must not be empty")
+        return value
+
+    @field_validator("source_path")
+    @classmethod
+    def absolute_result_source_path(cls, value: str) -> str:
+        path = Path(value)
+        if not path.is_absolute():
+            raise ValueError("source_path must be absolute")
+        return str(path.resolve())
+
+    @model_validator(mode="after")
+    def validate_result_fields(self) -> "LightroomApplyResultPayload":
+        if self.schema_version not in {LIGHTROOM_APPLY_RESULT_SCHEMA, "1.0"}:
+            raise ValueError("unsupported Lightroom apply result schema_version")
+        if not self.applied_settings and self.applied_parameters:
+            self.applied_settings = dict(self.applied_parameters)
+        if not self.applied_parameters and self.applied_settings:
+            self.applied_parameters = dict(self.applied_settings)
+        if not self.skipped_settings and self.skipped_parameters:
+            self.skipped_settings = dict(self.skipped_parameters)
+        if not self.skipped_parameters and self.skipped_settings:
+            self.skipped_parameters = dict(self.skipped_settings)
+        if self.status == "failed" and self.error is None and self.error_code:
+            self.error = {
+                "code": self.error_code,
+                "message": self.message,
+                "recoverable": True,
+            }
+        if "worker_running" not in self.lightroom_result:
+            raise ValueError("lightroom_result.worker_running is required")
+        if self.status in {"applied", "partial"}:
+            if self.lightroom_result.get("develop_settings_applied") is not True:
+                raise ValueError("successful apply result requires develop_settings_applied=true")
+            if not self.applied_settings:
+                raise ValueError("successful apply result requires applied_settings")
+        if self.status == "failed":
+            if not isinstance(self.error, dict):
+                raise ValueError("failed apply result requires error")
+            for field_name in ("code", "message", "recoverable"):
+                if field_name not in self.error:
+                    raise ValueError(f"failed apply result requires error.{field_name}")
         return self

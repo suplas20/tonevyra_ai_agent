@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0",
+  "request_id": "lr_apply_002",
+  "task_id": "task_002",
+  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\missing.jpg",
+  "status": "failed",
+  "catalog_action": "not_found",
+  "applied_parameters": {},
+  "error_code": "LIGHTROOM_SOURCE_IMPORT_FAILED",
+  "message": "Source photo could not be found or imported into Lightroom catalog.",
+  "recoverable": true,
+  "completed_at": "2026-06-18T12:01:05Z"
+}

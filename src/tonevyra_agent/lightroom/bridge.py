@@ -21,9 +21,12 @@ from tonevyra_agent.correction.schemas import CorrectionPlan
 from tonevyra_agent.db.models import ImageTask
 from tonevyra_agent.db.repositories import ImageTaskRepository, StageResultRepository, TaskEventRepository
 from tonevyra_agent.lightroom.schemas import (
+    LIGHTROOM_APPLY_ALLOWED_SETTINGS,
     LIGHTROOM_COMMAND_PING,
     LIGHTROOM_RESPONSE_FAILED,
     LIGHTROOM_RESPONSE_SUCCESS,
+    LightroomApplyRequestPayload,
+    LightroomApplyResultPayload,
     LightroomRequestPayload,
     LightroomResponsePayload,
 )
@@ -91,6 +94,12 @@ class LightroomBridge:
                 message="Lightroom bridge supports only TONEVYRA_LIGHTROOM_BACKEND=fake or lightroom.",
                 failed_stage=Stage.LIGHTROOM.value,
             )
+        if self.settings.lightroom_backend == "lightroom":
+            return self.write_apply_request(
+                session,
+                task=task,
+                correction_plan_artifact=correction_plan_artifact,
+            )
 
         from_status = task.status
         try:
@@ -157,6 +166,95 @@ class LightroomBridge:
         )
         return LightroomRequestResult(payload=payload, request_path=request_path, request_artifact=request_artifact)
 
+    def write_apply_request(
+        self,
+        session: Session,
+        *,
+        task: ImageTask,
+        correction_plan_artifact: ArtifactRef,
+    ) -> LightroomRequestResult:
+        """Write a T-019 folder-driven apply request for the real Lightroom plugin."""
+
+        from_status = task.status
+        try:
+            correction_payload = self.storage.load_json(correction_plan_artifact)
+            correction_plan = CorrectionPlan.model_validate(correction_payload)
+            develop_settings = _develop_settings_from_plan(correction_plan)
+            payload = LightroomApplyRequestPayload(
+                request_id=str(task.id),
+                task_id=str(task.id),
+                source_path=str(_absolute_project_path(task.source_path)),
+                correction_plan_id=str(correction_plan_artifact.artifact_id),
+                created_at=datetime.utcnow().isoformat(timespec="seconds") + "Z",
+                develop_settings=develop_settings,
+                safety={
+                    "clamped": correction_plan.clamped,
+                    "source_hash": task.source_hash,
+                    "non_destructive_required": True,
+                },
+                runtime_context={
+                    "input_folder": str(self.settings.project_path(self.settings.input_dir).resolve()),
+                    "runtime_dir": str(self.settings.project_path(self.settings.runtime_dir).resolve()),
+                },
+            )
+        except Exception as exc:
+            self.task_repository.mark_failed(
+                session,
+                task,
+                error_code=ErrorCode.LIGHTROOM_REQUEST_FAILED,
+                error_message="Failed to create Lightroom apply request payload.",
+                failed_stage=Stage.LIGHTROOM,
+            )
+            raise TonevyraError(
+                code=ErrorCode.LIGHTROOM_REQUEST_FAILED,
+                message="Failed to create Lightroom apply request payload.",
+                failed_stage=Stage.LIGHTROOM.value,
+            ) from exc
+
+        request_path = self.apply_request_path(payload.request_id)
+        _clear_stale_apply_files(self.settings, payload.request_id)
+        _write_json_atomic(request_path, payload.model_dump(mode="json"))
+        request_artifact = self.storage.save_json(
+            session,
+            task_id=task.id,
+            artifact_type=ArtifactType.LIGHTROOM_REQUEST,
+            name="lightroom_apply_request.json",
+            data=payload.model_dump(mode="json"),
+        )
+
+        self.task_repository.update_status(
+            session,
+            task,
+            status=TaskStatus.LIGHTROOM_REQUESTED,
+            current_stage=Stage.LIGHTROOM,
+        )
+        self.event_repository.create(
+            session,
+            task_id=task.id,
+            event_type=TaskEventType.LIGHTROOM_REQUESTED,
+            stage=Stage.LIGHTROOM,
+            message="Folder-driven Lightroom apply request JSON was written.",
+            payload_json={
+                "loop_name": PROCESSING_LOOP_NAME,
+                "loop_iteration": 1,
+                "event_type": TaskEventType.LIGHTROOM_REQUESTED.value,
+                "from_status": from_status,
+                "to_status": TaskStatus.LIGHTROOM_REQUESTED.value,
+                "reason": "lightroom_apply_request artifact and bridge request saved",
+                "request_id": payload.request_id,
+                "request_path": _project_relative_or_absolute(request_path),
+                "request_origin": payload.request_origin,
+                "command": payload.command,
+                "operation": payload.operation,
+                "develop_settings": payload.develop_settings,
+                "evidence_artifacts": [
+                    _artifact_summary(correction_plan_artifact),
+                    _artifact_summary(request_artifact),
+                ],
+            },
+        )
+        return LightroomRequestResult(payload=payload, request_path=request_path, request_artifact=request_artifact)
+
     def write_ping_request(self, *, request_id: str = "tonevyra-ping") -> LightroomPingResult:
         """Write a lightweight PING request for real Lightroom plugin smoke checks."""
 
@@ -198,6 +296,9 @@ class LightroomBridge:
         response_path: str | Path | None = None,
     ) -> LightroomResponseResult:
         """Read a Lightroom response, register artifacts, and update task state."""
+
+        if self.settings.lightroom_backend == "lightroom":
+            return self.ingest_apply_result(session, task=task, response_path=response_path)
 
         started_at = datetime.utcnow()
         from_status = task.status
@@ -399,6 +500,196 @@ class LightroomBridge:
             success=True,
         )
 
+    def ingest_apply_result(
+        self,
+        session: Session,
+        *,
+        task: ImageTask,
+        response_path: str | Path | None = None,
+    ) -> LightroomResponseResult:
+        """Read a T-019 Lightroom apply result and record DB/artifact evidence."""
+
+        started_at = datetime.utcnow()
+        from_status = task.status
+        path = Path(response_path) if response_path is not None else self.apply_result_path(str(task.id))
+        path = _absolute_project_path(path)
+        if not path.exists():
+            self.task_repository.mark_failed(
+                session,
+                task,
+                error_code=ErrorCode.LIGHTROOM_RESPONSE_TIMEOUT,
+                error_message=f"Lightroom apply result file was not found: {path}",
+                failed_stage=Stage.LIGHTROOM,
+            )
+            raise TonevyraError(
+                code=ErrorCode.LIGHTROOM_RESPONSE_TIMEOUT,
+                message=f"Lightroom apply result file was not found: {path}",
+                failed_stage=Stage.LIGHTROOM.value,
+            )
+
+        raw_payload = _read_json(path)
+        try:
+            response = LightroomApplyResultPayload.model_validate(raw_payload)
+        except ValidationError as exc:
+            self.task_repository.mark_failed(
+                session,
+                task,
+                error_code=ErrorCode.LIGHTROOM_EXPORT_FAILED,
+                error_message="Lightroom apply result payload is invalid.",
+                failed_stage=Stage.LIGHTROOM,
+            )
+            raise TonevyraError(
+                code=ErrorCode.LIGHTROOM_EXPORT_FAILED,
+                message="Lightroom apply result payload is invalid.",
+                failed_stage=Stage.LIGHTROOM.value,
+            ) from exc
+
+        response_artifact = self.storage.save_json(
+            session,
+            task_id=task.id,
+            artifact_type=ArtifactType.LIGHTROOM_RESPONSE,
+            name="lightroom_apply_result.json",
+            data=response.model_dump(mode="json"),
+        )
+        self.event_repository.create(
+            session,
+            task_id=task.id,
+            event_type=TaskEventType.LIGHTROOM_RESPONSE_RECEIVED,
+            stage=Stage.LIGHTROOM,
+            message="Folder-driven Lightroom apply result JSON was read.",
+            payload_json={
+                "loop_name": PROCESSING_LOOP_NAME,
+                "loop_iteration": 1,
+                "event_type": TaskEventType.LIGHTROOM_RESPONSE_RECEIVED.value,
+                "from_status": from_status,
+                "to_status": task.status,
+                "reason": "lightroom_apply_result artifact saved",
+                "request_id": response.request_id,
+                "response_status": response.status,
+                "request_origin": response.request_origin,
+                "command": response.command,
+                "catalog_action": response.catalog_action,
+                "applied_parameters": response.applied_parameters,
+                "skipped_parameters": response.skipped_parameters,
+                "applied_settings": response.applied_settings,
+                "skipped_settings": response.skipped_settings,
+                "lightroom_result": response.lightroom_result,
+                "evidence_artifacts": [_artifact_summary(response_artifact)],
+            },
+        )
+
+        finished_at = datetime.utcnow()
+        if response.status == "failed":
+            plugin_error = response.error or {}
+            self.stage_repository.create(
+                session,
+                task_id=task.id,
+                stage=Stage.LIGHTROOM,
+                stage_status=StageStatus.FAILED,
+                summary_json={
+                    "backend": "lightroom",
+                    "request_id": response.request_id,
+                    "apply_status": response.status,
+                    "catalog_action": response.catalog_action,
+                    "plugin_error": plugin_error,
+                    "lightroom_result": response.lightroom_result,
+                    "lightroom_response_artifact": _artifact_summary(response_artifact),
+                },
+                started_at=started_at,
+                finished_at=finished_at,
+                duration_ms=_duration_ms(started_at, finished_at),
+            )
+            self.task_repository.mark_failed(
+                session,
+                task,
+                error_code=ErrorCode.LIGHTROOM_EXPORT_FAILED,
+                error_message=str(plugin_error.get("message") or "Lightroom plugin apply failed."),
+                failed_stage=Stage.LIGHTROOM,
+            )
+            self.event_repository.create(
+                session,
+                task_id=task.id,
+                event_type=TaskEventType.TASK_FAILED,
+                stage=Stage.LIGHTROOM,
+                message="Folder-driven Lightroom plugin returned a failed apply result.",
+                payload_json={
+                    "loop_name": PROCESSING_LOOP_NAME,
+                    "loop_iteration": 1,
+                    "event_type": TaskEventType.TASK_FAILED.value,
+                    "from_status": from_status,
+                    "to_status": TaskStatus.FAILED.value,
+                    "reason": "lightroom apply result status failed",
+                    "error_code": ErrorCode.LIGHTROOM_EXPORT_FAILED.value,
+                    "plugin_error": plugin_error,
+                    "evidence_artifacts": [_artifact_summary(response_artifact)],
+                },
+            )
+            return LightroomResponseResult(
+                payload=response,
+                response_path=path,
+                response_artifact=response_artifact,
+                export_artifact=None,
+                success=False,
+            )
+
+        self.stage_repository.create(
+            session,
+            task_id=task.id,
+            stage=Stage.LIGHTROOM,
+            stage_status=StageStatus.SUCCEEDED,
+            summary_json={
+                "backend": "lightroom",
+                "request_id": response.request_id,
+                "apply_status": response.status,
+                "applied_settings": response.applied_settings,
+                "skipped_settings": response.skipped_settings,
+                "applied_parameters": response.applied_parameters,
+                "skipped_parameters": response.skipped_parameters,
+                "catalog_action": response.catalog_action,
+                "lightroom_result": response.lightroom_result,
+                "lightroom_response_artifact": _artifact_summary(response_artifact),
+            },
+            started_at=started_at,
+            finished_at=finished_at,
+            duration_ms=_duration_ms(started_at, finished_at),
+        )
+        self.task_repository.update_status(
+            session,
+            task,
+            status=TaskStatus.REVIEW_REQUIRED,
+            current_stage=Stage.LIGHTROOM,
+        )
+        self.event_repository.create(
+            session,
+            task_id=task.id,
+            event_type=TaskEventType.TASK_FINALIZED,
+            stage=Stage.LIGHTROOM,
+            message="Lightroom plugin applied Develop settings; manual Lightroom review is required.",
+            payload_json={
+                "loop_name": PROCESSING_LOOP_NAME,
+                "loop_iteration": 1,
+                "event_type": TaskEventType.TASK_FINALIZED.value,
+                "from_status": from_status,
+                "to_status": TaskStatus.REVIEW_REQUIRED.value,
+                "reason": "folder-driven Lightroom apply completed without automatic export",
+                "request_id": response.request_id,
+                "applied_settings": response.applied_settings,
+                "skipped_settings": response.skipped_settings,
+                "applied_parameters": response.applied_parameters,
+                "skipped_parameters": response.skipped_parameters,
+                "catalog_action": response.catalog_action,
+                "lightroom_result": response.lightroom_result,
+                "evidence_artifacts": [_artifact_summary(response_artifact)],
+            },
+        )
+        return LightroomResponseResult(
+            payload=response,
+            response_path=path,
+            response_artifact=response_artifact,
+            export_artifact=None,
+            success=True,
+        )
+
     def wait_for_response(
         self,
         *,
@@ -410,7 +701,7 @@ class LightroomBridge:
 
         timeout = timeout_seconds or self.settings.lightroom_response_timeout_seconds
         deadline = time.monotonic() + timeout
-        response_path = self.response_path(request_id)
+        response_path = self.apply_result_path(request_id) if self.settings.lightroom_backend == "lightroom" else self.response_path(request_id)
         while time.monotonic() <= deadline:
             if response_path.exists():
                 return response_path
@@ -426,6 +717,12 @@ class LightroomBridge:
 
     def response_path(self, request_id: str) -> Path:
         return (self.settings.project_path(self.settings.bridge_dir) / "responses" / f"{request_id}.json").resolve()
+
+    def apply_request_path(self, request_id: str) -> Path:
+        return (self.settings.project_path(self.settings.bridge_dir) / "lightroom_apply_requests" / f"{request_id}.json").resolve()
+
+    def apply_result_path(self, request_id: str) -> Path:
+        return (self.settings.project_path(self.settings.bridge_dir) / "lightroom_apply_results" / f"{request_id}.json").resolve()
 
 
 def write_lightroom_request(
@@ -454,6 +751,37 @@ def ingest_lightroom_response(
 
 def _default_export_path(settings: Settings, task: ImageTask) -> Path:
     return (settings.project_path(settings.output_dir) / "temp" / f"{task.id}.jpg").resolve()
+
+
+def _clear_stale_apply_files(settings: Settings, request_id: str) -> None:
+    bridge_dir = settings.project_path(settings.bridge_dir)
+    for subdir in (
+        "lightroom_apply_processing",
+        "lightroom_apply_processed",
+        "lightroom_apply_results",
+        "lightroom_apply_errors",
+        "lightroom_live_evidence",
+    ):
+        path = (bridge_dir / subdir / f"{request_id}.json").resolve()
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _develop_settings_from_plan(plan: CorrectionPlan) -> dict[str, float]:
+    """Translate planner keys to the T-019 Lightroom apply contract."""
+
+    key_map = {"temperature_delta": "temp"}
+    develop_settings: dict[str, float] = {}
+    for key, value in plan.adjustments_json.items():
+        apply_key = key_map.get(key, key)
+        if apply_key not in LIGHTROOM_APPLY_ALLOWED_SETTINGS:
+            continue
+        develop_settings[apply_key] = float(value)
+    if not develop_settings:
+        raise ValueError("correction plan did not contain any Lightroom apply settings")
+    return develop_settings
 
 
 def _absolute_project_path(path: str | Path) -> Path:
