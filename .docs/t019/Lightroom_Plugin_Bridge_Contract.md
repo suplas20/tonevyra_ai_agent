@@ -2,6 +2,17 @@
 
 이 계약은 Tonevyra Python agent와 Lightroom Classic plugin 사이의 파일 기반 bridge를 정의한다.
 
+
+## 0. 프로젝트 경로
+
+```text
+프로젝트 루트: F:\tonevyra_ai_agent
+Lightroom 플러그인 canonical path: F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin
+Bridge root: F:\tonevyra_ai_agent\runtime\bridge
+```
+
+상대 경로 예시는 모두 위 `Bridge root` 하위 경로를 의미한다.
+
 ## 1. Direction
 
 기본 방향은 다음과 같다.

@@ -2,6 +2,21 @@
 
 현재 프로젝트는 하네스와 스킬이 모두 통과한 상태다. 이제 `T-019 Folder-Driven Lightroom Plugin Automation Implementation`을 수행한다.
 
+
+## 프로젝트 경로
+
+```text
+프로젝트 루트: F:\tonevyra_ai_agent
+Lightroom 플러그인 canonical path: F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin
+문서 위치: F:\tonevyra_ai_agent\.docs
+하네스 위치: F:\tonevyra_ai_agent\harness
+스킬 위치: F:\tonevyra_ai_agent\skills
+런타임 기본 경로: F:\tonevyra_ai_agent\runtime
+Bridge 기본 경로: F:\tonevyra_ai_agent\runtime\bridge
+```
+
+위 경로를 기준으로 구현하라. 임시 scaffold 경로를 최종 구현 위치로 삼지 말 것.
+
 ## 반드시 지켜야 할 핵심 컨셉
 
 Tonevyra AI의 기본 UX는 사용자가 Lightroom에서 사진을 선택하고 메뉴를 누르는 방식이 아니다.
@@ -37,13 +52,13 @@ Lightroom에서 사진 선택
 ## 구현 범위
 
 1. 기존 fake Lightroom worker는 삭제하지 말고 regression/fallback 용도로 유지한다.
-2. `lightroom/TonevyraAI.lrplugin/` 또는 기존 canonical plugin path에 Lightroom plugin을 구현한다.
+2. `F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin`에 Lightroom plugin을 구현한다.
 3. `Info.lua`, `Init.lua`, `Worker.lua`, `Bridge.lua`, `Json.lua` 또는 동등 파일을 작성한다.
 4. plugin은 background worker 또는 bridge loop로 `runtime/bridge/lightroom_apply_requests/`를 감시한다.
 5. Python agent는 folder watcher task 처리 후 `APPLY_LIGHTROOM_SETTINGS` apply request를 작성한다.
 6. plugin은 apply request를 읽고 `source_path` 기준으로 Lightroom photo를 찾거나 import한다.
 7. plugin은 `develop_settings`의 허용된 MVP subset만 Lightroom에 적용한다.
-8. plugin은 `runtime/bridge/lightroom_apply_results/<request_id>.json`에 결과를 쓴다.
+8. plugin은 `F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_results\<request_id>.json`에 결과를 쓴다.
 9. agent는 apply result를 DB evidence와 `task_events.payload_json`에 연결한다.
 10. 실패는 recoverable error로 남기고 조용히 무시하지 않는다.
 
@@ -72,7 +87,7 @@ Lightroom에서 사진 선택
 Agent → Lightroom plugin:
 
 ```text
-runtime/bridge/lightroom_apply_requests/<request_id>.json
+F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_requests\<request_id>.json
 schema_version = t019.lightroom_apply.request.v1
 request_origin = tonevyra_agent
 command = APPLY_LIGHTROOM_SETTINGS
@@ -81,7 +96,7 @@ command = APPLY_LIGHTROOM_SETTINGS
 Lightroom plugin → Agent:
 
 ```text
-runtime/bridge/lightroom_apply_results/<request_id>.json
+F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_results\<request_id>.json
 schema_version = t019.lightroom_apply.result.v1
 request_origin = lightroom_plugin
 command = APPLY_LIGHTROOM_SETTINGS

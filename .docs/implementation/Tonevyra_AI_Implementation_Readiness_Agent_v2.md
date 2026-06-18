@@ -43,7 +43,7 @@ Tonevyra AI는 이제 구현 단계로 넘어간다. 더 많은 기능 설계보
 ```text
 제품명: Tonevyra AI
 Python package: tonevyra_agent
-프로젝트 루트 예시: tonevyra_agent/
+프로젝트 루트: `F:\tonevyra_ai_agent`
 CLI: tonevyra-agent
 DB: tonevyra_agent
 DB app user: tonevyra_app
@@ -54,13 +54,13 @@ DB env: TONEVYRA_DATABASE_URL
 
 ```env
 TONEVYRA_DATABASE_URL=postgresql+psycopg://tonevyra_app:<password>@localhost:5432/tonevyra_agent
-TONEVYRA_RUNTIME_DIR=runtime
-TONEVYRA_INPUT_DIR=runtime/input
-TONEVYRA_OUTPUT_DIR=runtime/output
-TONEVYRA_ARTIFACT_DIR=runtime/artifacts
-TONEVYRA_PREVIEW_DIR=runtime/previews
-TONEVYRA_BRIDGE_DIR=runtime/bridge
-TONEVYRA_LOG_DIR=logs
+TONEVYRA_RUNTIME_DIR=F:\tonevyra_ai_agent\runtime
+TONEVYRA_INPUT_DIR=F:\tonevyra_ai_agent\runtime\input
+TONEVYRA_OUTPUT_DIR=F:\tonevyra_ai_agent\runtime\output
+TONEVYRA_ARTIFACT_DIR=F:\tonevyra_ai_agent\runtime\artifacts
+TONEVYRA_PREVIEW_DIR=F:\tonevyra_ai_agent\runtime\previews
+TONEVYRA_BRIDGE_DIR=F:\tonevyra_ai_agent\runtime\bridge
+TONEVYRA_LOG_DIR=F:\tonevyra_ai_agent\logs
 TONEVYRA_VISION_BACKEND=mock
 TONEVYRA_LIGHTROOM_BACKEND=fake
 ```

@@ -4,6 +4,16 @@
 
 중요: 이 테스트는 Lightroom에서 사진을 선택하고 메뉴를 누르는 테스트가 아니다. 사용자는 지정 입력 폴더에 사진을 넣고, agent와 plugin이 자동으로 처리하는지 확인한다.
 
+
+## 경로 기준
+
+```text
+프로젝트 루트: F:\tonevyra_ai_agent
+Lightroom 플러그인: F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin
+입력 폴더 기본값: F:\tonevyra_ai_agent\runtime\input
+Bridge 기본값: F:\tonevyra_ai_agent\runtime\bridge
+```
+
 ## 사전 조건
 
 - Lightroom Classic 설치 완료
@@ -17,7 +27,7 @@
 
 1. Lightroom Classic 실행
 2. Plug-in Manager 열기
-3. `TonevyraAI.lrplugin` 추가
+3. `F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin` 추가
 4. 플러그인 상태 확인
    - 기대값: Installed and running
 5. Tonevyra bridge worker 상태 확인
@@ -31,10 +41,10 @@
 4. folder watcher가 task를 생성했는지 확인한다.
 5. correction plan 생성 여부를 확인한다.
 6. apply request JSON 생성 확인
-   - 위치: `runtime/bridge/lightroom_apply_requests/<request_id>.json`
+   - 위치: `F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_requests\<request_id>.json`
 7. Lightroom plugin worker가 request를 처리했는지 확인한다.
 8. apply result JSON 생성 확인
-   - 위치: `runtime/bridge/lightroom_apply_results/<request_id>.json`
+   - 위치: `F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_results\<request_id>.json`
 9. Lightroom catalog에서 해당 source_path 사진에 보정값이 적용되었는지 확인한다.
 10. DB evidence 또는 `task_events.payload_json` 연결을 확인한다.
 

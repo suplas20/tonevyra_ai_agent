@@ -8,6 +8,23 @@
 
 ---
 
+## 0. 프로젝트 경로 기준
+
+이 문서의 모든 구현 경로는 현재 프로젝트 루트를 기준으로 한다.
+
+```text
+프로젝트 루트: F:\tonevyra_ai_agent
+문서 위치: F:\tonevyra_ai_agent\.docs
+Lightroom 플러그인 canonical path: F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin
+런타임 기본 경로: F:\tonevyra_ai_agent\runtime
+Bridge 기본 경로: F:\tonevyra_ai_agent\runtime\bridge
+입력 폴더 기본 경로: F:\tonevyra_ai_agent\runtime\input
+```
+
+Codex는 다른 루트 경로를 임의로 만들지 말고, 위 경로를 기준으로 구현/테스트 명령을 작성한다.
+
+---
+
 ## 1. 배경
 
 Tonevyra AI의 현재 파이프라인은 하네스, 스킬, 루프 엔지니어링, 품질 게이트, DB evidence 기록 구조가 업데이트된 상태이다. 다음 단계는 지정 폴더에 들어온 사진을 agent가 감지하고, 로컬 모델 또는 deterministic MVP planner가 correction plan을 만든 뒤, Lightroom Classic 플러그인이 해당 보정값을 실제 Lightroom catalog/photo에 적용하는 실구현이다.
@@ -130,10 +147,10 @@ T-019는 단순히 UI에서 보정이 되는지만 보는 작업이 아니다. �
 
 ### 4.1 파일/폴더 구조
 
-다음 중 하나의 위치를 사용한다. 현재 프로젝트 구조에 이미 plugin 위치가 있으면 기존 위치를 우선한다.
+다음 위치를 canonical plugin path로 사용한다.
 
 ```text
-lightroom/TonevyraAI.lrplugin/
+F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin\
   Info.lua
   Init.lua
   Worker.lua
@@ -142,19 +159,7 @@ lightroom/TonevyraAI.lrplugin/
   README.md
 ```
 
-또는 기존 프로젝트가 이미 다음 경로를 사용한다면 이 위치를 유지한다.
-
-```text
-src/tonevyra_agent/lightroom/plugin/TonevyraAI.lrplugin/
-  Info.lua
-  Init.lua
-  Worker.lua
-  Bridge.lua
-  Json.lua 또는 JsonLight.lua
-  README.md
-```
-
-둘 중 하나만 canonical path로 정하되, 하네스에서 감지 가능해야 한다.
+기존 프로젝트에 다른 임시 scaffold나 과거 plugin path가 있더라도, T-019 실구현 결과물의 기준 위치는 위 canonical path이다. 하네스도 이 경로를 기준으로 검증할 수 있어야 한다.
 
 ### 4.2 Info.lua 요구사항
 
@@ -195,7 +200,7 @@ return {
 - catalog에 없으면 T-019 MVP에서 가져오기/import를 지원하거나, 명확한 recoverable failure를 남긴다.
 - 허용된 Develop parameter만 적용한다.
 - 적용 불가능한 parameter는 `skipped_settings`에 남긴다.
-- 성공, 실패, 부분 성공 결과를 `runtime/bridge/lightroom_apply_results/<request_id>.json`에 기록한다.
+- 성공, 실패, 부분 성공 결과를 `F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_results\<request_id>.json`에 기록한다.
 - 처리 완료된 apply request는 `processed/` 또는 `errors/`로 이동시키거나 idempotent marker를 남긴다.
 
 ### 4.4 Python agent 요구사항
@@ -207,7 +212,7 @@ Python agent 쪽에는 다음 처리가 있어야 한다.
 - source_path 기반 metadata / preview / vision analysis를 수행한다.
 - correction plan을 생성한다.
 - Lightroom에 적용 가능한 MVP subset으로 develop_settings를 clamp한다.
-- apply request JSON을 `runtime/bridge/lightroom_apply_requests/<request_id>.json`에 작성한다.
+- apply request JSON을 `F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_requests\<request_id>.json`에 작성한다.
 - Lightroom plugin의 apply result를 기다리거나 후속 loop에서 수거한다.
 - apply result를 DB와 `task_events.payload_json`에 연결한다.
 - timeout 또는 실패는 recoverable state로 남긴다.
@@ -428,10 +433,10 @@ T-019 하네스는 기존 선택 사진 기반 설계가 다시 들어오지 못
 3. agent folder watcher가 task를 생성하는지 확인한다.
 4. agent가 correction plan을 생성하는지 확인한다.
 5. apply request JSON 생성 확인
-   - 위치: `runtime/bridge/lightroom_apply_requests/<request_id>.json`
+   - 위치: `F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_requests\<request_id>.json`
 6. Lightroom plugin worker가 request를 처리하는지 확인한다.
 7. apply result JSON 생성 확인
-   - 위치: `runtime/bridge/lightroom_apply_results/<request_id>.json`
+   - 위치: `F:\tonevyra_ai_agent\runtime\bridge\lightroom_apply_results\<request_id>.json`
 8. Lightroom에서 해당 사진에 보정값이 적용되었는지 확인한다.
 9. DB의 `task_events.payload_json` 또는 artifact evidence에 연결되었는지 확인한다.
 

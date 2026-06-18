@@ -17,14 +17,14 @@
     "whites": 8.0
   },
   "command": "APPLY_ADJUSTMENTS_AND_EXPORT",
-  "correction_plan_path": "F:\\AI_Assistant\\runtime\\artifacts\\18b96817-765f-468b-aef5-fbfc206d28f9\\correction_plan.json",
+  "correction_plan_path": "F:\\tonevyra_ai_agent\\runtime\\artifacts\\18b96817-765f-468b-aef5-fbfc206d28f9\\correction_plan.json",
   "export": {
     "format": "JPEG",
     "quality": 92
   },
-  "export_path": "F:\\AI_Assistant\\runtime\\output\\temp\\18b96817-765f-468b-aef5-fbfc206d28f9.jpg",
+  "export_path": "F:\\tonevyra_ai_agent\\runtime\\output\\temp\\18b96817-765f-468b-aef5-fbfc206d28f9.jpg",
   "request_id": "18b96817-765f-468b-aef5-fbfc206d28f9",
   "schema_version": "1.0",
-  "source_path": "F:\\AI_Assistant\\harness\\fixtures\\images\\sample_underwater_01.jpg",
+  "source_path": "F:\\tonevyra_ai_agent\\harness\\fixtures\\images\\sample_underwater_01.jpg",
   "task_id": "18b96817-765f-468b-aef5-fbfc206d28f9"
 }

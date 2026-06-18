@@ -1327,6 +1327,19 @@ After T-015 is complete, stop and wait for user approval before T-016.
 
 # T-016: Real Lightroom Lua PoC
 
+## T-016 Status Update - Superseded by T-019
+
+T-016 remains as historical bridge PoC context only. The active real Lightroom implementation is now T-019 and must follow the folder-driven design.
+
+Canonical project root and plugin path:
+
+```text
+Project root: F:\tonevyra_ai_agent
+Lightroom plugin: F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin
+```
+
+Do not implement a selected-photo/menu-first correction flow. The user places photos in the input folder; Tonevyra agent detects them and writes Lightroom apply request JSON; the plugin worker applies the request and writes apply result JSON.
+
 ## Goal
 
 Connect the file-based Python bridge to a real Lightroom Classic Lua plugin proof of concept.
@@ -1341,19 +1354,23 @@ skills/lightroom-bridge/SKILL.md
 ## Implement
 
 ```text
-src/tonevyra_agent/lightroom/plugin/TonevyraAI.lrplugin/Info.lua
-src/tonevyra_agent/lightroom/plugin/TonevyraAI.lrplugin/Main.lua
+F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin\Info.lua
+F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin\Init.lua
+F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin\Worker.lua
+F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin\Bridge.lua
 ```
 
 ## Required Behavior
 
 ```text
 Plugin loads in Lightroom Classic.
-Python writes request JSON.
-Lua reads request.
-Lua applies adjustment/export command.
-Lua writes response JSON.
-Python reads response.
+Folder watcher / Python agent creates the task.
+Python writes APPLY_LIGHTROOM_SETTINGS request JSON.
+Lua worker polls and reads the request.
+Lua finds/imports the photo by source_path.
+Lua applies allowed Develop settings non-destructively.
+Lua writes apply result JSON.
+Python reads result and records DB/task_events evidence.
 ```
 
 ## Do Not Implement

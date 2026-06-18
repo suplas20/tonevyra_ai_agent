@@ -45,7 +45,7 @@ The local harness intentionally keeps `lightroom_simultaneous_operation_stabilit
 | Real Qwen model benchmark | Environment-dependent harness gap | Actual model files are not present in `models/`; current harness uses fake runtime to verify contracts. |
 | License-review evidence artifact | Future acceptance gate | Policy is documented, but no dedicated license review artifact type or DB field exists. Adding one would require enum/DB/migration/test coordination. |
 | Legacy source tree | Naming cleanup risk | `src/mw_photo_agent` remains on disk but is excluded from packaging. Deleting it should be a separate migration cleanup task. |
-| Git diff availability | Repository setup issue | `F:\AI_Assistant` was previously not recognized as a Git repo; diff may require repository initialization. |
+| Git diff availability | Repository setup issue resolved | `F:\tonevyra_ai_agent` is the current Git repo and diff/status checks should run there. |
 
 ## Additional Tests Recommended
 
@@ -72,7 +72,7 @@ Executed with `.\.venv\Scripts\python.exe`:
 | `python harness/scripts/verify_db_state.py` | Passed |
 | `python harness/scripts/verify_artifacts.py --smoke` | Passed |
 
-`git status --short` could not run because `F:\AI_Assistant` is not currently recognized as a Git repository.
+`git status --short` should be run from `F:\tonevyra_ai_agent`, which is the current project repository.
 
 ## Conclusion
 

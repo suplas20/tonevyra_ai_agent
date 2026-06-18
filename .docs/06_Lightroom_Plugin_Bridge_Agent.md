@@ -112,6 +112,23 @@ Do not invent additional status strings.
 
 ---
 
+
+## T-019 Folder-Driven Update
+
+T-019 supersedes any earlier selected-photo or menu-first Lightroom PoC wording. The canonical implementation path is:
+
+```text
+F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin
+```
+
+The Lightroom plugin is a thin apply worker. The product flow is folder-driven:
+
+```text
+input folder -> folder watcher -> Tonevyra agent -> apply request JSON -> Lightroom plugin worker -> apply result JSON -> DB/task_events evidence
+```
+
+The plugin must not use the current Lightroom selection as the primary task source. Lightroom menu entries are allowed only for status, diagnostics, worker restart, or manual replay of an existing apply request.
+
 ## 1. Protocol
 
 Use file-based JSON bridge.
