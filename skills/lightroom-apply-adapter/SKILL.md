@@ -61,6 +61,8 @@ The plugin must not:
 
 Debug-only menu items are allowed only when they process existing bridge requests. Debug menus must not become the product workflow.
 
+The formal product path is automatic bridge request processing inside the Lightroom plugin: the Agent writes an apply request JSON, the plugin automatically checks `runtime\bridge\lightroom_apply_requests`, applies the request, and writes a result JSON.
+
 ## Apply Request Contract
 
 A valid apply request must contain at least:
@@ -127,4 +129,8 @@ T-019 passes only when:
 
 ## Implementation Guidance
 
-Start with a manual/debug menu action such as “Process Pending Apply Request.” This is acceptable for T-019 because the target is proving that Lightroom can apply an Agent-created request. Continuous polling, automatic Lightroom launch, user folder selection, and full unattended orchestration belong to later Agent lifecycle work.
+Implement plugin-side automatic bridge request processing as the formal T-019 path. The plugin should poll/check `runtime\bridge\lightroom_apply_requests`, process Agent-created requests, and write result JSON files under `runtime\bridge\lightroom_apply_results`.
+
+A manual/debug menu action such as `Tonevyra Diagnostics Process Pending Apply Request` may remain only as a diagnostic tool for troubleshooting an existing bridge request. It is not the normal product workflow, must not require selected-photo targeting, and must not replace the automatic bridge request path.
+
+Automatic Lightroom launch, user folder selection UI, and full Agent lifecycle management remain outside T-019.

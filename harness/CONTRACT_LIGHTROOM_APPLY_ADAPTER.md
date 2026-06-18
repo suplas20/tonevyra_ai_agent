@@ -14,6 +14,7 @@ The Lightroom Classic plugin must be a thin apply adapter. It receives Agent-cre
 
 - Load in Lightroom Classic as `TonevyraAI.lrplugin`.
 - Read request JSON from `runtime\bridge\lightroom_apply_requests`.
+- Automatically check/process bridge apply requests as the formal T-019 product path.
 - Use `source_path` to identify the photo.
 - Find an existing catalog photo by path or import/add the source image.
 - Apply Develop settings or a preset.
@@ -31,6 +32,9 @@ The Lightroom Classic plugin must be a thin apply adapter. It receives Agent-cre
 - Agent orchestration.
 - Lightroom process lifecycle management.
 - Main workflow based on selected Lightroom photo.
+- Manual apply-adapter execution as the formal product workflow.
+
+Diagnostic menu items are allowed only for troubleshooting an existing bridge apply request. They must not replace plugin-side automatic bridge request processing.
 
 ## Required request fields
 
@@ -66,6 +70,7 @@ A T-019 implementation fails if plugin code or T-019 implementation notes make t
 - `runtime\input` monitoring.
 - input-folder or user-image-folder watcher behavior.
 - selected-photo product workflow.
+- manual-only apply-adapter product workflow.
 - `getTargetPhoto` as the main target selection mechanism.
 - AI/model calls.
 - quality score computation.

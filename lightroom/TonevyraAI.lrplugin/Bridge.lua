@@ -3,7 +3,7 @@ local LrPathUtils = import "LrPathUtils"
 
 local Bridge = {}
 
-Bridge.plugin_version = "t019-lightroom-apply-adapter-20260618-10"
+Bridge.plugin_version = "t019-lightroom-apply-adapter-20260618-12"
 Bridge.root = "F:\\tonevyra_ai_agent\\runtime\\bridge"
 Bridge.request_dir = Bridge.root .. "\\lightroom_apply_requests"
 Bridge.processing_dir = Bridge.root .. "\\lightroom_apply_processing"

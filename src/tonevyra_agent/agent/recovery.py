@@ -415,7 +415,7 @@ class RecoveryManager:
                 return self._decision(
                     task,
                     "no_action",
-                    "Lightroom apply request exists; waiting for manual apply-adapter result",
+                    "Lightroom apply request exists; waiting for Lightroom apply-adapter result",
                     target_status=TaskStatus.LIGHTROOM_REQUESTED,
                     target_stage=Stage.LIGHTROOM,
                     action="set_status",

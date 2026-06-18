@@ -1,5 +1,6 @@
 local LrApplication = import "LrApplication"
 local LrFileUtils = import "LrFileUtils"
+local LrTasks = import "LrTasks"
 
 local Bridge = require "Bridge"
 local Json = require "Json"
@@ -10,7 +11,7 @@ local running = false
 local activeJob = false
 local last_error = nil
 local ORIGIN = "lightroom_" .. "plugin"
-local PLUGIN_VERSION = "t019-lightroom-apply-adapter-20260618-10"
+local PLUGIN_VERSION = "t019-lightroom-apply-adapter-20260618-12"
 
 local KEY_MAP = {
   Exposure = "Exposure2012",
@@ -106,6 +107,8 @@ local function baseResult(request, status)
     skipped_parameters = {},
     applied_settings = {},
     skipped_settings = {},
+    write_access_retry_count = 0,
+    write_access_wait_ms = 0,
     error_code = nil,
     message = "",
     completed_at = now(),
@@ -193,67 +196,106 @@ local function mapSettings(settings)
   return develop, applied, skipped
 end
 
-local function findPhoto(catalog, sourcePath)
-  local found = false
-  local imported = false
-  local photo = nil
+-- Catalog write-access tuning. Every catalog mutation (addPhoto / applyDevelopSettings)
+-- must run inside withWriteAccessDo with an explicit timeout, and a block by another
+-- write-access call must be retried rather than closed as a final failure immediately.
+local WRITE_TIMEOUT_SECONDS = 15
+local WRITE_MAX_ATTEMPTS = 4
+local WRITE_RETRY_WAIT_SECONDS = 1.0
 
-  local okSearch, photos = pcall(function()
-    return catalog:findPhotos { searchDesc = sourcePath }
+-- Read-only stage: resolve an existing catalog photo by path. This must not acquire
+-- write access. findPhotoByPath is the canonical read-only lookup for a file path.
+local function resolveExistingPhoto(catalog, sourcePath)
+  local ok, photo = pcall(function()
+    return catalog:findPhotoByPath(sourcePath)
   end)
-  if okSearch and type(photos) == "table" and #photos > 0 then
-    photo = photos[1]
-    found = true
-  end
-
-  if not photo then
-    local okImport, importedPhoto = pcall(function()
-      return catalog:addPhoto(sourcePath)
-    end)
-    if okImport and importedPhoto then
-      photo = importedPhoto
-      imported = true
-    end
-  end
-
-  return photo, found, imported
-end
-
-local function findExistingPhoto(catalog, sourcePath)
-  local okSearch, photos = pcall(function()
-    return catalog:findPhotos { searchDesc = sourcePath }
-  end)
-  if okSearch and type(photos) == "table" and #photos > 0 then
-    return photos[1]
+  if ok and photo then
+    return photo
   end
   return nil
 end
 
-local function directApplyFallback(catalog, sourcePath, develop)
-  local sourceFound = false
-  local sourceImported = false
-  local photo = findExistingPhoto(catalog, sourcePath)
-  if photo then
-    sourceFound = true
-  else
-    local okImport, importedPhoto = pcall(function()
-      return catalog:addPhoto(sourcePath)
+-- Write-access stage: import the source photo (if not already in the catalog) and apply
+-- the Develop settings. All catalog mutations happen strictly inside withWriteAccessDo.
+-- If the catalog is blocked by another write-access call, the action is retried with a
+-- short wait up to WRITE_MAX_ATTEMPTS before reporting a recoverable failure.
+local function applyWithWriteAccess(catalog, sourcePath, develop, existingPhoto)
+  local outcome = {
+    photo = existingPhoto,
+    found = existingPhoto ~= nil,
+    imported = false,
+    applied = false,
+    retry_count = 0,
+    wait_ms = 0,
+    blocked = false,
+    error = nil,
+  }
+
+  local attempt = 0
+  while attempt < WRITE_MAX_ATTEMPTS do
+    attempt = attempt + 1
+    outcome.retry_count = attempt - 1
+    local innerError = nil
+
+    local writeOk, writeErr = pcall(function()
+      catalog:withWriteAccessDo("Tonevyra AI Apply Settings", function()
+        if not outcome.photo then
+          local okImport, importedPhoto = pcall(function()
+            return catalog:addPhoto(sourcePath)
+          end)
+          if okImport and importedPhoto then
+            outcome.photo = importedPhoto
+            outcome.imported = true
+          else
+            innerError = "import_failed: " .. tostring(importedPhoto)
+            return
+          end
+        end
+        local okApply, applyErr = pcall(function()
+          outcome.photo:applyDevelopSettings(develop)
+        end)
+        if okApply then
+          outcome.applied = true
+        else
+          innerError = "apply_failed: " .. tostring(applyErr)
+        end
+      end, { timeout = WRITE_TIMEOUT_SECONDS })
     end)
-    if okImport and importedPhoto then
-      photo = importedPhoto
-      sourceImported = true
-    else
-      return nil, sourceFound, sourceImported, "direct_import_failed: " .. tostring(importedPhoto)
+
+    if writeOk and innerError == nil and outcome.applied then
+      outcome.blocked = false
+      outcome.error = nil
+      return outcome
+    end
+
+    if innerError ~= nil then
+      -- Import/apply failed inside the write-access gate. Retrying will not help.
+      outcome.blocked = false
+      outcome.error = innerError
+      return outcome
+    end
+
+    -- withWriteAccessDo itself failed: catalog busy / blocked by another write access call.
+    outcome.blocked = true
+    outcome.error = tostring(writeErr)
+
+    if attempt < WRITE_MAX_ATTEMPTS then
+      LrTasks.sleep(WRITE_RETRY_WAIT_SECONDS)
+      outcome.wait_ms = outcome.wait_ms + math.floor(WRITE_RETRY_WAIT_SECONDS * 1000 + 0.5)
     end
   end
 
-  local okApply, applyErr = pcall(function()
-    photo:applyDevelopSettings(develop)
-  end)
-  if not okApply then
-    return nil, sourceFound, sourceImported, "direct_apply_failed: " .. tostring(applyErr)
+  return outcome
+end
+
+local function recordWriteEvidence(result, outcome)
+  result.write_access_retry_count = outcome.retry_count
+  result.write_access_wait_ms = outcome.wait_ms
+  result.evidence.write_access_retry_count = outcome.retry_count
+  result.evidence.write_access_wait_ms = outcome.wait_ms
+  if outcome.error then
+    result.evidence.write_access_error = tostring(outcome.error)
   end
-  return photo, sourceFound, sourceImported, nil
 end
 
 local function applyRequest(request)
@@ -263,6 +305,7 @@ local function applyRequest(request)
     return failed(request, code, message, true)
   end
 
+  -- Read-only stage: confirm the source file exists before touching the catalog.
   if not LrFileUtils.exists(request.source_path) then
     return failed(request, "SOURCE_PATH_NOT_FOUND", "The source_path file from the Agent apply request does not exist.", true)
   end
@@ -274,69 +317,48 @@ local function applyRequest(request)
     return result
   end
 
-  local result = baseResult(request, "applied")
-  result.applied_parameters = applied
-  result.skipped_parameters = skipped
-  result.applied_settings = applied
-  result.skipped_settings = skipped
-
   local catalog = LrApplication.activeCatalog()
-  local photo = nil
-  local sourceFound = false
-  local sourceImported = false
 
-  local writeOk, writeErr = pcall(function()
-    catalog:withWriteAccessDo("Tonevyra AI Apply Settings", function()
-      photo, sourceFound, sourceImported = findPhoto(catalog, request.source_path)
-      if photo then
-        photo:applyDevelopSettings(develop)
-      end
-    end, { timeoutInSeconds = 30 })
-  end)
+  -- Read-only stage: resolve an existing catalog photo by path (no write access taken).
+  local existingPhoto = resolveExistingPhoto(catalog, request.source_path)
 
-  if not writeOk then
-    local fallbackPhoto, fallbackFound, fallbackImported, fallbackErr = directApplyFallback(catalog, request.source_path, develop)
-    if fallbackPhoto then
-      result.lightroom_result.source_photo_found = fallbackFound
-      result.lightroom_result.source_photo_imported = fallbackImported
-      result.lightroom_result.develop_settings_applied = true
-      result.evidence.write_access_error = tostring(writeErr)
-      result.evidence.write_access_fallback = "direct_apply"
-      result.catalog_action = "found_existing"
-      if fallbackImported then
-        result.status = "partial"
-        result.catalog_action = "imported"
-      end
-      result.message = "Applied successfully through direct Lightroom API fallback"
-      return result
-    else
-      local failedResult = failed(request, "LIGHTROOM_WRITE_ACCESS_BLOCKED", tostring(writeErr), true)
-      failedResult.applied_parameters = {}
-      failedResult.applied_settings = {}
-      failedResult.skipped_parameters = skipped
-      failedResult.skipped_settings = skipped
-      failedResult.lightroom_result.source_photo_found = fallbackFound or sourceFound
-      failedResult.lightroom_result.source_photo_imported = fallbackImported or sourceImported
-      failedResult.evidence.write_access_fallback = "direct_apply_failed"
-      failedResult.evidence.fallback_error = tostring(fallbackErr)
-      failedResult.message = tostring(writeErr) .. "; fallback failed: " .. tostring(fallbackErr)
-      failedResult.error.message = failedResult.message
-      return failedResult
-    end
+  -- Write-access stage: import if needed and apply Develop settings, with retry on block.
+  local outcome = applyWithWriteAccess(catalog, request.source_path, develop, existingPhoto)
+
+  if outcome.applied then
+    local result = baseResult(request, "applied")
+    result.applied_parameters = applied
+    result.skipped_parameters = skipped
+    result.applied_settings = applied
+    result.skipped_settings = skipped
+    result.lightroom_result.source_photo_found = outcome.found
+    result.lightroom_result.source_photo_imported = outcome.imported
+    result.lightroom_result.develop_settings_applied = true
+    result.catalog_action = outcome.imported and "imported" or "found_existing"
+    recordWriteEvidence(result, outcome)
+    result.message = "Applied successfully"
+    return result
   end
 
-  result.lightroom_result.source_photo_found = sourceFound
-  result.lightroom_result.source_photo_imported = sourceImported
-  result.lightroom_result.develop_settings_applied = photo ~= nil
-  result.catalog_action = "found_existing"
-  if sourceImported then
-    result.status = "partial"
-    result.catalog_action = "imported"
+  -- Failure path: distinguish a recoverable write-access block from a hard import/apply error.
+  local errorCode, failMessage
+  if outcome.blocked then
+    errorCode = "LIGHTROOM_WRITE_ACCESS_BLOCKED"
+    failMessage = "Lightroom catalog write access stayed blocked after "
+      .. tostring(outcome.retry_count) .. " retries: " .. tostring(outcome.error)
+  else
+    errorCode = "LIGHTROOM_APPLY_FAILED"
+    failMessage = "Lightroom could not import/apply the source_path: " .. tostring(outcome.error)
   end
-  if not photo then
-    return failed(request, "LIGHTROOM_PHOTO_NOT_AVAILABLE", "Lightroom could not attach the source path.", true)
-  end
-  result.message = "Applied successfully"
+
+  local result = failed(request, errorCode, failMessage, true)
+  result.skipped_parameters = skipped
+  result.skipped_settings = skipped
+  result.catalog_action = outcome.imported and "imported" or "not_imported"
+  result.lightroom_result.source_photo_found = outcome.found
+  result.lightroom_result.source_photo_imported = outcome.imported
+  result.lightroom_result.develop_settings_applied = false
+  recordWriteEvidence(result, outcome)
   return result
 end
 
@@ -381,7 +403,7 @@ local function processClaimedPath(claimed, trigger)
   end
 end
 
-local function processPath(path)
+local function processPath(path, trigger)
   if activeJob then
     return
   end
@@ -391,7 +413,7 @@ local function processPath(path)
   end
   activeJob = true
   local ok, err = pcall(function()
-    processClaimedPath(claimed, "manual_menu")
+    processClaimedPath(claimed, trigger or "auto_bridge")
   end)
   if not ok then
     last_error = tostring(err)
@@ -406,6 +428,21 @@ function Worker.start()
   running = true
   Bridge.ensureDirs()
   Bridge.writeWorkerStatus(true, last_error)
+  while running do
+    local ok, items = pcall(function()
+      return Bridge.pendingRequests()
+    end)
+    if ok and items then
+      for _, path in ipairs(items) do
+        processPath(path, "auto_bridge")
+      end
+    else
+      last_error = tostring(items)
+    end
+    Bridge.writeWorkerStatus(true, last_error)
+    LrTasks.sleep(2)
+  end
+  Bridge.writeWorkerStatus(false, last_error)
   return true
 end
 
@@ -423,7 +460,7 @@ function Worker.processOnePending(trigger)
     Bridge.writeWorkerStatus(running, last_error)
     return "No pending apply request."
   end
-  processPath(items[1])
+  processPath(items[1], trigger or "diagnostic_menu")
   Bridge.writeWorkerStatus(running, last_error)
   return "Processed apply request: " .. tostring(items[1])
 end

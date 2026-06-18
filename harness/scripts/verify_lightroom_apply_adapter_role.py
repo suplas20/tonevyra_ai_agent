@@ -39,6 +39,8 @@ REQUIRED_PLUGIN_TERMS = [
     "source_path",
     "request_id",
     "task_id",
+    "auto_bridge",
+    "diagnostic",
 ]
 
 IMPLEMENTATION_SUFFIXES = {".lua", ".json", ".txt"}
@@ -90,6 +92,18 @@ def scan_required_terms(plugin_dir: Path) -> list[str]:
     text = "\n".join(combined).lower()
     missing = [term for term in REQUIRED_PLUGIN_TERMS if term.lower() not in text]
     return missing
+
+
+def scan_diagnostic_menu_boundary(plugin_dir: Path) -> list[str]:
+    failures: list[str] = []
+    info_path = plugin_dir / "Info.lua"
+    process_path = plugin_dir / "ProcessPending.lua"
+    info_text = info_path.read_text(encoding="utf-8", errors="ignore") if info_path.exists() else ""
+    process_text = process_path.read_text(encoding="utf-8", errors="ignore") if process_path.exists() else ""
+    combined = f"{info_text}\n{process_text}".lower()
+    if "process pending apply request" in combined and "diagnostic" not in combined:
+        failures.append("Manual pending-request menu must be labeled and wired as diagnostic-only")
+    return failures
 
 
 def verify_fixtures(project_root: Path) -> list[str]:
@@ -168,6 +182,7 @@ def main() -> int:
             missing = scan_required_terms(plugin_dir)
             if missing:
                 failures.append(f"Plugin appears not to implement required adapter terms: {missing}")
+            failures.extend(scan_diagnostic_menu_boundary(plugin_dir))
     elif args.strict:
         failures.append("--plugin-dir is required in --strict mode")
 

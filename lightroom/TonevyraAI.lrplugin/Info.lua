@@ -9,7 +9,7 @@ return {
 
   LrLibraryMenuItems = {
     {
-      title = "Tonevyra Process Pending Apply Request",
+      title = "Tonevyra Diagnostics Process Pending Apply Request",
       file = "ProcessPending.lua",
     },
     {
