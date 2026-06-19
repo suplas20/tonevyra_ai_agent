@@ -1,5 +1,6 @@
 local LrApplication = import "LrApplication"
 local LrFileUtils = import "LrFileUtils"
+local LrFunctionContext = import "LrFunctionContext"
 local LrTasks = import "LrTasks"
 
 local Bridge = require "Bridge"
@@ -11,7 +12,7 @@ local running = false
 local activeJob = false
 local last_error = nil
 local ORIGIN = "lightroom_" .. "plugin"
-local PLUGIN_VERSION = "t019-lightroom-apply-adapter-20260618-12"
+local PLUGIN_VERSION = "t019-lightroom-apply-adapter-20260618-13"
 
 local KEY_MAP = {
   Exposure = "Exposure2012",
@@ -205,8 +206,11 @@ local WRITE_RETRY_WAIT_SECONDS = 1.0
 
 -- Read-only stage: resolve an existing catalog photo by path. This must not acquire
 -- write access. findPhotoByPath is the canonical read-only lookup for a file path.
+-- The protected call uses the SDK's yield-safe pcallWithContext (never a plain Lua
+-- pcall) so a yielding Lightroom API call cannot trip "Yielding is not allowed within
+-- a C or metamethod call".
 local function resolveExistingPhoto(catalog, sourcePath)
-  local ok, photo = pcall(function()
+  local ok, photo = LrFunctionContext.pcallWithContext("tonevyra_find_photo", function(context)
     return catalog:findPhotoByPath(sourcePath)
   end)
   if ok and photo then
@@ -217,8 +221,15 @@ end
 
 -- Write-access stage: import the source photo (if not already in the catalog) and apply
 -- the Develop settings. All catalog mutations happen strictly inside withWriteAccessDo.
--- If the catalog is blocked by another write-access call, the action is retried with a
--- short wait up to WRITE_MAX_ATTEMPTS before reporting a recoverable failure.
+--
+-- Yield safety rules enforced here:
+--   * withWriteAccessDo / addPhoto / applyDevelopSettings all yield, so they are wrapped
+--     only by the SDK's yield-safe pcallWithContext, never a plain Lua pcall.
+--   * The withWriteAccessDo callback does no sleeping, retrying, or dialogs.
+--   * A blocked catalog is reported via callbackTimeoutFunction (no thrown error), and
+--     the retry wait (LrTasks.sleep) runs OUTSIDE withWriteAccessDo.
+--   * write_access_retry_count / write_access_wait_ms only grow when a retry is actually
+--     performed.
 local function applyWithWriteAccess(catalog, sourcePath, develop, existingPhoto)
   local outcome = {
     photo = existingPhoto,
@@ -234,53 +245,71 @@ local function applyWithWriteAccess(catalog, sourcePath, develop, existingPhoto)
   local attempt = 0
   while attempt < WRITE_MAX_ATTEMPTS do
     attempt = attempt + 1
-    outcome.retry_count = attempt - 1
+
     local innerError = nil
+    local timedOut = false
 
-    local writeOk, writeErr = pcall(function()
-      catalog:withWriteAccessDo("Tonevyra AI Apply Settings", function()
-        if not outcome.photo then
-          local okImport, importedPhoto = pcall(function()
-            return catalog:addPhoto(sourcePath)
-          end)
-          if okImport and importedPhoto then
-            outcome.photo = importedPhoto
-            outcome.imported = true
-          else
-            innerError = "import_failed: " .. tostring(importedPhoto)
-            return
-          end
-        end
-        local okApply, applyErr = pcall(function()
-          outcome.photo:applyDevelopSettings(develop)
-        end)
-        if okApply then
-          outcome.applied = true
-        else
-          innerError = "apply_failed: " .. tostring(applyErr)
-        end
-      end, { timeout = WRITE_TIMEOUT_SECONDS })
-    end)
+    local protectedOk, protectedErr = LrFunctionContext.pcallWithContext(
+      "tonevyra_write_access",
+      function(context)
+        catalog:withWriteAccessDo(
+          "Tonevyra AI Apply Settings",
+          function()
+            if not outcome.photo then
+              local importedPhoto = catalog:addPhoto(sourcePath)
+              if not importedPhoto then
+                innerError = "import_failed: addPhoto returned nil"
+                return
+              end
+              outcome.photo = importedPhoto
+              outcome.imported = true
+            end
+            outcome.photo:applyDevelopSettings(develop)
+            outcome.applied = true
+          end,
+          {
+            timeout = WRITE_TIMEOUT_SECONDS,
+            callbackTimeoutFunction = function()
+              timedOut = true
+            end,
+          }
+        )
+      end
+    )
 
-    if writeOk and innerError == nil and outcome.applied then
+    if outcome.applied then
       outcome.blocked = false
       outcome.error = nil
       return outcome
     end
 
+    if not protectedOk then
+      -- A thrown error inside the write-access gate (import/apply). Retrying will not help.
+      outcome.blocked = false
+      outcome.error = "write_callback_error: " .. tostring(protectedErr)
+      return outcome
+    end
+
     if innerError ~= nil then
-      -- Import/apply failed inside the write-access gate. Retrying will not help.
+      -- Import/apply reported a soft failure. Retrying will not help.
       outcome.blocked = false
       outcome.error = innerError
       return outcome
     end
 
-    -- withWriteAccessDo itself failed: catalog busy / blocked by another write access call.
+    -- Callback never ran: write access was not granted within the timeout (catalog busy).
     outcome.blocked = true
-    outcome.error = tostring(writeErr)
+    if timedOut then
+      outcome.error = "write access blocked: catalog busy, timed out after "
+        .. tostring(WRITE_TIMEOUT_SECONDS) .. "s"
+    else
+      outcome.error = "write access not granted"
+    end
 
     if attempt < WRITE_MAX_ATTEMPTS then
+      -- Retry wait happens OUTSIDE withWriteAccessDo (and outside any plain Lua pcall).
       LrTasks.sleep(WRITE_RETRY_WAIT_SECONDS)
+      outcome.retry_count = outcome.retry_count + 1
       outcome.wait_ms = outcome.wait_ms + math.floor(WRITE_RETRY_WAIT_SECONDS * 1000 + 0.5)
     end
   end
@@ -379,20 +408,24 @@ local function processClaimedPath(claimed, trigger)
     return
   end
 
+  -- Json.decode is pure Lua string parsing and does not yield, so a plain pcall is safe.
   local ok, request = pcall(function()
     return Json.decode(text)
   end)
-  if not ok then
+  if not ok or type(request) ~= "table" then
     writeResult(failed({ request_id = "unknown" }, "REQUEST_JSON_INVALID", "Apply request JSON could not be parsed.", true))
     Bridge.moveError(claimed)
     return
   end
   request.trigger = trigger or "bridge_request"
 
-  local okApply, result = pcall(function()
+  -- applyRequest performs yielding catalog work, so it is protected with the SDK's
+  -- yield-safe pcallWithContext rather than a plain Lua pcall. A failure here must still
+  -- produce a result JSON.
+  local okApply, result = LrFunctionContext.pcallWithContext("tonevyra_apply_request", function(context)
     return applyRequest(request)
   end)
-  if not okApply then
+  if not okApply or type(result) ~= "table" then
     result = failed(request, "LIGHTROOM_APPLY_FAILED", tostring(result), true)
   end
   writeResult(result)
@@ -412,7 +445,9 @@ local function processPath(path, trigger)
     return
   end
   activeJob = true
-  local ok, err = pcall(function()
+  -- processClaimedPath performs yielding catalog work, so it is protected with the SDK's
+  -- yield-safe pcallWithContext rather than a plain Lua pcall.
+  local ok, err = LrFunctionContext.pcallWithContext("tonevyra_process_path", function(context)
     processClaimedPath(claimed, trigger or "auto_bridge")
   end)
   if not ok then
