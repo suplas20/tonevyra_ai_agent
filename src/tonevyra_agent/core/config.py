@@ -98,6 +98,11 @@ class Settings(BaseSettings):
             bridge_dir / "lightroom_apply_results",
             bridge_dir / "lightroom_apply_errors",
             bridge_dir / "lightroom_live_evidence",
+            bridge_dir / "lightroom_export_requests",
+            bridge_dir / "lightroom_export_processing",
+            bridge_dir / "lightroom_export_processed",
+            bridge_dir / "lightroom_export_results",
+            bridge_dir / "lightroom_export_errors",
             self.project_path(self.log_dir),
             self.project_path(self.models_dir),
         )

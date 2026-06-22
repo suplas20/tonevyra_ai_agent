@@ -21,3 +21,15 @@ lightroom_responses/
   success_response.json
   export_failed_response.json
 ```
+
+
+## T-020 Lightroom Final Export Adapter Fixtures
+
+```text
+lightroom_export_adapter/valid_export_request.json
+lightroom_export_adapter/valid_export_result.json
+lightroom_export_adapter/failed_export_result.json
+lightroom_export_adapter/invalid_missing_export_path_request.json
+```
+
+These fixtures validate export request/result fields, output-file success semantics, failure evidence, and source/export path separation.

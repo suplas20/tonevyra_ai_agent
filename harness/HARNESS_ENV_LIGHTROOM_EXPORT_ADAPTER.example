@@ -1,0 +1,12 @@
+# T-020 Lightroom Final Export Adapter harness environment
+TONEVYRA_PROJECT_ROOT=F:\tonevyra_ai_agent
+TONEVYRA_LIGHTROOM_PLUGIN_DIR=F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin
+TONEVYRA_LIGHTROOM_EXPORT_REQUEST_DIR=F:\tonevyra_ai_agent\runtime\bridge\lightroom_export_requests
+TONEVYRA_LIGHTROOM_EXPORT_RESULT_DIR=F:\tonevyra_ai_agent\runtime\bridge\lightroom_export_results
+TONEVYRA_LIGHTROOM_EXPORT_OUTPUT_ROOT=F:\tonevyra_ai_agent\runtime\output\temp
+TONEVYRA_LIGHTROOM_EXPORT_TIMEOUT_SECONDS=300
+TONEVYRA_LIGHTROOM_EXPORT_FORMAT=JPEG
+TONEVYRA_LIGHTROOM_EXPORT_QUALITY=95
+TONEVYRA_LIGHTROOM_EXPORT_COLOR_SPACE=sRGB
+TONEVYRA_LIGHTROOM_EXPORT_RESIZE=false
+TONEVYRA_LIGHTROOM_EXPORT_OVERWRITE=false

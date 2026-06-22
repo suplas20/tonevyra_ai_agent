@@ -397,17 +397,49 @@ class RecoveryManager:
         request = self._artifact_evidence(session, task.id, ArtifactType.LIGHTROOM_REQUEST, require_json=True)
         if self.settings.lightroom_backend == "lightroom":
             apply_result_path = self.lightroom_bridge.apply_result_path(str(task.id))
+            export_request_id = f"export-{task.id}"
+            export_request_path = self.lightroom_bridge.export_request_path(export_request_id)
+            export_result_path = self.lightroom_bridge.export_result_path(export_request_id)
+            export_path = self._export_path_from_response(export_result_path)
             apply_result_evidence = _file_evidence("lightroom_apply_result_file", apply_result_path)
-            evidence = [request.as_payload(), apply_result_evidence]
+            export_request_evidence = _file_evidence("lightroom_export_request_file", export_request_path)
+            export_result_evidence = _file_evidence("lightroom_export_result_file", export_result_path)
+            export_file_evidence = _file_evidence("lightroom_export_file", export_path) if export_path else None
+            evidence = [request.as_payload(), apply_result_evidence, export_request_evidence, export_result_evidence]
+            if export_file_evidence:
+                evidence.append(export_file_evidence)
+            if export_result_path.exists():
+                return self._decision(
+                    task,
+                    "resume",
+                    "Lightroom export result exists; ingest export result and resume quality gate",
+                    resume_from_stage=Stage.QUALITY,
+                    target_status=TaskStatus.QUALITY_CHECK,
+                    target_stage=Stage.QUALITY,
+                    action="ingest_export_then_quality",
+                    response_path=export_result_path,
+                    export_path=export_path,
+                    raw_evidence=evidence,
+                )
+            if export_request_path.exists():
+                return self._decision(
+                    task,
+                    "no_action",
+                    "Lightroom export request exists; waiting for Lightroom export result",
+                    target_status=TaskStatus.LIGHTROOM_PROCESSING,
+                    target_stage=Stage.LIGHTROOM,
+                    action="set_status",
+                    raw_evidence=evidence,
+                )
             if apply_result_path.exists():
                 return self._decision(
                     task,
                     "resume",
-                    "Lightroom apply result exists; ingest apply-adapter result",
+                    "Lightroom apply result exists; ingest apply result and write export request",
                     resume_from_stage=Stage.LIGHTROOM,
                     target_status=TaskStatus.LIGHTROOM_PROCESSING,
                     target_stage=Stage.LIGHTROOM,
-                    action="ingest_response",
+                    action="ingest_apply_then_export",
                     response_path=apply_result_path,
                     raw_evidence=evidence,
                 )
@@ -615,6 +647,20 @@ class RecoveryManager:
             self.lightroom_bridge.ingest_response(session, task=task, response_path=decision.response_path)
             return
 
+        if decision.action == "ingest_apply_then_export" and decision.response_path is not None:
+            apply_result = self.lightroom_bridge.ingest_apply_result(session, task=task, response_path=decision.response_path)
+            if apply_result.success:
+                self.lightroom_bridge.write_export_request(session, task=task, apply_result=apply_result.payload)
+            return
+
+        if decision.action == "ingest_export_then_quality" and decision.response_path is not None:
+            export_result = self.lightroom_bridge.ingest_export_result(session, task=task, response_path=decision.response_path)
+            if export_result.export_artifact is None:
+                return
+            self.task_repository.update_status(session, task, status=TaskStatus.QUALITY_CHECK, current_stage=Stage.QUALITY)
+            self.quality_gate.evaluate_export(session, task=task, export_artifact=export_result.export_artifact)
+            return
+
         if decision.action == "run_quality":
             self.task_repository.update_status(session, task, status=TaskStatus.QUALITY_CHECK, current_stage=Stage.QUALITY)
             self.quality_gate.evaluate_export(
@@ -679,6 +725,8 @@ class RecoveryManager:
             return export.row, None, [export]
 
         response_path = self.lightroom_bridge.response_path(str(task.id))
+        if self.settings.lightroom_backend == "lightroom":
+            response_path = self.lightroom_bridge.export_result_path(f"export-{task.id}")
         export_path = self._export_path_from_response(response_path)
         if export_path is not None and export_path.exists():
             return None, export_path, [export]

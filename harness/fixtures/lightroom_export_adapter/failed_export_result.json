@@ -1,0 +1,30 @@
+{
+  "schema_version": "t020.lightroom_export.result.v1",
+  "request_id": "export-request-002",
+  "task_id": "task-002",
+  "apply_request_id": "apply-request-002",
+  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\failed.jpg",
+  "export_path": "F:\\tonevyra_ai_agent\\runtime\\output\\temp\\task-002\\failed_tonevyra.jpg",
+  "status": "failed",
+  "export_settings": {
+    "format": "JPEG",
+    "quality": 95,
+    "color_space": "sRGB",
+    "resize": false
+  },
+  "lightroom_result": {
+    "plugin_loaded": true,
+    "worker_running": true,
+    "source_photo_found": true,
+    "export_started": true,
+    "export_completed": false
+  },
+  "file_result": {
+    "exists": false,
+    "size_bytes": 0
+  },
+  "error_code": "LIGHTROOM_EXPORT_FAILED",
+  "recoverable": true,
+  "message": "Export failed before the expected output file was created",
+  "completed_at": "2026-06-19T12:05:18Z"
+}

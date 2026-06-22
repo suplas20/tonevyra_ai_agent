@@ -106,3 +106,28 @@ Qwen3-VL-4B: commercial/default candidate
 ```
 
 Qwen3 commercial/default promotion is blocked until license review, local benchmark evidence, Lightroom simultaneous stability, rollback documentation, and explicit human approval are complete.
+
+
+## T-020 Lightroom Final Export Adapter
+
+T-020 verifies automatic export of the corrected Lightroom catalog rendition after a valid T-019 apply result.
+
+Static contract and fixture verification:
+
+```powershell
+python .\harness\scripts\verify_lightroom_export_adapter.py --project-root F:\tonevyra_ai_agent
+```
+
+Plugin source boundary verification:
+
+```powershell
+python .\harness\scripts\verify_lightroom_export_adapter.py --project-root F:\tonevyra_ai_agent --plugin-dir F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin --strict
+```
+
+Real result and output-file evidence verification:
+
+```powershell
+python .\harness\scripts\verify_lightroom_export_adapter.py --project-root F:\tonevyra_ai_agent --plugin-dir F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin --result-json <result-json> --require-output-file --strict
+```
+
+A T-020 success requires both `status=exported` and an actual non-empty output file. T-019 Apply Adapter files and tests remain mandatory regression gates.

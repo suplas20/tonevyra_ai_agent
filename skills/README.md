@@ -68,3 +68,51 @@ skills/lightroom-apply-adapter/SKILL.md
 harness/CONTRACT_LIGHTROOM_APPLY_ADAPTER.md
 harness/scripts/verify_lightroom_apply_adapter_role.py
 ```
+
+
+## T-020 Lightroom Final Export Adapter Gate
+
+The T-020 Lightroom Plugin export path starts only after T-019 has returned a verified `status=applied` result. The Agent creates an export request, the Plugin automatically exports the corrected catalog rendition, and the Agent verifies both the export result JSON and the actual non-empty output file before `EXPORT_DONE`.
+
+Canonical T-020 references:
+
+```text
+skills/lightroom-final-export-adapter/SKILL.md
+harness/CONTRACT_LIGHTROOM_EXPORT_ADAPTER.md
+harness/scripts/verify_lightroom_export_adapter.py
+harness/fixtures/lightroom_export_adapter/
+```
+
+## Cumulative Skill Inventory (T-020 preservation check)
+
+This inventory is additive. Existing skill files are preserved, and T-019/T-020 skills are added without replacing earlier Lightroom skills.
+
+Total `SKILL.md` files: **25**
+
+```text
+agent-worker-pipeline
+artifact-storage
+cli-operations
+correction-planner
+correction-planning
+feedback-learning
+folder-watcher
+image-metadata-preview
+lightroom-apply-adapter
+lightroom-bridge
+lightroom-final-export-adapter
+lightroom-live-test
+lightroom-plugin-implementation
+local-model-security
+loop-engineering
+model-benchmark-loop
+model-security
+postgresql-persistence
+project-scope
+python-mvp-structure
+quality-gate
+recovery-error-handling
+recovery-loop
+testing-harness
+vision-analysis
+```

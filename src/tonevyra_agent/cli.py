@@ -74,6 +74,25 @@ def _writable_dir_check(name: str, path: Path) -> CheckResult:
         return CheckResult(name, False, f"{exc.__class__.__name__}: {exc}")
 
 
+def _vision_backend_check(settings: Settings) -> CheckResult:
+    backend = settings.vision_backend.lower()
+    if backend == "mock":
+        fixture = settings.project_path(settings.vision_mock_fixture)
+        return CheckResult(
+            "vision backend",
+            fixture.exists(),
+            f"mock fixture={fixture}",
+        )
+    if backend in {"qwen", "qwen2.5-vl", "qwen25vl"}:
+        model_path = settings.project_path(settings.qwen_model_path)
+        return CheckResult(
+            "vision backend",
+            model_path.exists(),
+            f"{settings.vision_backend} local_model={model_path}",
+        )
+    return CheckResult("vision backend", False, f"unsupported backend={settings.vision_backend}")
+
+
 @app.command()
 def doctor() -> None:
     """Verify Python, runtime folders, and PostgreSQL database contract."""
@@ -101,13 +120,7 @@ def doctor() -> None:
             str(settings.worker_concurrency),
         )
     )
-    results.append(
-        CheckResult(
-            "mock vision backend",
-            settings.vision_backend == "mock" and settings.project_path(settings.vision_mock_fixture).exists(),
-            settings.vision_backend,
-        )
-    )
+    results.append(_vision_backend_check(settings))
     results.append(CheckResult("fake lightroom backend", settings.lightroom_backend == "fake", settings.lightroom_backend))
 
     try:

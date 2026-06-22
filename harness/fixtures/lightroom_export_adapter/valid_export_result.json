@@ -1,0 +1,32 @@
+{
+  "schema_version": "t020.lightroom_export.result.v1",
+  "request_id": "export-request-001",
+  "task_id": "task-001",
+  "apply_request_id": "apply-request-001",
+  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\test.jpg",
+  "export_path": "F:\\tonevyra_ai_agent\\runtime\\output\\temp\\task-001\\test_tonevyra.jpg",
+  "status": "exported",
+  "export_settings": {
+    "format": "JPEG",
+    "quality": 95,
+    "color_space": "sRGB",
+    "resize": false
+  },
+  "lightroom_result": {
+    "plugin_loaded": true,
+    "worker_running": true,
+    "source_photo_found": true,
+    "export_started": true,
+    "export_completed": true,
+    "plugin_version": "t020-lightroom-final-export-adapter"
+  },
+  "file_result": {
+    "exists": true,
+    "size_bytes": 8245321,
+    "width": 6000,
+    "height": 4000
+  },
+  "error_code": null,
+  "message": "Export completed successfully",
+  "completed_at": "2026-06-19T12:00:18Z"
+}

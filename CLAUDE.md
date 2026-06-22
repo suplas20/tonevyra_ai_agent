@@ -174,3 +174,42 @@ When modifying code:
 ```
 
 If implementation requires changing a project rule, stop and ask for approval before changing code.
+
+
+---
+
+## Required reading for T-020 Lightroom export work
+
+Before implementing or modifying corrected-image export, Lightroom export requests/results, export recovery, export file verification, or `EXPORT_DONE` transitions, read:
+
+```text
+AGENTS.md
+.docs/t020/T-020_Lightroom_Final_Export_Adapter_Work_Order.md
+skills/lightroom-apply-adapter/SKILL.md
+skills/lightroom-final-export-adapter/SKILL.md
+skills/lightroom-bridge/SKILL.md
+skills/artifact-storage/SKILL.md
+skills/recovery-error-handling/SKILL.md
+skills/testing-harness/SKILL.md
+```
+
+T-020 implementation rules:
+
+```text
+- Preserve all completed T-019 behavior and files.
+- Create export requests only after a verified T-019 applied result.
+- Use absolute source_path and export_path values.
+- The normal workflow must be automatic bridge processing, not manual Lightroom export.
+- Default MVP export is JPEG quality 95, sRGB, no resize, no overwrite.
+- Do not report success unless the expected output file exists and has non-zero size.
+- Do not set EXPORT_DONE before result, file, checksum/artifact, and DB evidence are valid.
+- Keep retry and timeout bounded and recoverable.
+- Do not modify Vision, Correction Planner, or Quality Gate algorithms for T-020.
+- Do not add new status or error code values without synchronized rule, enum, DB, migration, recovery, fixture, and test updates.
+```
+
+Canonical T-020 harness:
+
+```powershell
+python .\harness\scripts\verify_lightroom_export_adapter.py --project-root F:\tonevyra_ai_agent --plugin-dir F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin --strict
+```

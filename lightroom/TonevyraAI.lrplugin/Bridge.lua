@@ -3,13 +3,18 @@ local LrPathUtils = import "LrPathUtils"
 
 local Bridge = {}
 
-Bridge.plugin_version = "t019-lightroom-apply-adapter-20260618-13"
+Bridge.plugin_version = "t020-lightroom-final-export-adapter-20260622"
 Bridge.root = "F:\\tonevyra_ai_agent\\runtime\\bridge"
 Bridge.request_dir = Bridge.root .. "\\lightroom_apply_requests"
 Bridge.processing_dir = Bridge.root .. "\\lightroom_apply_processing"
 Bridge.processed_dir = Bridge.root .. "\\lightroom_apply_processed"
 Bridge.result_dir = Bridge.root .. "\\lightroom_apply_results"
 Bridge.error_dir = Bridge.root .. "\\lightroom_apply_errors"
+Bridge.export_request_dir = Bridge.root .. "\\lightroom_export_requests"
+Bridge.export_processing_dir = Bridge.root .. "\\lightroom_export_processing"
+Bridge.export_processed_dir = Bridge.root .. "\\lightroom_export_processed"
+Bridge.export_result_dir = Bridge.root .. "\\lightroom_export_results"
+Bridge.export_error_dir = Bridge.root .. "\\lightroom_export_errors"
 Bridge.live_evidence_dir = Bridge.root .. "\\lightroom_live_evidence"
 Bridge.status_path = Bridge.root .. "\\lightroom_worker_status.txt"
 
@@ -26,6 +31,11 @@ function Bridge.ensureDirs()
   ensureDir(Bridge.processed_dir)
   ensureDir(Bridge.result_dir)
   ensureDir(Bridge.error_dir)
+  ensureDir(Bridge.export_request_dir)
+  ensureDir(Bridge.export_processing_dir)
+  ensureDir(Bridge.export_processed_dir)
+  ensureDir(Bridge.export_result_dir)
+  ensureDir(Bridge.export_error_dir)
   ensureDir(Bridge.live_evidence_dir)
 end
 
@@ -73,10 +83,39 @@ function Bridge.pendingRequests()
   return items
 end
 
+function Bridge.pendingExportRequests()
+  Bridge.ensureDirs()
+  local items = {}
+  local iterator = LrFileUtils.files(Bridge.export_request_dir)
+  if iterator then
+    for filePath in iterator do
+      if LrPathUtils.extension(filePath) == "json" then
+        table.insert(items, filePath)
+      end
+    end
+  end
+  table.sort(items)
+  return items
+end
+
 function Bridge.claim(path)
   Bridge.ensureDirs()
   local name = LrPathUtils.leafName(path)
   local claimed = LrPathUtils.child(Bridge.processing_dir, name)
+  if LrFileUtils.exists(claimed) then
+    LrFileUtils.delete(claimed)
+  end
+  local ok = LrFileUtils.move(path, claimed)
+  if ok then
+    return claimed
+  end
+  return nil
+end
+
+function Bridge.claimExport(path)
+  Bridge.ensureDirs()
+  local name = LrPathUtils.leafName(path)
+  local claimed = LrPathUtils.child(Bridge.export_processing_dir, name)
   if LrFileUtils.exists(claimed) then
     LrFileUtils.delete(claimed)
   end
@@ -97,6 +136,12 @@ function Bridge.writeResult(requestId, data)
   return writeAll(path, data)
 end
 
+function Bridge.writeExportResult(requestId, data)
+  Bridge.ensureDirs()
+  local path = LrPathUtils.child(Bridge.export_result_dir, requestId .. ".json")
+  return writeAll(path, data)
+end
+
 function Bridge.writeEvidence(requestId, data)
   Bridge.ensureDirs()
   local path = LrPathUtils.child(Bridge.live_evidence_dir, requestId .. ".json")
@@ -111,6 +156,8 @@ function Bridge.writeWorkerStatus(isRunning, lastError)
     "updated_at=" .. os.date("!%Y-%m-%dT%H:%M:%SZ"),
     "request_dir=" .. Bridge.request_dir,
     "result_dir=" .. Bridge.result_dir,
+    "export_request_dir=" .. Bridge.export_request_dir,
+    "export_result_dir=" .. Bridge.export_result_dir,
     "last_error=" .. tostring(lastError or ""),
     "",
   }, "\n")
@@ -146,10 +193,30 @@ function Bridge.moveError(path)
   LrFileUtils.move(path, target)
 end
 
+function Bridge.moveExportError(path)
+  Bridge.ensureDirs()
+  local name = LrPathUtils.leafName(path)
+  local target = LrPathUtils.child(Bridge.export_error_dir, name)
+  if LrFileUtils.exists(target) then
+    LrFileUtils.delete(target)
+  end
+  LrFileUtils.move(path, target)
+end
+
 function Bridge.moveProcessed(path)
   Bridge.ensureDirs()
   local name = LrPathUtils.leafName(path)
   local target = LrPathUtils.child(Bridge.processed_dir, name)
+  if LrFileUtils.exists(target) then
+    LrFileUtils.delete(target)
+  end
+  LrFileUtils.move(path, target)
+end
+
+function Bridge.moveExportProcessed(path)
+  Bridge.ensureDirs()
+  local name = LrPathUtils.leafName(path)
+  local target = LrPathUtils.child(Bridge.export_processed_dir, name)
   if LrFileUtils.exists(target) then
     LrFileUtils.delete(target)
   end

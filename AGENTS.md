@@ -1086,3 +1086,56 @@ When in doubt, follow this priority:
 The goal is not to create a beautiful dashboard first.
 
 The goal is to create a local, secure, recoverable photo correction agent that can process real photos through Lightroom Classic and produce classified output.
+
+
+---
+
+## 31. T-020 Lightroom Final Export Adapter Policy
+
+T-019 applies Agent-created correction values to a Lightroom catalog photo. T-020 automatically exports that corrected rendition to an actual file.
+
+Canonical T-020 flow:
+
+```text
+T-019 apply result: status=applied
+→ Agent validates apply success
+→ Agent writes Lightroom export request
+→ Lightroom Plugin automatically exports corrected rendition
+→ Plugin writes export result
+→ Agent verifies result and actual output file
+→ EXPORT_DONE
+→ QUALITY_CHECK
+```
+
+Canonical paths:
+
+```text
+Export requests: runtime/bridge/lightroom_export_requests/
+Export results: runtime/bridge/lightroom_export_results/
+Temporary corrected output: runtime/output/temp/
+```
+
+T-020 rules:
+
+1. Export requests may be created only after a valid T-019 apply result proves that Develop settings were applied.
+2. Request `source_path` and `export_path` must be normalized absolute paths.
+3. The default MVP export profile is JPEG, quality 95, sRGB, no resize, no source overwrite.
+4. Plugin-side automatic bridge processing is the product path. Manual export or selected-photo export is diagnostic only.
+5. The Plugin must not analyze photos, generate correction plans, calculate quality scores, access PostgreSQL, or orchestrate the full task.
+6. A JSON result with `status=exported` is insufficient by itself. The expected output file must exist, be non-empty, and differ from the source path.
+7. `EXPORT_DONE` may be persisted only after result and file verification and artifact registration.
+8. Every claimed export request must produce a durable `exported` or `failed` result.
+9. Export timeout, retry, duplicate handling, and recovery must be bounded and evidence-based.
+10. T-020 must preserve the completed T-019 Apply Adapter behavior and its harness/skills/documents.
+11. Do not add new task statuses for T-020. Use `LIGHTROOM_PROCESSING → EXPORT_DONE → QUALITY_CHECK`.
+12. Use existing error codes first: `LIGHTROOM_REQUEST_FAILED`, `LIGHTROOM_RESPONSE_TIMEOUT`, `LIGHTROOM_EXPORT_FAILED`, `EXPORT_FILE_MISSING`, `ARTIFACT_WRITE_FAILED`, `DB_WRITE_FAILED`.
+13. New error codes require synchronized rule, enum, database constraint, migration, recovery, fixture, and test updates.
+
+Required T-020 references:
+
+```text
+.docs/t020/T-020_Lightroom_Final_Export_Adapter_Work_Order.md
+skills/lightroom-final-export-adapter/SKILL.md
+harness/CONTRACT_LIGHTROOM_EXPORT_ADAPTER.md
+harness/scripts/verify_lightroom_export_adapter.py
+```

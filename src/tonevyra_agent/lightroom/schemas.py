@@ -13,10 +13,13 @@ from tonevyra_agent.core.enums import ErrorCode
 LIGHTROOM_COMMAND_PING = "PING"
 LIGHTROOM_COMMAND_APPLY_ADJUSTMENTS_AND_EXPORT = "APPLY_ADJUSTMENTS_AND_EXPORT"
 LIGHTROOM_COMMAND_APPLY_SETTINGS = "APPLY_LIGHTROOM_SETTINGS"
+LIGHTROOM_COMMAND_EXPORT_CORRECTED_IMAGE = "EXPORT_CORRECTED_IMAGE"
 LIGHTROOM_RESPONSE_SUCCESS = "success"
 LIGHTROOM_RESPONSE_FAILED = "failed"
 LIGHTROOM_APPLY_REQUEST_SCHEMA = "t019.lightroom_apply.request.v1"
 LIGHTROOM_APPLY_RESULT_SCHEMA = "t019.lightroom_apply.result.v1"
+LIGHTROOM_EXPORT_REQUEST_SCHEMA = "t020.lightroom_export.request.v1"
+LIGHTROOM_EXPORT_RESULT_SCHEMA = "t020.lightroom_export.result.v1"
 
 LIGHTROOM_APPLY_ALLOWED_SETTINGS = {
     "exposure",
@@ -216,6 +219,8 @@ class LightroomApplyResultPayload(BaseModel):
     lightroom_result: dict[str, Any] = Field(default_factory=dict)
     evidence: dict[str, Any] = Field(default_factory=dict)
     error: dict[str, Any] | None = None
+    write_access_retry_count: int | None = None
+    write_access_wait_ms: int | None = None
 
     @field_validator("request_id", "task_id")
     @classmethod
@@ -263,4 +268,134 @@ class LightroomApplyResultPayload(BaseModel):
             for field_name in ("code", "message", "recoverable"):
                 if field_name not in self.error:
                     raise ValueError(f"failed apply result requires error.{field_name}")
+        return self
+
+
+class LightroomOutputSharpening(BaseModel):
+    """MVP Lightroom export output-sharpening settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = True
+    medium: Literal["screen"] = "screen"
+    amount: Literal["standard"] = "standard"
+
+
+class LightroomFinalExportSettings(BaseModel):
+    """T-020 corrected-rendition export settings."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    format: Literal["JPEG"] = "JPEG"
+    quality: int = Field(default=95, ge=1, le=100)
+    color_space: Literal["sRGB"] = "sRGB"
+    resize: Literal[False] = False
+    output_sharpening: LightroomOutputSharpening = Field(default_factory=LightroomOutputSharpening)
+    metadata_policy: Literal["copyright_and_capture_only"] = "copyright_and_capture_only"
+    overwrite: Literal[False] = False
+
+
+class LightroomExportRequestPayload(BaseModel):
+    """T-020 request written by Python for the Lightroom final export adapter."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["t020.lightroom_export.request.v1"] = LIGHTROOM_EXPORT_REQUEST_SCHEMA
+    request_id: str
+    task_id: str
+    apply_request_id: str
+    source_path: str
+    export_path: str
+    command: Literal["EXPORT_CORRECTED_IMAGE"] = LIGHTROOM_COMMAND_EXPORT_CORRECTED_IMAGE
+    export_settings: LightroomFinalExportSettings = Field(default_factory=LightroomFinalExportSettings)
+    created_at: str
+
+    @field_validator("request_id", "task_id", "apply_request_id", "created_at")
+    @classmethod
+    def non_empty_export_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("field must not be empty")
+        return value
+
+    @field_validator("source_path", "export_path")
+    @classmethod
+    def absolute_export_paths(cls, value: str) -> str:
+        path = Path(value)
+        if not path.is_absolute():
+            raise ValueError("path must be absolute")
+        return str(path.resolve())
+
+    @model_validator(mode="after")
+    def validate_export_paths(self) -> "LightroomExportRequestPayload":
+        if Path(self.source_path) == Path(self.export_path):
+            raise ValueError("export_path must not equal source_path")
+        return self
+
+
+class LightroomExportResultPayload(BaseModel):
+    """T-020 result written by the Lightroom final export adapter."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    schema_version: Literal["t020.lightroom_export.result.v1"] = LIGHTROOM_EXPORT_RESULT_SCHEMA
+    request_id: str
+    task_id: str
+    apply_request_id: str
+    source_path: str
+    export_path: str
+    status: Literal["exported", "failed"]
+    export_settings: dict[str, Any]
+    lightroom_result: dict[str, Any]
+    file_result: dict[str, Any]
+    error_code: str | None = None
+    message: str = ""
+    completed_at: str
+    recoverable: bool | None = None
+
+    @field_validator("request_id", "task_id", "apply_request_id", "completed_at")
+    @classmethod
+    def non_empty_export_result_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("field must not be empty")
+        return value
+
+    @field_validator("source_path", "export_path")
+    @classmethod
+    def absolute_export_result_paths(cls, value: str) -> str:
+        path = Path(value)
+        if not path.is_absolute():
+            raise ValueError("path must be absolute")
+        return str(path.resolve())
+
+    @field_validator("error_code")
+    @classmethod
+    def known_export_error_code(cls, value: str | None) -> str | None:
+        if value in (None, ""):
+            return None
+        return ErrorCode(value).value
+
+    @model_validator(mode="after")
+    def validate_export_result(self) -> "LightroomExportResultPayload":
+        if Path(self.source_path) == Path(self.export_path):
+            raise ValueError("export_path must not equal source_path")
+        if self.status == "exported":
+            required_lr = (
+                "plugin_loaded",
+                "worker_running",
+                "source_photo_found",
+                "export_started",
+                "export_completed",
+            )
+            for field_name in required_lr:
+                if self.lightroom_result.get(field_name) is not True:
+                    raise ValueError(f"exported result requires lightroom_result.{field_name}=true")
+            if self.file_result.get("exists") is not True:
+                raise ValueError("exported result requires file_result.exists=true")
+            size = self.file_result.get("size_bytes")
+            if not isinstance(size, int) or size <= 0:
+                raise ValueError("exported result requires file_result.size_bytes > 0")
+            if self.error_code is not None:
+                raise ValueError("exported result must not contain error_code")
+        if self.status == "failed" and self.error_code is None:
+            raise ValueError("failed export result requires error_code")
         return self

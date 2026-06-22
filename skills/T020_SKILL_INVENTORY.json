@@ -1,0 +1,39 @@
+{
+  "version": "t020-v2-preservation-fix",
+  "skill_count": 25,
+  "skills": [
+    "agent-worker-pipeline",
+    "artifact-storage",
+    "cli-operations",
+    "correction-planner",
+    "correction-planning",
+    "feedback-learning",
+    "folder-watcher",
+    "image-metadata-preview",
+    "lightroom-apply-adapter",
+    "lightroom-bridge",
+    "lightroom-final-export-adapter",
+    "lightroom-live-test",
+    "lightroom-plugin-implementation",
+    "local-model-security",
+    "loop-engineering",
+    "model-benchmark-loop",
+    "model-security",
+    "postgresql-persistence",
+    "project-scope",
+    "python-mvp-structure",
+    "quality-gate",
+    "recovery-error-handling",
+    "recovery-loop",
+    "testing-harness",
+    "vision-analysis"
+  ],
+  "preserved_legacy_lightroom_skills": [
+    "lightroom-live-test",
+    "lightroom-plugin-implementation"
+  ],
+  "added_skills": [
+    "lightroom-apply-adapter",
+    "lightroom-final-export-adapter"
+  ]
+}

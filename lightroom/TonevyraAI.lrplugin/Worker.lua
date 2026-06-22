@@ -1,6 +1,8 @@
 local LrApplication = import "LrApplication"
+local LrExportSession = import "LrExportSession"
 local LrFileUtils = import "LrFileUtils"
 local LrFunctionContext = import "LrFunctionContext"
+local LrPathUtils = import "LrPathUtils"
 local LrTasks = import "LrTasks"
 
 local Bridge = require "Bridge"
@@ -12,7 +14,7 @@ local running = false
 local activeJob = false
 local last_error = nil
 local ORIGIN = "lightroom_" .. "plugin"
-local PLUGIN_VERSION = "t019-lightroom-apply-adapter-20260618-13"
+local PLUGIN_VERSION = Bridge.plugin_version
 
 local KEY_MAP = {
   Exposure = "Exposure2012",
@@ -142,6 +144,77 @@ local function failed(request, code, message, recoverable)
   return result
 end
 
+local function fileSize(path)
+  local handle = io.open(path, "rb")
+  if not handle then
+    return 0
+  end
+  local size = handle:seek("end") or 0
+  handle:close()
+  return size
+end
+
+local function baseExportResult(request, status)
+  local exportPath = tostring(request.export_path or "")
+  local exists = exportPath ~= "" and LrFileUtils.exists(exportPath)
+  return {
+    schema_version = "t020.lightroom_export.result.v1",
+    request_id = tostring(request.request_id or "unknown"),
+    task_id = tostring(request.task_id or "unknown"),
+    apply_request_id = tostring(request.apply_request_id or "unknown"),
+    source_path = tostring(request.source_path or ""),
+    export_path = exportPath,
+    status = status,
+    export_settings = request.export_settings or {
+      format = "JPEG",
+      quality = 95,
+      color_space = "sRGB",
+      resize = false,
+    },
+    lightroom_result = {
+      plugin_loaded = true,
+      plugin_version = PLUGIN_VERSION,
+      worker_running = running,
+      source_photo_found = false,
+      export_started = false,
+      export_completed = false,
+    },
+    file_result = {
+      exists = exists,
+      size_bytes = exists and fileSize(exportPath) or 0,
+    },
+    error_code = nil,
+    message = "",
+    completed_at = now(),
+  }
+end
+
+local function normalizeExportErrorCode(code)
+  if code == "LIGHTROOM_REQUEST_FAILED"
+    or code == "LIGHTROOM_RESPONSE_TIMEOUT"
+    or code == "LIGHTROOM_EXPORT_FAILED"
+    or code == "EXPORT_FILE_MISSING"
+    or code == "ARTIFACT_WRITE_FAILED"
+    or code == "DB_WRITE_FAILED" then
+    return code
+  end
+  if code == "EXPORT_FILE_MISSING" then
+    return "EXPORT_FILE_MISSING"
+  end
+  if code == "LIGHTROOM_EXPORT_FAILED" or code == "SOURCE_PHOTO_NOT_FOUND" then
+    return "LIGHTROOM_EXPORT_FAILED"
+  end
+  return "LIGHTROOM_REQUEST_FAILED"
+end
+
+local function exportFailed(request, code, message, recoverable)
+  local result = baseExportResult(request or {}, "failed")
+  result.error_code = normalizeExportErrorCode(code)
+  result.recoverable = recoverable
+  result.message = tostring(code) .. ": " .. tostring(message)
+  return result
+end
+
 local function validate(request)
   if type(request) ~= "table" then
     return false, "INVALID_JSON", "Request JSON did not decode to an object."
@@ -169,6 +242,56 @@ local function validate(request)
   end
   if request.safety ~= nil and (type(request.safety) ~= "table" or request.safety.non_destructive_required ~= true) then
     return false, "SAFETY_REQUIRED", "non_destructive_required must be true when safety is supplied."
+  end
+  return true, nil, nil
+end
+
+local function validateExportRequest(request)
+  if type(request) ~= "table" then
+    return false, "INVALID_JSON", "Export request JSON did not decode to an object."
+  end
+  if request.schema_version ~= "t020.lightroom_export.request.v1" then
+    return false, "INVALID_SCHEMA", "Unsupported export request schema."
+  end
+  if request.command ~= "EXPORT_CORRECTED_IMAGE" then
+    return false, "INVALID_COMMAND", "Unsupported Lightroom export command."
+  end
+  if type(request.request_id) ~= "string" or request.request_id == "" then
+    return false, "MISSING_REQUEST_ID", "request_id is required."
+  end
+  if type(request.task_id) ~= "string" or request.task_id == "" then
+    return false, "MISSING_TASK_ID", "task_id is required."
+  end
+  if type(request.apply_request_id) ~= "string" or request.apply_request_id == "" then
+    return false, "MISSING_APPLY_REQUEST_ID", "apply_request_id is required."
+  end
+  if type(request.source_path) ~= "string" or request.source_path == "" then
+    return false, "MISSING_SOURCE_PATH", "source_path is required."
+  end
+  if type(request.export_path) ~= "string" or request.export_path == "" then
+    return false, "MISSING_EXPORT_PATH", "export_path is required."
+  end
+  if request.source_path == request.export_path then
+    return false, "INVALID_EXPORT_PATH", "export_path must not equal source_path."
+  end
+  local normalized = string.lower(request.export_path)
+  if not string.find(normalized, "\\runtime\\output\\temp\\", 1, true) then
+    return false, "INVALID_EXPORT_PATH", "export_path must stay under runtime\\output\\temp."
+  end
+  if type(request.export_settings) ~= "table" then
+    return false, "MISSING_EXPORT_SETTINGS", "export_settings is required."
+  end
+  if request.export_settings.format ~= "JPEG" then
+    return false, "UNSUPPORTED_EXPORT_FORMAT", "MVP export format must be JPEG."
+  end
+  if request.export_settings.color_space ~= "sRGB" then
+    return false, "UNSUPPORTED_COLOR_SPACE", "MVP export color_space must be sRGB."
+  end
+  if request.export_settings.resize ~= false then
+    return false, "UNSUPPORTED_RESIZE", "MVP export resize must be false."
+  end
+  if request.export_settings.overwrite ~= false then
+    return false, "OVERWRITE_FORBIDDEN", "Export overwrite must be false."
   end
   return true, nil, nil
 end
@@ -391,9 +514,93 @@ local function applyRequest(request)
   return result
 end
 
+local function ensureDirectory(path)
+  if path and path ~= "" and not LrFileUtils.exists(path) then
+    LrFileUtils.createAllDirectories(path)
+  end
+end
+
+local function exportPhoto(photo, exportPath, exportSettings)
+  local exportFolder = LrPathUtils.parent(exportPath)
+  local exportName = LrPathUtils.removeExtension(LrPathUtils.leafName(exportPath))
+  ensureDirectory(exportFolder)
+
+  local quality = tonumber(exportSettings.quality or 95) or 95
+  local exportSession = LrExportSession {
+    photosToExport = { photo },
+    exportSettings = {
+      LR_export_destinationType = "specificFolder",
+      LR_export_destinationPathPrefix = exportFolder,
+      LR_export_useSubfolder = false,
+      LR_format = "JPEG",
+      LR_jpeg_quality = quality / 100,
+      LR_export_colorSpace = "sRGB",
+      LR_size_doConstrain = false,
+      LR_outputSharpeningOn = true,
+      LR_outputSharpeningMedia = "screen",
+      LR_outputSharpeningLevel = 2,
+      LR_renamingTokensOn = true,
+      LR_tokens = exportName,
+    },
+  }
+  exportSession:doExportOnCurrentTask()
+end
+
+local function exportRequest(request)
+  request.trigger = request.trigger or "bridge_request"
+  local ok, code, message = validateExportRequest(request)
+  if not ok then
+    return exportFailed(request, code, message, true)
+  end
+
+  if not LrFileUtils.exists(request.source_path) then
+    return exportFailed(request, "SOURCE_PATH_NOT_FOUND", "The source_path file from the Agent export request does not exist.", true)
+  end
+  if LrFileUtils.exists(request.export_path) then
+    return exportFailed(request, "EXPORT_PATH_EXISTS", "The export_path already exists and overwrite is false.", true)
+  end
+
+  local catalog = LrApplication.activeCatalog()
+  local photo = resolveExistingPhoto(catalog, request.source_path)
+  if not photo then
+    return exportFailed(request, "SOURCE_PHOTO_NOT_FOUND", "The corrected catalog photo was not found by source_path.", true)
+  end
+
+  local result = baseExportResult(request, "exported")
+  result.lightroom_result.source_photo_found = true
+  result.lightroom_result.export_started = true
+
+  local exportOk, exportErr = LrFunctionContext.pcallWithContext("tonevyra_export_request", function(context)
+    exportPhoto(photo, request.export_path, request.export_settings or {})
+  end)
+
+  if not exportOk then
+    return exportFailed(request, "LIGHTROOM_EXPORT_FAILED", "Lightroom export failed: " .. tostring(exportErr), true)
+  end
+  if not LrFileUtils.exists(request.export_path) or fileSize(request.export_path) <= 0 then
+    return exportFailed(request, "EXPORT_FILE_MISSING", "Lightroom export did not create a non-empty export_path.", true)
+  end
+
+  result.lightroom_result.export_completed = true
+  result.file_result.exists = true
+  result.file_result.size_bytes = fileSize(request.export_path)
+  result.message = "Export completed successfully"
+  result.completed_at = now()
+  return result
+end
+
 local function writeResult(result)
   local json = Json.encode(result)
   local ok, err = Bridge.writeResult(result.request_id, json)
+  if not ok then
+    last_error = err
+  end
+  Bridge.writeEvidence(result.request_id, json)
+end
+
+local function writeExportResult(result)
+  local json = Json.encode(result)
+  local ok, err = Bridge.writeExportResult(result.request_id, json)
   if not ok then
     last_error = err
   end
@@ -456,6 +663,56 @@ local function processPath(path, trigger)
   activeJob = false
 end
 
+local function processClaimedExportPath(claimed, trigger)
+  local text, readErr = Bridge.read(claimed)
+  if not text then
+    writeExportResult(exportFailed({ request_id = "unknown" }, "REQUEST_READ_FAILED", readErr or "Unable to read export request.", true))
+    Bridge.moveExportError(claimed)
+    return
+  end
+
+  local ok, request = pcall(function()
+    return Json.decode(text)
+  end)
+  if not ok or type(request) ~= "table" then
+    writeExportResult(exportFailed({ request_id = "unknown" }, "REQUEST_JSON_INVALID", "Export request JSON could not be parsed.", true))
+    Bridge.moveExportError(claimed)
+    return
+  end
+  request.trigger = trigger or "bridge_request"
+
+  local okExport, result = LrFunctionContext.pcallWithContext("tonevyra_process_export_path", function(context)
+    return exportRequest(request)
+  end)
+  if not okExport or type(result) ~= "table" then
+    result = exportFailed(request, "LIGHTROOM_EXPORT_FAILED", tostring(result), true)
+  end
+  writeExportResult(result)
+  if result.status == "failed" then
+    Bridge.moveExportError(claimed)
+  else
+    Bridge.moveExportProcessed(claimed)
+  end
+end
+
+local function processExportPath(path, trigger)
+  if activeJob then
+    return
+  end
+  local claimed = Bridge.claimExport(path)
+  if not claimed then
+    return
+  end
+  activeJob = true
+  local ok, err = LrFunctionContext.pcallWithContext("tonevyra_process_export_request", function(context)
+    processClaimedExportPath(claimed, trigger or "auto_bridge")
+  end)
+  if not ok then
+    last_error = tostring(err)
+  end
+  activeJob = false
+end
+
 function Worker.start()
   if running then
     return
@@ -473,6 +730,16 @@ function Worker.start()
       end
     else
       last_error = tostring(items)
+    end
+    local okExport, exportItems = pcall(function()
+      return Bridge.pendingExportRequests()
+    end)
+    if okExport and exportItems then
+      for _, path in ipairs(exportItems) do
+        processExportPath(path, "auto_bridge")
+      end
+    else
+      last_error = tostring(exportItems)
     end
     Bridge.writeWorkerStatus(true, last_error)
     LrTasks.sleep(2)
@@ -500,6 +767,25 @@ function Worker.processOnePending(trigger)
   return "Processed apply request: " .. tostring(items[1])
 end
 
+function Worker.processOnePendingExport(trigger)
+  Bridge.ensureDirs()
+  local ok, items = pcall(function()
+    return Bridge.pendingExportRequests()
+  end)
+  if not ok then
+    last_error = tostring(items)
+    Bridge.writeWorkerStatus(running, last_error)
+    return "Bridge export request scan failed: " .. last_error
+  end
+  if not items or #items == 0 then
+    Bridge.writeWorkerStatus(running, last_error)
+    return "No pending export request."
+  end
+  processExportPath(items[1], trigger or "diagnostic_menu")
+  Bridge.writeWorkerStatus(running, last_error)
+  return "Processed export request: " .. tostring(items[1])
+end
+
 function Worker.stop()
   running = false
   Bridge.writeWorkerStatus(false, last_error)
@@ -515,6 +801,8 @@ function Worker.status()
     worker_running = tostring(running),
     request_dir = Bridge.request_dir,
     result_dir = Bridge.result_dir,
+    export_request_dir = Bridge.export_request_dir,
+    export_result_dir = Bridge.export_result_dir,
     last_error = last_error or "",
   }
 end

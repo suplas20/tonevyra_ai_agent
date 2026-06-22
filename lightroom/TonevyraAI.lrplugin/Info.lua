@@ -13,6 +13,10 @@ return {
       file = "ProcessPending.lua",
     },
     {
+      title = "Tonevyra Diagnostics Process Pending Export Request",
+      file = "ProcessPendingExport.lua",
+    },
+    {
       title = "Tonevyra Bridge Status",
       file = "Status.lua",
     },

@@ -79,9 +79,19 @@ class AgentWorker:
             correction_plan = self._run_correction_plan(task_id, vision_artifact=vision_artifacts.structured_artifact)
             request_result = self._write_lightroom_request(task_id, correction_plan_artifact=correction_plan)
             if self.settings.lightroom_backend == "lightroom":
-                return self._current_result(task_id, processed=True)
-            response_path = self._wait_for_lightroom_response(task_id, request_id=request_result.payload.request_id)
-            response_result = self._ingest_lightroom_response(task_id, response_path=response_path)
+                apply_result_path = self._wait_for_lightroom_response(task_id, request_id=request_result.payload.request_id)
+                apply_result = self._ingest_lightroom_response(task_id, response_path=apply_result_path)
+                if not apply_result.success:
+                    return self._current_result(task_id, processed=True)
+                export_request = self._write_lightroom_export_request(task_id, apply_result=apply_result.payload)
+                export_result_path = self._wait_for_lightroom_export_response(
+                    task_id,
+                    request_id=export_request.payload.request_id,
+                )
+                response_result = self._ingest_lightroom_export_response(task_id, response_path=export_result_path)
+            else:
+                response_path = self._wait_for_lightroom_response(task_id, request_id=request_result.payload.request_id)
+                response_result = self._ingest_lightroom_response(task_id, response_path=response_path)
         except TonevyraError:
             return self._current_result(task_id, processed=True)
         except Exception as exc:
@@ -228,6 +238,62 @@ class AgentWorker:
             task = self._require_task(session, task_id)
             try:
                 return self.lightroom_bridge.ingest_response(session, task=task, response_path=response_path)
+            except TonevyraError:
+                session.commit()
+                raise
+
+    def _write_lightroom_export_request(self, task_id: UUID, *, apply_result):
+        with session_scope(self.settings) as session:
+            task = self._require_task(session, task_id)
+            try:
+                return self.lightroom_bridge.write_export_request(
+                    session,
+                    task=task,
+                    apply_result=apply_result,
+                )
+            except TonevyraError:
+                session.commit()
+                raise
+
+    def _wait_for_lightroom_export_response(self, task_id: UUID, *, request_id: str) -> Path:
+        with session_scope(self.settings) as session:
+            task = self._require_task(session, task_id)
+            from_status = task.status
+            self.task_repository.update_status(
+                session,
+                task,
+                status=TaskStatus.LIGHTROOM_PROCESSING,
+                current_stage=Stage.LIGHTROOM,
+            )
+            self.event_repository.create(
+                session,
+                task_id=task.id,
+                event_type=TaskEventType.LIGHTROOM_REQUESTED,
+                stage=Stage.LIGHTROOM,
+                message="Worker is waiting for a Lightroom export result.",
+                payload_json={
+                    "loop_name": PROCESSING_LOOP_NAME,
+                    "loop_iteration": 1,
+                    "event_type": TaskEventType.LIGHTROOM_REQUESTED.value,
+                    "from_status": from_status,
+                    "to_status": TaskStatus.LIGHTROOM_PROCESSING.value,
+                    "reason": "lightroom export request handed to Lightroom plugin",
+                    "request_id": request_id,
+                    "evidence_artifacts": [],
+                },
+            )
+
+        try:
+            return self.lightroom_bridge.wait_for_export_response(request_id=request_id, poll_interval_seconds=0.25)
+        except TonevyraError as exc:
+            self._mark_failed(task_id, error_code=exc.code, error_message=exc.message, failed_stage=Stage.LIGHTROOM)
+            raise
+
+    def _ingest_lightroom_export_response(self, task_id: UUID, *, response_path: Path):
+        with session_scope(self.settings) as session:
+            task = self._require_task(session, task_id)
+            try:
+                return self.lightroom_bridge.ingest_export_result(session, task=task, response_path=response_path)
             except TonevyraError:
                 session.commit()
                 raise

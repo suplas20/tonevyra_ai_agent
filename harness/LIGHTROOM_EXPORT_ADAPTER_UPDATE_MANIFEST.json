@@ -1,0 +1,33 @@
+{
+  "scope": "t020_harness_skills_additive_update",
+  "ticket": "T-020",
+  "title": "Lightroom Final Export Adapter",
+  "existing_files_preserved": true,
+  "existing_content_preserved": true,
+  "deleted_paths": [],
+  "added_paths": [
+    "skills/lightroom-final-export-adapter/SKILL.md",
+    "harness/CONTRACT_LIGHTROOM_EXPORT_ADAPTER.md",
+    "harness/HARNESS_ENV_LIGHTROOM_EXPORT_ADAPTER.example",
+    "harness/prompts/07_lightroom_export_adapter_implementation_prompt.md",
+    "harness/scripts/verify_lightroom_export_adapter.py",
+    "harness/fixtures/lightroom_export_adapter/valid_export_request.json",
+    "harness/fixtures/lightroom_export_adapter/valid_export_result.json",
+    "harness/fixtures/lightroom_export_adapter/failed_export_result.json",
+    "harness/fixtures/lightroom_export_adapter/invalid_missing_export_path_request.json",
+    "harness/LIGHTROOM_EXPORT_ADAPTER_UPDATE_MANIFEST.json"
+  ],
+  "append_only_updates": [
+    "skills/README.md",
+    "harness/README.md",
+    "harness/fixtures/README.md",
+    "AGENTS.md (delivered separately as AGENTS_T020_UPDATED.md)",
+    "CLAUDE.md (delivered separately as CLAUDE_T020_UPDATED.md)"
+  ],
+  "standalone_document": "T-020_Lightroom_Final_Export_Adapter_Work_Order.md",
+  "t019_preservation_required": [
+    "skills/lightroom-apply-adapter/SKILL.md",
+    "harness/CONTRACT_LIGHTROOM_APPLY_ADAPTER.md",
+    "harness/scripts/verify_lightroom_apply_adapter_role.py"
+  ]
+}
