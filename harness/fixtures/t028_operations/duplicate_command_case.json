@@ -1,0 +1,6 @@
+{
+  "operation": "LIGHTROOM_EXPORT",
+  "idempotency_key": "job-1:export:attempt-1",
+  "requests_received": 2,
+  "expected_external_executions": 1
+}

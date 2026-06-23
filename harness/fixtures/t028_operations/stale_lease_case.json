@@ -1,0 +1,7 @@
+{
+  "lease_owner": "worker-old",
+  "heartbeat_age_seconds": 180,
+  "lease_timeout_seconds": 60,
+  "owner_process_alive": false,
+  "expected_action": "RECLAIM"
+}

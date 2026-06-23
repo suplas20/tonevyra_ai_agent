@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-027 Usage Ledger Event",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "usage_event_id",
+    "idempotency_key",
+    "user_scope_id",
+    "job_id",
+    "plan_id",
+    "plan_version",
+    "state",
+    "photo_units",
+    "compute_metrics",
+    "reason"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t027.usage.ledger.v1"
+    },
+    "usage_event_id": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "type": "string"
+    },
+    "user_scope_id": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "plan_id": {
+      "type": "string"
+    },
+    "plan_version": {
+      "type": "integer"
+    },
+    "state": {
+      "enum": [
+        "RESERVED",
+        "COMMITTED",
+        "RELEASED"
+      ]
+    },
+    "photo_units": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "compute_metrics": {
+      "type": "object"
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}

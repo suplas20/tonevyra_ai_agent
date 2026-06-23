@@ -1,0 +1,9 @@
+{
+  "train": [
+    "case-shared"
+  ],
+  "test": [
+    "case-shared"
+  ],
+  "expected_validation": "FAIL"
+}

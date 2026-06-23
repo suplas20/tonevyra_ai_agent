@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-028 Operation Checkpoint",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "checkpoint_id",
+    "job_id",
+    "attempt_id",
+    "stage",
+    "state",
+    "input_checksums",
+    "output_checksums",
+    "idempotency_key",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t028.operation.checkpoint.v1"
+    },
+    "checkpoint_id": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "attempt_id": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "PENDING",
+        "COMMITTED",
+        "RECONCILIATION_REQUIRED"
+      ]
+    },
+    "input_checksums": {
+      "type": "array"
+    },
+    "output_checksums": {
+      "type": "array"
+    },
+    "idempotency_key": {
+      "type": "string"
+    },
+    "lease_owner": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "created_at": {
+      "type": "string"
+    },
+    "committed_at": {
+      "type": [
+        "string",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

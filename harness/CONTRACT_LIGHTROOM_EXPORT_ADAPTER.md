@@ -45,6 +45,11 @@ runtime\output\temp
 
 The command must be `EXPORT_CORRECTED_IMAGE`.
 
+`source_path` is the original corrected Lightroom catalog photo path and must
+not be limited to JPG/JPEG. T-020 must support RAW sources such as `.ARW`,
+`.CR3`, `.CR2`, `.NEF`, and `.DNG`. The default MVP `export_path` remains a
+JPEG file because the export rendition is `JPEG / quality 95 / sRGB`.
+
 ## Result Fields
 
 - `schema_version`
@@ -127,6 +132,7 @@ T-020 fails if:
 - the product flow is manual-only;
 - output success is reported without file existence and non-zero size;
 - source path and export path may be the same;
+- source fixtures only prove JPG/JPEG behavior and do not cover RAW source input;
 - plugin owns AI, correction planning, quality scoring, DB logic, or input watching;
 - T-019 files are removed or its acceptance contract is weakened.
 

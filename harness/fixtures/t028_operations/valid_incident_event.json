@@ -1,0 +1,12 @@
+{
+  "schema_version": "t028.incident.event.v1",
+  "incident_id": "incident-001",
+  "correlation_id": "corr-001",
+  "job_id": "job-028-001",
+  "stage": "LIGHTROOM_PROCESSING",
+  "component": "lightroom_bridge",
+  "fault_class": "RECOVERABLE_RESTART",
+  "error_code": "LIGHTROOM_UNAVAILABLE",
+  "recovery_action": "resume_after_health_check",
+  "created_at": "2026-06-23T00:02:00Z"
+}

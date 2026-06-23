@@ -1,0 +1,22 @@
+{
+  "schema_version": "t022.retry_counter_separation.v1",
+  "job_id": "job-t022-retry",
+  "plan": "standard",
+  "max_quality_retries": 2,
+  "model_runtime_retry_count": 1,
+  "quality_retry_count": 1,
+  "events": [
+    {
+      "type": "MODEL_RUNTIME_RETRY",
+      "reason": "MODEL_TIMEOUT",
+      "model_runtime_retry_count_after": 1,
+      "quality_retry_count_after": 0
+    },
+    {
+      "type": "QUALITY_REPROCESSING",
+      "reason": "SKIN_TOO_WARM",
+      "model_runtime_retry_count_after": 1,
+      "quality_retry_count_after": 1
+    }
+  ]
+}

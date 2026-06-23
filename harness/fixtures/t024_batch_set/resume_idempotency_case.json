@@ -1,0 +1,17 @@
+{
+  "completed_job_ids": [
+    "job-001",
+    "job-002"
+  ],
+  "pending_job_ids": [
+    "job-003"
+  ],
+  "duplicate_submission": true,
+  "expected_reexecute": [
+    "job-003"
+  ],
+  "must_not_reexecute": [
+    "job-001",
+    "job-002"
+  ]
+}

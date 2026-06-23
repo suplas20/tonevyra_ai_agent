@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-026 Benchmark Case",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "dataset_id",
+    "dataset_version",
+    "split",
+    "case_id",
+    "source_checksum",
+    "reference_checksums",
+    "license_or_consent",
+    "scene_class",
+    "difficulty",
+    "required_metrics"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t026.benchmark.case.v1"
+    },
+    "dataset_id": {
+      "type": "string"
+    },
+    "dataset_version": {
+      "type": "string"
+    },
+    "split": {
+      "enum": [
+        "train",
+        "calibration",
+        "test"
+      ]
+    },
+    "case_id": {
+      "type": "string"
+    },
+    "source_checksum": {
+      "type": "string"
+    },
+    "reference_checksums": {
+      "type": "array",
+      "minItems": 1
+    },
+    "license_or_consent": {
+      "type": "string"
+    },
+    "scene_class": {
+      "type": "string"
+    },
+    "difficulty": {
+      "enum": [
+        "simple",
+        "moderate",
+        "complex"
+      ]
+    },
+    "required_metrics": {
+      "type": "array",
+      "minItems": 1
+    }
+  },
+  "additionalProperties": true
+}

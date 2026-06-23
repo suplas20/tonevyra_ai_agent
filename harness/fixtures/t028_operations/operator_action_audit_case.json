@@ -1,0 +1,6 @@
+{
+  "command": "release-stale-lease",
+  "dry_run_supported": true,
+  "confirmation_required": true,
+  "audit_event_required": true
+}

@@ -228,3 +228,18 @@ training_sample_manifest.json
 ```
 
 The MVP must not require live model fine-tuning to pass the harness. Learning readiness means local data capture, approval flags, and future offline training compatibility.
+
+## T-021 Dual-Mode Agent Core and Closed-Loop Contract Addendum
+
+T-021 extends the legacy terminal decision contract without deleting it. Until the database migration is complete, T-021 semantics are persisted through task events and `failure_class` while existing `PASS / REVIEW_REQUIRED / FAILED` rows remain readable.
+
+Canonical T-021 states:
+
+```text
+CREATED → ANALYZING → ADJUSTMENT_READY → LIGHTROOM_PROCESSING → EXPORTED → EVALUATING
+EVALUATING → APPROVED | RETRY_REQUIRED | SOURCE_LIMITED | TECHNICAL_FAILED | FINAL_FAILED
+RETRY_REQUIRED → ADJUSTMENT_READY
+```
+
+`EXPORTED` requires the full T-020 export-result and output-file evidence. The Plugin remains a technical adapter and cannot make quality or retry decisions. Detailed rules live in `harness/CONTRACT_T021_DUAL_MODE_CLOSED_LOOP.md`.
+

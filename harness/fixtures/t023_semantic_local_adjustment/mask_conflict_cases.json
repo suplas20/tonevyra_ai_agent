@@ -1,0 +1,26 @@
+{
+  "cases": [
+    {
+      "case_id": "skin-vs-global-clarity",
+      "global_intent": {
+        "clarity_delta": 0.3
+      },
+      "local_intent": {
+        "region_type": "skin",
+        "clarity_delta": -0.1
+      },
+      "expected_rule": "skin_naturalness_wins_locally"
+    },
+    {
+      "case_id": "sky-vs-global-saturation",
+      "global_intent": {
+        "saturation_delta": 0.1
+      },
+      "local_intent": {
+        "region_type": "sky",
+        "saturation_delta": -0.05
+      },
+      "expected_rule": "bounded_additive_delta"
+    }
+  ]
+}

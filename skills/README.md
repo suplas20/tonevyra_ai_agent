@@ -116,3 +116,54 @@ recovery-loop
 testing-harness
 vision-analysis
 ```
+
+## T-021 Dual-Mode Agent Core and Closed-Loop Gate
+
+T-021 keeps one Common Agent Core and selects Module or Model Providers through plan policy. Provider output is normalized analysis evidence; the Adjustment Planner remains the only component that creates bounded Lightroom values. Post-export quality is classified by the Agent, not the Plugin.
+
+Canonical T-021 references:
+
+```text
+skills/dual-mode-agent-core/SKILL.md
+skills/closed-loop-quality-reprocessing/SKILL.md
+harness/CONTRACT_T021_DUAL_MODE_CLOSED_LOOP.md
+harness/scripts/verify_t021_dual_mode_closed_loop.py
+harness/fixtures/t021_dual_mode/
+```
+
+T-021 adds two skills without removing or merging the 25 T-020 skills.
+
+## Cumulative Skill Inventory (T-021 preservation check)
+
+Total `SKILL.md` files: **27**
+
+```text
+agent-worker-pipeline
+artifact-storage
+cli-operations
+closed-loop-quality-reprocessing
+correction-planner
+correction-planning
+dual-mode-agent-core
+feedback-learning
+folder-watcher
+image-metadata-preview
+lightroom-apply-adapter
+lightroom-bridge
+lightroom-final-export-adapter
+lightroom-live-test
+lightroom-plugin-implementation
+local-model-security
+loop-engineering
+model-benchmark-loop
+model-security
+postgresql-persistence
+project-scope
+python-mvp-structure
+quality-gate
+recovery-error-handling
+recovery-loop
+testing-harness
+vision-analysis
+```
+

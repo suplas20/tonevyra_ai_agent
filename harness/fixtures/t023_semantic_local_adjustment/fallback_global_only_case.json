@@ -1,0 +1,6 @@
+{
+  "mask_capability_available": false,
+  "expected_degraded_mode": true,
+  "expected_behavior": "global_only",
+  "must_record_reason": true
+}

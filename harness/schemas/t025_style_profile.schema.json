@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-025 Style Profile",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "profile_id",
+    "user_scope_id",
+    "version",
+    "status",
+    "source",
+    "preferences",
+    "constraints",
+    "confidence",
+    "minimum_evidence_count"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t025.style.profile.v1"
+    },
+    "profile_id": {
+      "type": "string"
+    },
+    "user_scope_id": {
+      "type": "string"
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "DRAFT",
+        "ACTIVE",
+        "SUPERSEDED",
+        "DISABLED"
+      ]
+    },
+    "source": {
+      "enum": [
+        "explicit",
+        "feedback_calibration",
+        "imported_approved"
+      ]
+    },
+    "preferences": {
+      "type": "object"
+    },
+    "constraints": {
+      "type": "object"
+    },
+    "confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "minimum_evidence_count": {
+      "type": "integer",
+      "minimum": 0
+    }
+  },
+  "additionalProperties": false
+}

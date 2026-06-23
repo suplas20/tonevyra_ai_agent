@@ -1,0 +1,18 @@
+{
+  "schema_version": "t028.operation.checkpoint.v1",
+  "checkpoint_id": "cp-001",
+  "job_id": "job-028-001",
+  "attempt_id": "attempt-1",
+  "stage": "EXPORTED",
+  "state": "COMMITTED",
+  "input_checksums": [
+    "sha256:source"
+  ],
+  "output_checksums": [
+    "sha256:export"
+  ],
+  "idempotency_key": "job-028-001:export:1",
+  "lease_owner": null,
+  "created_at": "2026-06-23T00:00:00Z",
+  "committed_at": "2026-06-23T00:01:00Z"
+}

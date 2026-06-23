@@ -1,0 +1,38 @@
+{
+  "schema_version": "t021.analysis.result.v1",
+  "job_id": "job-model-001",
+  "attempt_id": "attempt-model-000",
+  "provider_type": "model",
+  "provider_version": "qwen-adapter-contract-v1",
+  "scene": {
+    "type": "portrait",
+    "genre": "editorial",
+    "mood": "soft",
+    "lighting": "mixed"
+  },
+  "subjects": [
+    {
+      "type": "person",
+      "priority": 1,
+      "skin_naturalness_risk": "medium"
+    }
+  ],
+  "technical_findings": [
+    {
+      "code": "UNDEREXPOSED",
+      "severity": 0.36
+    }
+  ],
+  "color_findings": [
+    {
+      "code": "MIXED_LIGHTING",
+      "severity": 0.44
+    }
+  ],
+  "quality_risks": [
+    "SKIN_TONE_UNNATURAL",
+    "MOOD_LOSS_RISK"
+  ],
+  "confidence": 0.91,
+  "created_at": "2026-06-22T00:00:00Z"
+}

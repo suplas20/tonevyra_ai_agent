@@ -1,0 +1,35 @@
+{
+  "schema_version": "t021.plan_policies.v1",
+  "plans": {
+    "free": {
+      "analysis_provider": "module",
+      "quality_provider": "module",
+      "max_quality_retries": 1,
+      "allow_model_loading": false
+    },
+    "lite": {
+      "analysis_provider": "module",
+      "quality_provider": "module",
+      "max_quality_retries": 2,
+      "allow_model_loading": false
+    },
+    "standard": {
+      "analysis_provider": "model",
+      "quality_provider": "model",
+      "max_quality_retries": 2,
+      "allow_model_loading": true
+    },
+    "pro": {
+      "analysis_provider": "model",
+      "quality_provider": "model",
+      "max_quality_retries": 3,
+      "allow_model_loading": true
+    },
+    "t021_mvp": {
+      "analysis_provider": "module",
+      "quality_provider": "module",
+      "max_quality_retries": 2,
+      "allow_model_loading": false
+    }
+  }
+}

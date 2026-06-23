@@ -3,7 +3,7 @@
   "request_id": "export-request-002",
   "task_id": "task-002",
   "apply_request_id": "apply-request-002",
-  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\failed.jpg",
+  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\failed.ARW",
   "export_path": "F:\\tonevyra_ai_agent\\runtime\\output\\temp\\task-002\\failed_tonevyra.jpg",
   "status": "failed",
   "export_settings": {

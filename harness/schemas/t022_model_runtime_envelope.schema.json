@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t022.model.runtime.envelope.v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "request_id",
+    "job_id",
+    "attempt_id",
+    "operation",
+    "provider_type",
+    "model_id",
+    "model_revision",
+    "model_checksum",
+    "runtime_backend",
+    "runtime_version",
+    "device",
+    "dtype",
+    "quantization",
+    "started_at",
+    "completed_at",
+    "latency_ms",
+    "parse_status",
+    "confidence",
+    "raw_output_checksum",
+    "normalized_output"
+  ],
+  "properties": {
+    "schema_version": {"const": "t022.model.runtime.envelope.v1"},
+    "operation": {"enum": ["analysis", "quality"]},
+    "provider_type": {"const": "model"},
+    "latency_ms": {"type": "number", "minimum": 0},
+    "parse_status": {"enum": ["SUCCESS", "FAILED"]},
+    "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+    "normalized_output": {"type": "object"}
+  },
+  "additionalProperties": true
+}

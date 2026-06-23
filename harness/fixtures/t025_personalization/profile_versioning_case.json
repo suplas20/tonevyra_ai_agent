@@ -1,0 +1,15 @@
+{
+  "versions": [
+    {
+      "version": 1,
+      "status": "SUPERSEDED"
+    },
+    {
+      "version": 2,
+      "status": "ACTIVE"
+    }
+  ],
+  "rollback_target": 1,
+  "expected_new_version": 3,
+  "expected_source": "rollback"
+}

@@ -1,0 +1,78 @@
+{
+  "schema_version": "t024.batch.job.v1",
+  "batch_id": "batch-024-001",
+  "chunk_size": 10,
+  "state": "PROCESSING",
+  "items": [
+    {
+      "job_id": "job-001",
+      "source_path": "/input/photo_001.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:001",
+      "set_id": "set-a"
+    },
+    {
+      "job_id": "job-002",
+      "source_path": "/input/photo_002.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:002",
+      "set_id": "set-a"
+    },
+    {
+      "job_id": "job-003",
+      "source_path": "/input/photo_003.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:003",
+      "set_id": "set-a"
+    },
+    {
+      "job_id": "job-004",
+      "source_path": "/input/photo_004.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:004",
+      "set_id": "set-a"
+    },
+    {
+      "job_id": "job-005",
+      "source_path": "/input/photo_005.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:005",
+      "set_id": "set-a"
+    },
+    {
+      "job_id": "job-006",
+      "source_path": "/input/photo_006.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:006",
+      "set_id": "set-a"
+    },
+    {
+      "job_id": "job-007",
+      "source_path": "/input/photo_007.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:007",
+      "set_id": "set-a"
+    },
+    {
+      "job_id": "job-008",
+      "source_path": "/input/photo_008.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:008",
+      "set_id": "set-a"
+    },
+    {
+      "job_id": "job-009",
+      "source_path": "/input/photo_009.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:009",
+      "set_id": "set-a"
+    },
+    {
+      "job_id": "job-010",
+      "source_path": "/input/photo_010.jpg",
+      "item_state": "QUEUED",
+      "idempotency_key": "batch-024-001:010",
+      "set_id": "set-a"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import datetime
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -17,6 +18,7 @@ from tonevyra_agent.core.errors import TonevyraError
 from tonevyra_agent.db.models import ImageTask
 from tonevyra_agent.db.repositories import StageResultRepository, TaskEventRepository
 from tonevyra_agent.images.preview import PreviewArtifactResult, create_preview_artifact
+from tonevyra_agent.images.raw_preview import extract_largest_embedded_jpeg, is_raw_source
 from tonevyra_agent.storage.artifacts import ArtifactRef, ArtifactStorage
 
 
@@ -75,11 +77,29 @@ def extract_basic_metadata(source_path: Path) -> dict[str, Any]:
             }
             exif = image.getexif()
     except (OSError, UnidentifiedImageError) as exc:
-        raise TonevyraError(
-            code=ErrorCode.PREVIEW_GENERATION_FAILED,
-            message=f"Unable to read image metadata: {path}",
-            failed_stage=Stage.METADATA.value,
-        ) from exc
+        if not is_raw_source(path):
+            raise TonevyraError(
+                code=ErrorCode.PREVIEW_GENERATION_FAILED,
+                message=f"Unable to read image metadata: {path}",
+                failed_stage=Stage.METADATA.value,
+            ) from exc
+        embedded = extract_largest_embedded_jpeg(path)
+        if embedded is None:
+            raise TonevyraError(
+                code=ErrorCode.PREVIEW_GENERATION_FAILED,
+                message=f"Unable to read RAW metadata or embedded preview: {path}",
+                failed_stage=Stage.METADATA.value,
+            ) from exc
+        with Image.open(BytesIO(embedded)) as image:
+            metadata["image"] = {
+                "format": "RAW",
+                "width": image.width,
+                "height": image.height,
+                "mode": image.mode,
+                "readable": True,
+                "metadata_source": "embedded_jpeg_preview",
+            }
+            exif = image.getexif()
 
     named_exif = _named_exif(exif)
     metadata["exif"] = named_exif

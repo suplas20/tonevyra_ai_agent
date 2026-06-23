@@ -1,0 +1,5 @@
+{
+  "requesting_user": "user-a",
+  "profile_owner": "user-b",
+  "expected_access": "DENY"
+}

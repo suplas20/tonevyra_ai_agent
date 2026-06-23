@@ -131,3 +131,22 @@ python .\harness\scripts\verify_lightroom_export_adapter.py --project-root F:\to
 ```
 
 A T-020 success requires both `status=exported` and an actual non-empty output file. T-019 Apply Adapter files and tests remain mandatory regression gates.
+
+## T-021 Dual-Mode Agent Core and Closed-Loop Quality Reprocessing
+
+T-021 verifies that one Common Agent Core can select Module or Model Providers through plan policy, while all Provider outputs use a common normalized schema and cannot bypass the Adjustment Planner. It also verifies that post-export quality evaluation produces bounded retries and separates technical failure, source limitation, final failure, and approval.
+
+Static contract and fixture verification:
+
+```powershell
+python .\harness\scripts\verify_t021_dual_mode_closed_loop.py --project-root F:\tonevyra_ai_agent
+```
+
+Runtime evidence verification:
+
+```powershell
+python .\harness\scripts\verify_t021_dual_mode_closed_loop.py --project-root F:\tonevyra_ai_agent --job-evidence <job-manifest.json> --strict
+```
+
+Run T-019 Apply Adapter and T-020 Final Export Adapter verifiers before T-021. T-021 requires all 25 baseline skills and adds two new skills for a cumulative total of 27.
+

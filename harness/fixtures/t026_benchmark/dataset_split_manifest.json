@@ -1,0 +1,15 @@
+{
+  "train": [
+    "train-001",
+    "train-002"
+  ],
+  "calibration": [
+    "cal-001",
+    "cal-002"
+  ],
+  "test": [
+    "test-001",
+    "test-002"
+  ],
+  "expected_overlap_count": 0
+}

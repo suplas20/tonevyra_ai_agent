@@ -1,0 +1,17 @@
+{
+  "schema_version": "t027.usage.ledger.v1",
+  "usage_event_id": "usage-001",
+  "idempotency_key": "user-1:job-1:photo-unit",
+  "user_scope_id": "user-1",
+  "job_id": "job-1",
+  "plan_id": "standard",
+  "plan_version": 1,
+  "state": "COMMITTED",
+  "photo_units": 1,
+  "compute_metrics": {
+    "model_ms": 1800,
+    "gpu_peak_mb": 5200,
+    "quality_retries": 1
+  },
+  "reason": "job_completed"
+}

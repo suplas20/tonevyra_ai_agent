@@ -1,0 +1,20 @@
+{
+  "cases": [
+    {
+      "file_exists": true,
+      "db_record_exists": false,
+      "expected": "REGISTER_AFTER_CHECKSUM_VERIFY"
+    },
+    {
+      "file_exists": false,
+      "db_record_exists": true,
+      "expected": "MANUAL_INTERVENTION_OR_RETRY_POLICY"
+    },
+    {
+      "file_exists": true,
+      "db_record_exists": true,
+      "checksum_match": false,
+      "expected": "MANUAL_INTERVENTION"
+    }
+  ]
+}

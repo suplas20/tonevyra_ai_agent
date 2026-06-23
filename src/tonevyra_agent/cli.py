@@ -83,6 +83,12 @@ def _vision_backend_check(settings: Settings) -> CheckResult:
             fixture.exists(),
             f"mock fixture={fixture}",
         )
+    if backend in {"module", "module-analysis", "t021_module"}:
+        return CheckResult(
+            "vision backend",
+            True,
+            f"{settings.vision_backend} local deterministic provider",
+        )
     if backend in {"qwen", "qwen2.5-vl", "qwen25vl"}:
         model_path = settings.project_path(settings.qwen_model_path)
         return CheckResult(

@@ -46,6 +46,10 @@ Diagnostic menu items are allowed only for troubleshooting an existing bridge ap
 - `develop_settings` or `preset_path`
 - `created_at`
 
+`source_path` is the original catalog/source photo path and must not be limited
+to JPG/JPEG. The adapter must accept every supported MVP image extension:
+`.cr3`, `.cr2`, `.nef`, `.arw`, `.dng`, `.jpg`, and `.jpeg`.
+
 ## Required result fields
 
 - `schema_version`
@@ -75,6 +79,7 @@ A T-019 implementation fails if plugin code or T-019 implementation notes make t
 - AI/model calls.
 - quality score computation.
 - correction plan creation.
+- JPG-only source assumptions. RAW source fixtures such as `.ARW` must remain valid.
 
 ## Canonical test command
 

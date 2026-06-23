@@ -1,0 +1,5 @@
+{
+  "idempotency_key": "job-1:usage-commit",
+  "recovery_replays": 3,
+  "expected_commits": 1
+}

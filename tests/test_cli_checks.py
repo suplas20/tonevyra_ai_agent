@@ -32,3 +32,12 @@ def test_vision_backend_check_rejects_missing_qwen_model_path(tmp_path: Path) ->
 
     assert result.ok is False
     assert "missing" in result.detail
+
+
+def test_vision_backend_check_accepts_t021_module_provider() -> None:
+    settings = Settings(vision_backend="module")
+
+    result = _vision_backend_check(settings)
+
+    assert result.ok is True
+    assert "local deterministic provider" in result.detail

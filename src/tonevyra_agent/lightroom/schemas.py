@@ -29,6 +29,7 @@ LIGHTROOM_APPLY_ALLOWED_SETTINGS = {
     "whites",
     "blacks",
     "temp",
+    "temperature_delta",
     "tint",
     "vibrance",
     "saturation",

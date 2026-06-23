@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from tonevyra_agent.core.config import Settings, get_settings
 from tonevyra_agent.core.enums import ArtifactType, ErrorCode, Stage
 from tonevyra_agent.core.errors import TonevyraError
+from tonevyra_agent.images.raw_preview import extract_largest_embedded_jpeg, is_raw_source
 from tonevyra_agent.storage.artifacts import ArtifactRef, ArtifactStorage
 
 
@@ -62,23 +63,8 @@ def create_preview_bytes(source_path: Path, *, max_long_edge: int = 1024) -> Pre
 
     path = source_path.resolve()
     try:
-        with Image.open(path) as image:
-            image = ImageOps.exif_transpose(image)
-            image = _to_srgb_rgb(image)
-            image.thumbnail((max_long_edge, max_long_edge), Image.Resampling.LANCZOS)
-
-            buffer = BytesIO()
-            save_kwargs: dict[str, Any] = {
-                "format": "JPEG",
-                "quality": 92,
-                "optimize": True,
-            }
-            icc_profile = _srgb_profile_bytes()
-            if icc_profile is not None:
-                save_kwargs["icc_profile"] = icc_profile
-            image.save(buffer, **save_kwargs)
-            data = buffer.getvalue()
-            width, height = image.size
+        with _open_preview_source(path) as image:
+            data, width, height = _render_preview_jpeg(image, max_long_edge=max_long_edge)
     except (OSError, UnidentifiedImageError) as exc:
         raise TonevyraError(
             code=ErrorCode.PREVIEW_GENERATION_FAILED,
@@ -95,6 +81,38 @@ def create_preview_bytes(source_path: Path, *, max_long_edge: int = 1024) -> Pre
         color_space="sRGB",
         long_edge=max(width, height),
     )
+
+
+def _open_preview_source(path: Path) -> Image.Image:
+    try:
+        return Image.open(path)
+    except (OSError, UnidentifiedImageError):
+        if not is_raw_source(path):
+            raise
+        embedded = extract_largest_embedded_jpeg(path)
+        if embedded is None:
+            raise
+        return Image.open(BytesIO(embedded))
+
+
+def _render_preview_jpeg(image: Image.Image, *, max_long_edge: int) -> tuple[bytes, int, int]:
+    image = ImageOps.exif_transpose(image)
+    image = _to_srgb_rgb(image)
+    image.thumbnail((max_long_edge, max_long_edge), Image.Resampling.LANCZOS)
+
+    buffer = BytesIO()
+    save_kwargs: dict[str, Any] = {
+        "format": "JPEG",
+        "quality": 92,
+        "optimize": True,
+    }
+    icc_profile = _srgb_profile_bytes()
+    if icc_profile is not None:
+        save_kwargs["icc_profile"] = icc_profile
+    image.save(buffer, **save_kwargs)
+    data = buffer.getvalue()
+    width, height = image.size
+    return data, width, height
 
 
 def create_preview_artifact(

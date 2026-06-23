@@ -1,0 +1,25 @@
+{
+  "cases": [
+    {
+      "job_id": "job-001",
+      "capture_group": "A",
+      "scene": "outdoor_portrait",
+      "grouping_confidence": 0.95,
+      "expected_set": "set-a"
+    },
+    {
+      "job_id": "job-002",
+      "capture_group": "A",
+      "scene": "outdoor_portrait",
+      "grouping_confidence": 0.93,
+      "expected_set": "set-a"
+    },
+    {
+      "job_id": "job-010",
+      "capture_group": "B",
+      "scene": "night_flash",
+      "grouping_confidence": 0.42,
+      "expected_set": "outlier"
+    }
+  ]
+}

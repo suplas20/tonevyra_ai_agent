@@ -1,0 +1,23 @@
+{
+  "schema_version": "t022.module_model_comparison.v1",
+  "dataset_id": "t022-fixture-set-001",
+  "same_source_set": true,
+  "same_lightroom_export_profile": true,
+  "module": {
+    "provider_version": "module-rules-v1",
+    "first_pass_approval_rate": 0.70,
+    "final_approval_rate": 0.84,
+    "average_quality_retries": 0.42,
+    "average_processing_ms": 3200,
+    "peak_memory_mb": 480
+  },
+  "model": {
+    "provider_version": "tonevyra-local-vision:pinned-revision-001",
+    "first_pass_approval_rate": 0.82,
+    "final_approval_rate": 0.93,
+    "average_quality_retries": 0.31,
+    "average_processing_ms": 6100,
+    "average_inference_ms": 1320,
+    "peak_memory_mb": 8420
+  }
+}

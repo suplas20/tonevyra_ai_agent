@@ -1,0 +1,35 @@
+{
+  "schema_version": "t023.local.adjustment.plan.v1",
+  "job_id": "job-023-001",
+  "attempt_id": "attempt-1",
+  "planner_version": "local-planner-1.0",
+  "capability_snapshot_id": "lr-cap-1",
+  "degraded_mode": false,
+  "plans": [
+    {
+      "mask_plan_id": "mask-plan-1",
+      "region_id": "region-person-1",
+      "supported_mask_type": "people",
+      "bounded_adjustment_intents": {
+        "exposure_delta": 0.2,
+        "highlights_delta": -0.15,
+        "texture_delta": -0.1
+      },
+      "conflict_resolution": [
+        "skin_texture_safety_applied"
+      ],
+      "fallback_behavior": "global_only"
+    },
+    {
+      "mask_plan_id": "mask-plan-2",
+      "region_id": "region-sky-1",
+      "supported_mask_type": "sky",
+      "bounded_adjustment_intents": {
+        "highlights_delta": -0.2,
+        "saturation_delta": -0.05
+      },
+      "conflict_resolution": [],
+      "fallback_behavior": "skip"
+    }
+  ]
+}

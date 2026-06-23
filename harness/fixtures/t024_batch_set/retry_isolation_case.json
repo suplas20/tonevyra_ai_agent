@@ -1,0 +1,11 @@
+{
+  "job_a": {
+    "quality_retry_count": 1,
+    "max": 2
+  },
+  "job_b": {
+    "quality_retry_count": 0,
+    "max": 2
+  },
+  "expected_job_b_count_after_job_a_retry": 0
+}

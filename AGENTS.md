@@ -1139,3 +1139,180 @@ skills/lightroom-final-export-adapter/SKILL.md
 harness/CONTRACT_LIGHTROOM_EXPORT_ADAPTER.md
 harness/scripts/verify_lightroom_export_adapter.py
 ```
+
+---
+
+## 32. T-021 Dual-Mode Agent Core and Closed-Loop Quality Policy
+
+T-021 introduces one Common Agent Core with replaceable analysis and quality providers. It does not authorize separate free and paid agent codebases.
+
+Canonical architecture:
+
+```text
+Common Agent Core
+→ AnalysisProvider: module | model
+→ normalized analysis schema
+→ Adjustment Planner + safety clamp
+→ T-019 Lightroom Apply Adapter
+→ T-020 Lightroom Final Export Adapter
+→ QualityProvider: module | model
+→ Quality Evaluator
+→ bounded Retry Controller
+→ terminal decision
+```
+
+### 32.1 Required responsibility boundaries
+
+1. Provider output is analysis or quality evidence.
+2. Adjustment Planner is the only component that creates final bounded Lightroom adjustment values.
+3. Lightroom Plugin is a technical execution adapter only.
+4. State Manager owns legal transitions.
+5. Retry Controller owns retry budget and progress checks.
+6. SaaS Plan Policy chooses Provider and retry limits.
+7. Model Provider must never bypass Planner, state policy, or quality policy.
+
+Forbidden Provider fields:
+
+```text
+lightroom_adjustments
+develop_settings
+preset_path
+final_decision
+```
+
+### 32.2 Provider and plan policy
+
+```text
+free     → module analysis / module quality / max quality retry 1
+lite     → module analysis / module quality / max quality retry 2
+standard → model analysis / model quality / max quality retry 2
+pro      → model analysis / model quality / max quality retry 3
+t021_mvp → module analysis / module quality / max quality retry 2
+```
+
+Do not deliberately degrade Module Provider output for lower plans. Plan differentiation must come from provider capability, throughput, retry depth, output features, and advanced semantics.
+
+Model Provider remains local-only. No remote API fallback, runtime download, external URL image loading, or silent Module fallback is allowed.
+
+### 32.3 T-021 state machine
+
+```text
+CREATED
+→ ANALYZING
+→ ADJUSTMENT_READY
+→ LIGHTROOM_PROCESSING
+→ EXPORTED
+→ EVALUATING
+→ APPROVED
+```
+
+Retry:
+
+```text
+EVALUATING
+→ RETRY_REQUIRED
+→ ADJUSTMENT_READY
+→ LIGHTROOM_PROCESSING
+→ EXPORTED
+→ EVALUATING
+```
+
+Terminal classifications:
+
+```text
+APPROVED
+SOURCE_LIMITED
+TECHNICAL_FAILED
+FINAL_FAILED
+```
+
+`RETRY_REQUIRED` is non-terminal and must always be bounded by plan policy.
+
+### 32.4 Export and quality boundary
+
+`EXPORTED` may be entered only after all T-020 evidence is valid:
+
+```text
+status=exported
+expected output exists
+output size > 0
+source path differs from export path
+artifact checksum and DB registration succeed
+```
+
+The Plugin must not calculate quality scores or set `APPROVED`, `RETRY_REQUIRED`, `SOURCE_LIMITED`, or `FINAL_FAILED`.
+
+### 32.5 Failure separation
+
+```text
+TECHNICAL_FAILED: provider, schema, Lightroom, Plugin, bridge, file, artifact, DB, timeout, or state error
+RETRY_REQUIRED: quality below target but an actionable strategy remains
+SOURCE_LIMITED: durable evidence that source data cannot be recovered by correction
+FINAL_FAILED: retry budget exhausted, no progress, or policy stop
+APPROVED: technical and quality gates pass
+```
+
+Technical recovery attempts and quality retries use separate bounded budgets.
+
+### 32.6 Attempt and artifact policy
+
+Every retry creates a new immutable attempt:
+
+```text
+job_id remains stable
+attempt_id is new
+attempt_no increments
+apply/export request ids are new
+previous artifacts remain unchanged
+plan delta and score delta are recorded
+```
+
+Required attempt artifacts:
+
+```text
+attempt_manifest.json
+analysis_result.json
+normalized_analysis.json
+adjustment_plan.json
+lightroom_apply_request.json
+lightroom_apply_result.json
+lightroom_export_request.json
+lightroom_export_result.json
+quality_evaluation.json
+state_transition.json
+retry_decision.json when applicable
+```
+
+### 32.7 Legacy compatibility
+
+Do not delete legacy status values or rewrite historical rows during T-021 migration.
+
+Before the additive DB migration is active, use:
+
+```text
+EXPORTED → EXPORT_DONE + T-021 event evidence
+EVALUATING → QUALITY_CHECK + T-021 event evidence
+APPROVED → PASS + t021_decision
+SOURCE_LIMITED / TECHNICAL_FAILED / FINAL_FAILED → FAILED + failure_class
+RETRY_REQUIRED → non-terminal task event
+```
+
+Any status/enum expansion requires synchronized code enum, DB constraint, Alembic migration, repository, recovery, CLI, fixture, and harness updates.
+
+### 32.8 Mandatory regression and acceptance gates
+
+The completed T-019 and T-020 contracts remain mandatory. T-021 cannot pass if their files or behavior are removed.
+
+Required references:
+
+```text
+.docs/t021/T-021_Dual_Mode_Photo_Agent_Core_Work_Order.md
+.docs/t021/T-021_Implementation_Specification.md
+skills/dual-mode-agent-core/SKILL.md
+skills/closed-loop-quality-reprocessing/SKILL.md
+harness/CONTRACT_T021_DUAL_MODE_CLOSED_LOOP.md
+harness/scripts/verify_t021_dual_mode_closed_loop.py
+```
+
+The T-020 baseline contains 25 skills. T-021 must preserve all 25 and add the two T-021 skills for a cumulative total of 27.
+

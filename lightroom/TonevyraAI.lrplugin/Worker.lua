@@ -56,7 +56,7 @@ local RANGES = {
   Shadows = { -100, 100 },
   Whites = { -100, 100 },
   Blacks = { -100, 100 },
-  Temp = { 1500, 50000 },
+  Temp = { 2500, 50000 },
   Tint = { -150, 150 },
   Vibrance = { -100, 100 },
   Saturation = { -100, 100 },
@@ -71,7 +71,8 @@ local RANGES = {
   shadows = { -100, 100 },
   whites = { -100, 100 },
   blacks = { -100, 100 },
-  temp = { 1500, 50000 },
+  temp = { 2500, 50000 },
+  temperature_delta = { -2000, 2000 },
   tint = { -150, 150 },
   vibrance = { -100, 100 },
   saturation = { -100, 100 },
@@ -296,7 +297,7 @@ local function validateExportRequest(request)
   return true, nil, nil
 end
 
-local function mapSettings(settings)
+local function mapSettings(settings, baseDevelopSettings)
   local develop = {}
   local applied = {}
   local skipped = {}
@@ -304,10 +305,43 @@ local function mapSettings(settings)
     local lrKey = KEY_MAP[key]
     local range = RANGES[key]
     local number = tonumber(value)
-    if not lrKey then
+    if key == "temperature_delta" then
+      if not number then
+        skipped[key] = { reason = "non_numeric", value = value }
+      else
+        local baseTemperature = tonumber(baseDevelopSettings and baseDevelopSettings.Temperature)
+        if not baseTemperature then
+          skipped[key] = { reason = "base_temperature_unavailable", value = value }
+        else
+          local delta = clamp(number, range[1], range[2])
+          local target = clamp(baseTemperature + delta, RANGES.temp[1], RANGES.temp[2])
+          develop.Temperature = target
+          applied[key] = delta
+          applied.temp = target
+          if delta ~= number then
+            skipped[key .. "_clamp"] = { reason = "clamped", value = number, applied = delta }
+          end
+          if target ~= baseTemperature + delta then
+            skipped.temp_clamp = { reason = "clamped", value = baseTemperature + delta, applied = target }
+          end
+          skipped.temperature_resolution = {
+            reason = "resolved_relative_delta_to_absolute_temperature",
+            base = baseTemperature,
+            delta = delta,
+            applied = target,
+          }
+        end
+      end
+    elseif not lrKey then
       skipped[key] = { reason = "unsupported_parameter", value = value }
     elseif not number then
       skipped[key] = { reason = "non_numeric", value = value }
+    elseif (key == "temp" or key == "Temp") and number < range[1] then
+      skipped[key] = {
+        reason = "temperature_must_be_absolute_not_delta",
+        value = number,
+        minimum_absolute_temperature = range[1],
+      }
     else
       local clamped = clamp(number, range[1], range[2])
       develop[lrKey] = clamped
@@ -353,12 +387,14 @@ end
 --     the retry wait (LrTasks.sleep) runs OUTSIDE withWriteAccessDo.
 --   * write_access_retry_count / write_access_wait_ms only grow when a retry is actually
 --     performed.
-local function applyWithWriteAccess(catalog, sourcePath, develop, existingPhoto)
+local function applyWithWriteAccess(catalog, sourcePath, settings, existingPhoto)
   local outcome = {
     photo = existingPhoto,
     found = existingPhoto ~= nil,
     imported = false,
     applied = false,
+    applied_settings = {},
+    skipped_settings = {},
     retry_count = 0,
     wait_ms = 0,
     blocked = false,
@@ -386,6 +422,14 @@ local function applyWithWriteAccess(catalog, sourcePath, develop, existingPhoto)
               end
               outcome.photo = importedPhoto
               outcome.imported = true
+            end
+            local baseDevelopSettings = outcome.photo:getDevelopSettings()
+            local develop, applied, skipped = mapSettings(settings, baseDevelopSettings)
+            outcome.applied_settings = applied
+            outcome.skipped_settings = skipped
+            if next(applied) == nil then
+              innerError = "no_supported_settings"
+              return
             end
             outcome.photo:applyDevelopSettings(develop)
             outcome.applied = true
@@ -462,27 +506,20 @@ local function applyRequest(request)
     return failed(request, "SOURCE_PATH_NOT_FOUND", "The source_path file from the Agent apply request does not exist.", true)
   end
 
-  local develop, applied, skipped = mapSettings(request.develop_settings)
-  if next(applied) == nil then
-    local result = failed(request, "NO_SUPPORTED_SETTINGS", "No supported Develop settings were supplied.", true)
-    result.skipped_settings = skipped
-    return result
-  end
-
   local catalog = LrApplication.activeCatalog()
 
   -- Read-only stage: resolve an existing catalog photo by path (no write access taken).
   local existingPhoto = resolveExistingPhoto(catalog, request.source_path)
 
   -- Write-access stage: import if needed and apply Develop settings, with retry on block.
-  local outcome = applyWithWriteAccess(catalog, request.source_path, develop, existingPhoto)
+  local outcome = applyWithWriteAccess(catalog, request.source_path, request.develop_settings, existingPhoto)
 
   if outcome.applied then
     local result = baseResult(request, "applied")
-    result.applied_parameters = applied
-    result.skipped_parameters = skipped
-    result.applied_settings = applied
-    result.skipped_settings = skipped
+    result.applied_parameters = outcome.applied_settings
+    result.skipped_parameters = outcome.skipped_settings
+    result.applied_settings = outcome.applied_settings
+    result.skipped_settings = outcome.skipped_settings
     result.lightroom_result.source_photo_found = outcome.found
     result.lightroom_result.source_photo_imported = outcome.imported
     result.lightroom_result.develop_settings_applied = true
@@ -504,8 +541,8 @@ local function applyRequest(request)
   end
 
   local result = failed(request, errorCode, failMessage, true)
-  result.skipped_parameters = skipped
-  result.skipped_settings = skipped
+  result.skipped_parameters = outcome.skipped_settings
+  result.skipped_settings = outcome.skipped_settings
   result.catalog_action = outcome.imported and "imported" or "not_imported"
   result.lightroom_result.source_photo_found = outcome.found
   result.lightroom_result.source_photo_imported = outcome.imported

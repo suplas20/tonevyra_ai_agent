@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "request_id": "lr_apply_001",
   "task_id": "task_001",
-  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\test.jpg",
+  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\test.ARW",
   "status": "applied",
   "catalog_action": "imported",
   "applied_parameters": {

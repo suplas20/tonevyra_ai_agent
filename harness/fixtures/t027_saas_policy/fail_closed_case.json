@@ -1,0 +1,6 @@
+{
+  "requested_plan": "standard",
+  "policy_found": false,
+  "expected_route": "DENY",
+  "silent_module_fallback": false
+}

@@ -213,3 +213,56 @@ Canonical T-020 harness:
 ```powershell
 python .\harness\scripts\verify_lightroom_export_adapter.py --project-root F:\tonevyra_ai_agent --plugin-dir F:\tonevyra_ai_agent\lightroom\TonevyraAI.lrplugin --strict
 ```
+
+---
+
+## Required reading for T-021 dual-mode agent and closed-loop work
+
+Before modifying Common Agent Core, provider selection, Module/Model analysis, quality evaluation, retry behavior, new failure classes, or T-021 states, read:
+
+```text
+AGENTS.md
+.docs/t021/T-021_Dual_Mode_Photo_Agent_Core_Work_Order.md
+.docs/t021/T-021_Implementation_Specification.md
+skills/dual-mode-agent-core/SKILL.md
+skills/closed-loop-quality-reprocessing/SKILL.md
+skills/correction-planner/SKILL.md
+skills/lightroom-apply-adapter/SKILL.md
+skills/lightroom-final-export-adapter/SKILL.md
+skills/artifact-storage/SKILL.md
+skills/testing-harness/SKILL.md
+```
+
+T-021 implementation rules:
+
+```text
+- Preserve all 25 T-020 baseline skills and all T-019/T-020 harness files.
+- Add, do not merge, the dual-mode-agent-core and closed-loop-quality-reprocessing skills.
+- Build one Common Agent Core; do not create separate free and paid repositories.
+- Complete ModuleAnalysisProvider and ModuleQualityProvider first.
+- Keep Model Provider behind the same normalized schema.
+- Reject model output that includes direct Lightroom adjustments, Develop settings, preset paths, or final decisions.
+- Adjustment Planner remains the only component that creates bounded Lightroom values.
+- Do not begin quality evaluation before T-020 export result and actual output-file evidence are valid.
+- Keep Plugin responsibility technical; Plugin must not score quality or decide retries.
+- Separate TECHNICAL_FAILED from RETRY_REQUIRED, SOURCE_LIMITED, and FINAL_FAILED.
+- Create a new immutable attempt and new request IDs for every quality retry.
+- Respect plan-specific retry budgets and progress guards.
+- Do not automatically switch to a remote model or silently fall back between providers.
+- Keep legacy statuses readable and use additive migrations.
+```
+
+Required verification order:
+
+```powershell
+python .\harness\scripts\verify_lightroom_apply_adapter_role.py --project-root F:\tonevyra_ai_agent
+python .\harness\scripts\verify_lightroom_export_adapter.py --project-root F:\tonevyra_ai_agent
+python .\harness\scripts\verify_t021_dual_mode_closed_loop.py --project-root F:\tonevyra_ai_agent
+```
+
+When runtime evidence exists:
+
+```powershell
+python .\harness\scripts\verify_t021_dual_mode_closed_loop.py --project-root F:\tonevyra_ai_agent --job-evidence <job-manifest.json> --strict
+```
+

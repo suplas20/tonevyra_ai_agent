@@ -42,6 +42,8 @@ REQUIRED_RESULT_FIELDS = {
 }
 
 REQUIRED_EXPORT_SETTINGS = {"format", "quality", "color_space", "resize"}
+SUPPORTED_SOURCE_EXTENSIONS = {".cr3", ".cr2", ".nef", ".arw", ".dng", ".jpg", ".jpeg"}
+RAW_SOURCE_EXTENSIONS = {".cr3", ".cr2", ".nef", ".arw", ".dng"}
 
 REQUIRED_PLUGIN_TERMS = [
     "lightroom_export_requests",
@@ -80,6 +82,20 @@ def assert_fields(data: dict, required: set[str], path: Path) -> None:
     missing = sorted(required - set(data))
     if missing:
         raise AssertionError(f"{path} missing required fields: {missing}")
+
+
+def source_extension(data: dict) -> str:
+    return Path(str(data.get("source_path") or "")).suffix.lower()
+
+
+def validate_supported_source_path(data: dict, path: Path) -> list[str]:
+    source = data.get("source_path")
+    if not source:
+        return [f"{path} source_path must be non-empty"]
+    suffix = source_extension(data)
+    if suffix not in SUPPORTED_SOURCE_EXTENSIONS:
+        return [f"{path} source_path must use a supported photo extension, got {suffix!r}"]
+    return []
 
 
 def iter_implementation_files(path: Path) -> Iterable[Path]:
@@ -139,6 +155,9 @@ def validate_request(data: dict, path: Path) -> list[str]:
         failures.append(f"{path} source_path and export_path must be non-empty")
     elif Path(str(source)) == Path(str(export)):
         failures.append(f"{path} export_path must not equal source_path")
+    failures.extend(validate_supported_source_path(data, path))
+    if source_extension(data) not in RAW_SOURCE_EXTENSIONS:
+        failures.append(f"{path} must use a RAW source extension to prevent JPG-only export adapter assumptions")
 
     settings = data.get("export_settings")
     if not isinstance(settings, dict):
@@ -176,6 +195,9 @@ def validate_result(data: dict, path: Path, *, require_output_file: bool) -> lis
     export = data.get("export_path")
     if source and export and Path(str(source)) == Path(str(export)):
         failures.append(f"{path} export_path must not equal source_path")
+    failures.extend(validate_supported_source_path(data, path))
+    if source_extension(data) not in RAW_SOURCE_EXTENSIONS:
+        failures.append(f"{path} must use a RAW source extension to prove RAW source to JPEG export behavior")
 
     lr = data.get("lightroom_result")
     fr = data.get("file_result")

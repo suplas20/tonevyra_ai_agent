@@ -1,0 +1,13 @@
+{
+  "schema_version": "t022.local_model_manifest.v1",
+  "model_id": "remote-model",
+  "model_revision": "latest",
+  "model_root": "https://example.invalid/model",
+  "model_checksum": "",
+  "runtime_backend": "remote_api",
+  "remote_api_enabled": true,
+  "runtime_download_enabled": true,
+  "external_image_url_enabled": true,
+  "allowed_model_root": "models",
+  "network_required": true
+}

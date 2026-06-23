@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-024 Batch Job",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "batch_id",
+    "chunk_size",
+    "items",
+    "state"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t024.batch.job.v1"
+    },
+    "batch_id": {
+      "type": "string"
+    },
+    "chunk_size": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+    },
+    "state": {
+      "enum": [
+        "CREATED",
+        "GROUPING",
+        "PROCESSING",
+        "EVALUATING",
+        "COMPLETED",
+        "PARTIAL_FAILED",
+        "FAILED"
+      ]
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "job_id",
+          "source_path",
+          "item_state",
+          "idempotency_key"
+        ],
+        "properties": {
+          "job_id": {
+            "type": "string"
+          },
+          "source_path": {
+            "type": "string"
+          },
+          "item_state": {
+            "type": "string"
+          },
+          "idempotency_key": {
+            "type": "string"
+          },
+          "set_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

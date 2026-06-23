@@ -1,0 +1,23 @@
+{
+  "schema_version": "t026.benchmark.run.v1",
+  "run_id": "run-026-001",
+  "dataset_id": "tonevyra-benchmark",
+  "dataset_version": "1.0.0",
+  "candidate_version": "agent-0.8.0",
+  "baseline_version": "agent-0.7.0",
+  "conditions_hash": "sha256:conditions1",
+  "aggregate_metrics": {
+    "final_approval_rate": 0.95,
+    "technical_failure_rate": 0.01,
+    "mean_latency_ms": 3100
+  },
+  "genre_metrics": {
+    "portrait": {
+      "human_score": 94.2
+    },
+    "night": {
+      "human_score": 90.1
+    }
+  },
+  "regression_decision": "PASS"
+}

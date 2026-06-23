@@ -1,0 +1,23 @@
+{
+  "schema_version": "t025.style.profile.v1",
+  "profile_id": "profile-025-001",
+  "user_scope_id": "user-local-1",
+  "version": 2,
+  "status": "ACTIVE",
+  "source": "explicit",
+  "preferences": {
+    "contrast_strength": 0.2,
+    "skin_warmth": 0.1,
+    "texture_clarity_balance": -0.15,
+    "mood_tags": [
+      "natural",
+      "clean"
+    ]
+  },
+  "constraints": {
+    "preserve_skin_naturalness": true,
+    "max_saturation_strength": 0.3
+  },
+  "confidence": 0.94,
+  "minimum_evidence_count": 5
+}

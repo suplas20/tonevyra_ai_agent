@@ -1,0 +1,19 @@
+{
+  "schema_version": "t026.benchmark.case.v1",
+  "dataset_id": "tonevyra-benchmark",
+  "dataset_version": "1.0.0",
+  "split": "test",
+  "case_id": "portrait-mixed-001",
+  "source_checksum": "sha256:source001",
+  "reference_checksums": [
+    "sha256:ref001"
+  ],
+  "license_or_consent": "internal-consent-v1",
+  "scene_class": "portrait_mixed_light",
+  "difficulty": "complex",
+  "required_metrics": [
+    "clipping",
+    "skin_naturalness",
+    "human_preference"
+  ]
+}

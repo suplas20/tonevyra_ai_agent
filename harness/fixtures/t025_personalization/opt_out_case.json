@@ -1,0 +1,6 @@
+{
+  "user_scope_id": "user-local-2",
+  "opt_out": true,
+  "expected_profile_loaded": false,
+  "expected_feedback_collected": false
+}

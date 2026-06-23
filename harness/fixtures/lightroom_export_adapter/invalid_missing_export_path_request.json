@@ -3,7 +3,7 @@
   "request_id": "export-request-invalid-001",
   "task_id": "task-invalid-001",
   "apply_request_id": "apply-request-invalid-001",
-  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\test.jpg",
+  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\test.ARW",
   "command": "EXPORT_CORRECTED_IMAGE",
   "export_settings": {
     "format": "JPEG",

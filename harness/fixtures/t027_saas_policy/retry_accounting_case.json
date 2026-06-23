@@ -1,0 +1,6 @@
+{
+  "job_id": "job-1",
+  "quality_attempts": 3,
+  "expected_photo_units": 1,
+  "expected_compute_retry_count": 2
+}

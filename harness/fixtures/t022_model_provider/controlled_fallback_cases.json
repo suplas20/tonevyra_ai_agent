@@ -1,0 +1,25 @@
+{
+  "schema_version": "t022.controlled_fallback_cases.v1",
+  "cases": [
+    {
+      "name": "fallback_disabled_timeout",
+      "allow_module_fallback": false,
+      "failure_reason": "MODEL_TIMEOUT",
+      "expected_status": "TECHNICAL_FAILED",
+      "fallback_event": null
+    },
+    {
+      "name": "fallback_enabled_timeout",
+      "allow_module_fallback": true,
+      "failure_reason": "MODEL_TIMEOUT",
+      "expected_status": "DEGRADED_PROVIDER",
+      "fallback_event": {
+        "fallback_event_id": "fallback-001",
+        "requested_provider": "model",
+        "executed_provider": "module",
+        "fallback_reason": "MODEL_TIMEOUT",
+        "degraded_mode": true
+      }
+    }
+  ]
+}

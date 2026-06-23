@@ -213,7 +213,6 @@ local DEVELOP_SETTING_KEYS = {
   shadows = "Shadows2012",
   whites = "Whites2012",
   blacks = "Blacks2012",
-  temperature_delta = "Temperature",
   tint = "Tint",
   vibrance = "Vibrance",
   saturation = "Saturation",

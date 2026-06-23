@@ -1,0 +1,7 @@
+{
+  "last_committed_stage": "ADJUSTMENT_READY",
+  "pending_stage": "LIGHTROOM_PROCESSING",
+  "external_apply_result_found": false,
+  "expected_resume_stage": "LIGHTROOM_PROCESSING",
+  "must_reuse_idempotency_key": true
+}

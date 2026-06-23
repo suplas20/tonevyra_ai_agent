@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-025 Style Application Evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "job_id",
+    "profile_id",
+    "profile_version",
+    "mapping_version",
+    "applied",
+    "bounded_deltas",
+    "safety_overrides"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t025.style.application.v1"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "profile_id": {
+      "type": "string"
+    },
+    "profile_version": {
+      "type": "integer"
+    },
+    "mapping_version": {
+      "type": "string"
+    },
+    "applied": {
+      "type": "boolean"
+    },
+    "bounded_deltas": {
+      "type": "object"
+    },
+    "safety_overrides": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": false
+}

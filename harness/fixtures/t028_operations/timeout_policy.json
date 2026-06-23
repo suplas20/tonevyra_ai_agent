@@ -1,0 +1,6 @@
+{
+  "model_runtime_max_retries": 2,
+  "lightroom_command_max_retries": 2,
+  "max_wait_seconds": 300,
+  "unbounded_retry_allowed": false
+}

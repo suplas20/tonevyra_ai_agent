@@ -21,6 +21,9 @@ REQUIRED_RESULT_FIELDS = {
     "schema_version", "request_id", "task_id", "source_path", "status", "catalog_action", "completed_at", "message"
 }
 
+SUPPORTED_SOURCE_EXTENSIONS = {".cr3", ".cr2", ".nef", ".arw", ".dng", ".jpg", ".jpeg"}
+RAW_SOURCE_EXTENSIONS = {".cr3", ".cr2", ".nef", ".arw", ".dng"}
+
 PROHIBITED_PATTERNS = [
     (re.compile(r"runtime[\\/]+input", re.IGNORECASE), "plugin must not watch or scan runtime/input"),
     (re.compile(r"input[_ -]?folder", re.IGNORECASE), "plugin must not own input folder logic"),
@@ -57,6 +60,20 @@ def assert_fields(data: dict, required: set[str], path: Path) -> None:
     missing = sorted(required - set(data))
     if missing:
         raise AssertionError(f"{path} missing required fields: {missing}")
+
+
+def source_extension(data: dict) -> str:
+    return Path(str(data.get("source_path") or "")).suffix.lower()
+
+
+def validate_supported_source_path(data: dict, path: Path) -> list[str]:
+    source = data.get("source_path")
+    if not source:
+        return [f"{path} must include non-empty source_path"]
+    suffix = source_extension(data)
+    if suffix not in SUPPORTED_SOURCE_EXTENSIONS:
+        return [f"{path} source_path must use a supported photo extension, got {suffix!r}"]
+    return []
 
 
 def iter_implementation_files(path: Path) -> Iterable[Path]:
@@ -128,11 +145,15 @@ def verify_fixtures(project_root: Path) -> list[str]:
         assert_fields(req, REQUIRED_REQUEST_FIELDS, req_path)
         if "develop_settings" not in req and "preset_path" not in req:
             failures.append(f"{req_path} must include develop_settings or preset_path")
-        if not req.get("source_path"):
-            failures.append(f"{req_path} must include non-empty source_path")
+        failures.extend(validate_supported_source_path(req, req_path))
+        if source_extension(req) not in RAW_SOURCE_EXTENSIONS:
+            failures.append(f"{req_path} must use a RAW source extension to prevent JPG-only adapter assumptions")
 
         res = load_json(res_path)
         assert_fields(res, REQUIRED_RESULT_FIELDS, res_path)
+        failures.extend(validate_supported_source_path(res, res_path))
+        if source_extension(res) not in RAW_SOURCE_EXTENSIONS:
+            failures.append(f"{res_path} must use a RAW source extension to prove Lightroom apply supports RAW sources")
         if res.get("status") not in {"applied", "failed", "skipped", "partial"}:
             failures.append(f"{res_path} has invalid status: {res.get('status')}")
         if res.get("status") == "applied" and not (res.get("applied_parameters") or res.get("applied_preset")):
@@ -140,6 +161,7 @@ def verify_fixtures(project_root: Path) -> list[str]:
 
         failed_res = load_json(failed_res_path)
         assert_fields(failed_res, REQUIRED_RESULT_FIELDS, failed_res_path)
+        failures.extend(validate_supported_source_path(failed_res, failed_res_path))
         if failed_res.get("status") != "failed":
             failures.append(f"{failed_res_path} must be a failed result")
         if not failed_res.get("error_code"):

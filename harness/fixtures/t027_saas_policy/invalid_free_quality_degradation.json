@@ -1,0 +1,7 @@
+{
+  "plan_id": "free",
+  "analysis_provider": "module",
+  "quality_multiplier": 0.7,
+  "intentionally_reduce_quality": true,
+  "expected_validation": "FAIL"
+}

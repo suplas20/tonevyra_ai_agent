@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t022.runtime.evidence.v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "job_id",
+    "plan",
+    "network_disabled",
+    "runtime_download_used",
+    "remote_api_used",
+    "model_checksum_verified",
+    "source_checksum",
+    "export_checksum",
+    "model_runtime_retry_count",
+    "quality_retry_count",
+    "analysis_runtime",
+    "quality_runtime"
+  ],
+  "properties": {
+    "schema_version": {"const": "t022.runtime.evidence.v1"},
+    "plan": {"enum": ["standard", "pro"]},
+    "network_disabled": {"const": true},
+    "runtime_download_used": {"const": false},
+    "remote_api_used": {"const": false},
+    "model_checksum_verified": {"const": true},
+    "model_runtime_retry_count": {"type": "integer", "minimum": 0},
+    "quality_retry_count": {"type": "integer", "minimum": 0},
+    "analysis_runtime": {"type": "object"},
+    "quality_runtime": {"type": "object"}
+  },
+  "additionalProperties": true
+}

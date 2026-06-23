@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-023 Local Adjustment Plan",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "job_id",
+    "attempt_id",
+    "planner_version",
+    "capability_snapshot_id",
+    "plans",
+    "degraded_mode"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t023.local.adjustment.plan.v1"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "attempt_id": {
+      "type": "string"
+    },
+    "planner_version": {
+      "type": "string"
+    },
+    "capability_snapshot_id": {
+      "type": "string"
+    },
+    "degraded_mode": {
+      "type": "boolean"
+    },
+    "plans": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "mask_plan_id",
+          "region_id",
+          "supported_mask_type",
+          "bounded_adjustment_intents",
+          "conflict_resolution",
+          "fallback_behavior"
+        ],
+        "properties": {
+          "mask_plan_id": {
+            "type": "string"
+          },
+          "region_id": {
+            "type": "string"
+          },
+          "supported_mask_type": {
+            "enum": [
+              "subject",
+              "people",
+              "face_skin",
+              "sky",
+              "background",
+              "linear_gradient",
+              "radial_gradient"
+            ]
+          },
+          "bounded_adjustment_intents": {
+            "type": "object"
+          },
+          "conflict_resolution": {
+            "type": "array"
+          },
+          "fallback_behavior": {
+            "enum": [
+              "skip",
+              "global_only",
+              "technical_failure"
+            ]
+          }
+        }
+      }
+    }
+  },
+  "additionalProperties": false
+}

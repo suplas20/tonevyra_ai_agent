@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-024 Set Consistency Result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "batch_id",
+    "set_id",
+    "representative_job_id",
+    "grouping_confidence",
+    "baseline",
+    "item_results",
+    "overall_score"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t024.set.consistency.v1"
+    },
+    "batch_id": {
+      "type": "string"
+    },
+    "set_id": {
+      "type": "string"
+    },
+    "representative_job_id": {
+      "type": "string"
+    },
+    "grouping_confidence": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
+    "baseline": {
+      "type": "object"
+    },
+    "item_results": {
+      "type": "array"
+    },
+    "overall_score": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 100
+    }
+  },
+  "additionalProperties": true
+}

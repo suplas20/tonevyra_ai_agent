@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t021.job.v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "job_id",
+    "task_id",
+    "plan",
+    "analysis_provider",
+    "quality_provider",
+    "state",
+    "attempt_no",
+    "max_quality_retries"
+  ],
+  "properties": {
+    "plan": {
+      "enum": [
+        "free",
+        "lite",
+        "standard",
+        "pro",
+        "t021_mvp"
+      ]
+    },
+    "analysis_provider": {
+      "enum": [
+        "module",
+        "model"
+      ]
+    },
+    "quality_provider": {
+      "enum": [
+        "module",
+        "model"
+      ]
+    },
+    "attempt_no": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "max_quality_retries": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 3
+    }
+  },
+  "additionalProperties": true
+}

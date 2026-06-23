@@ -1,0 +1,19 @@
+{
+  "schema_version": "t023.local.adjustment.plan.v1",
+  "job_id": "job-invalid",
+  "attempt_id": "attempt-1",
+  "planner_version": "1",
+  "capability_snapshot_id": "cap",
+  "degraded_mode": false,
+  "plans": [
+    {
+      "mask_plan_id": "m1",
+      "region_id": "r1",
+      "supported_mask_type": "generative_object_replace",
+      "bounded_adjustment_intents": {},
+      "conflict_resolution": [],
+      "fallback_behavior": "skip"
+    }
+  ],
+  "expected_validation": "FAIL"
+}

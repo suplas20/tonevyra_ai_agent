@@ -47,6 +47,9 @@ class Settings(BaseSettings):
     qwen3_model_revision: str = "local"
     qwen3_model_sha256: str | None = None
     qwen_max_new_tokens: int = 768
+    model_manifest_path: Path = Field(default=PROJECT_ROOT / "models" / "tonevyra-local-vision" / "model_manifest.json")
+    model_confidence_threshold: float = 0.7
+    model_runtime_version: str = "1.0.0"
     vision_review_confidence_threshold: float = 0.7
     planner_review_confidence_threshold: float = 0.7
     lightroom_backend: str = "fake"

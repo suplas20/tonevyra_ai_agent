@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-028 Incident Event",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "incident_id",
+    "correlation_id",
+    "job_id",
+    "stage",
+    "component",
+    "fault_class",
+    "error_code",
+    "recovery_action",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t028.incident.event.v1"
+    },
+    "incident_id": {
+      "type": "string"
+    },
+    "correlation_id": {
+      "type": "string"
+    },
+    "job_id": {
+      "type": "string"
+    },
+    "stage": {
+      "type": "string"
+    },
+    "component": {
+      "type": "string"
+    },
+    "fault_class": {
+      "enum": [
+        "TRANSIENT",
+        "RECOVERABLE_RESTART",
+        "MANUAL_INTERVENTION",
+        "TERMINAL"
+      ]
+    },
+    "error_code": {
+      "type": "string"
+    },
+    "recovery_action": {
+      "type": "string"
+    },
+    "created_at": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": true
+}

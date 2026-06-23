@@ -7,6 +7,8 @@ from pydantic import ValidationError
 
 from tonevyra_agent.lightroom.schemas import LightroomExportRequestPayload, LightroomExportResultPayload
 from tonevyra_agent.lightroom.schemas import LightroomApplyResultPayload
+from tonevyra_agent.correction.schemas import CorrectionPlan
+from tonevyra_agent.lightroom.bridge import _develop_settings_from_plan
 
 
 def test_lightroom_export_request_rejects_source_overwrite(tmp_path: Path) -> None:
@@ -132,3 +134,24 @@ def test_lightroom_apply_result_accepts_write_access_evidence(tmp_path: Path) ->
 
     assert result.status == "applied"
     assert result.write_access_retry_count == 0
+
+
+def test_lightroom_apply_request_keeps_relative_temperature_delta() -> None:
+    plan = CorrectionPlan(
+        base_preset="underwater-clean",
+        style_target="natural",
+        adjustments_json={
+            "exposure": 0.25,
+            "temperature_delta": 1200,
+            "tint": 18,
+        },
+        confidence=0.86,
+        reason_summary="Relative temperature is resolved by the Lightroom plugin.",
+    )
+
+    settings = _develop_settings_from_plan(plan)
+
+    assert settings["exposure"] == 0.25
+    assert settings["tint"] == 18
+    assert settings["temperature_delta"] == 1200
+    assert "temp" not in settings

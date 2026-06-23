@@ -1,0 +1,6 @@
+{
+  "user_a_used": 50,
+  "user_b_used": 10,
+  "request_user": "user_b",
+  "expected_used_for_check": 10
+}

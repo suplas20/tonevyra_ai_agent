@@ -1,0 +1,15 @@
+{
+  "events": [
+    {
+      "idempotency_key": "same-key",
+      "state": "COMMITTED",
+      "photo_units": 1
+    },
+    {
+      "idempotency_key": "same-key",
+      "state": "COMMITTED",
+      "photo_units": 1
+    }
+  ],
+  "expected_committed_photo_units": 1
+}

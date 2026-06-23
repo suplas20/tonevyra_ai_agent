@@ -1,0 +1,40 @@
+{
+  "schema_version": "t022.model.runtime.envelope.v1",
+  "request_id": "req-invalid-adjustment-001",
+  "job_id": "job-t022-invalid",
+  "attempt_id": "attempt-0",
+  "operation": "analysis",
+  "provider_type": "model",
+  "model_id": "tonevyra-local-vision",
+  "model_revision": "pinned-revision-001",
+  "model_checksum": "sha256:2f5b0f8a4de92fc9e8cfd861d2f8db05c56f9a855d94cbfc104f37d3c198f607",
+  "runtime_backend": "local_qwen_vision",
+  "runtime_version": "1.0.0",
+  "device": "cuda:0",
+  "dtype": "float16",
+  "quantization": "none",
+  "started_at": "2026-06-22T09:00:00Z",
+  "completed_at": "2026-06-22T09:00:01Z",
+  "latency_ms": 1000,
+  "parse_status": "SUCCESS",
+  "confidence": 0.95,
+  "raw_output_checksum": "sha256:invalidraw001",
+  "normalized_output": {
+    "schema_version": "t021.analysis.result.v1",
+    "job_id": "job-t022-invalid",
+    "attempt_id": "attempt-0",
+    "provider_type": "model",
+    "provider_version": "invalid-provider",
+    "scene": {},
+    "subjects": [],
+    "technical_findings": [],
+    "color_findings": [],
+    "quality_risks": [],
+    "confidence": 0.95,
+    "created_at": "2026-06-22T09:00:01Z",
+    "lightroom_adjustments": {
+      "Temperature": -12,
+      "Highlights": -30
+    }
+  }
+}

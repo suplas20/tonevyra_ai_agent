@@ -1,0 +1,12 @@
+{
+  "review_session_id": "review-001",
+  "blind_pair_id": "pair-001",
+  "randomized_order": true,
+  "provider_labels_hidden": true,
+  "criteria_scores": {
+    "skin_naturalness": 4.6,
+    "overall_preference": 4.4
+  },
+  "preference": "B",
+  "confidence": 0.9
+}

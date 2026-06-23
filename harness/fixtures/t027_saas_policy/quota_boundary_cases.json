@@ -1,0 +1,14 @@
+{
+  "quota": 100,
+  "used": 99,
+  "cases": [
+    {
+      "requested": 1,
+      "expected": "ALLOW"
+    },
+    {
+      "requested": 2,
+      "expected": "DENY"
+    }
+  ]
+}

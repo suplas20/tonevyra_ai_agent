@@ -1,0 +1,11 @@
+{
+  "sample_count": 7,
+  "minimum_evidence_count": 5,
+  "direction_consistency": 0.86,
+  "confidence": 0.82,
+  "candidate_delta": {
+    "contrast_strength": 0.05
+  },
+  "expected_candidate_created": true,
+  "automatic_model_finetune": false
+}

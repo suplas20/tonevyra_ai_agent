@@ -1,0 +1,13 @@
+{
+  "schema_version": "t023.semantic.analysis.v1",
+  "job_id": "job-invalid",
+  "attempt_id": "attempt-1",
+  "provider_type": "model",
+  "primary_region_id": "r1",
+  "created_at": "2026-06-23T00:00:00Z",
+  "regions": [],
+  "plugin_command": {
+    "execute_mask": true,
+    "lightroom_mask_payload": {}
+  }
+}

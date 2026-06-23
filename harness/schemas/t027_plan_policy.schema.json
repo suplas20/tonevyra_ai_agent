@@ -1,0 +1,82 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-027 Plan Policy",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "plan_id",
+    "version",
+    "status",
+    "analysis_provider",
+    "quality_provider",
+    "max_quality_retries",
+    "max_batch_size",
+    "max_input_megapixels",
+    "priority_class",
+    "monthly_photo_quota",
+    "fallback_policy"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t027.plan.policy.v1"
+    },
+    "plan_id": {
+      "enum": [
+        "free",
+        "lite",
+        "standard",
+        "pro"
+      ]
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "status": {
+      "enum": [
+        "ACTIVE",
+        "INACTIVE"
+      ]
+    },
+    "analysis_provider": {
+      "enum": [
+        "module",
+        "model"
+      ]
+    },
+    "quality_provider": {
+      "enum": [
+        "module",
+        "model"
+      ]
+    },
+    "max_quality_retries": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "max_batch_size": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "max_input_megapixels": {
+      "type": "number",
+      "minimum": 1
+    },
+    "priority_class": {
+      "enum": [
+        "low",
+        "normal",
+        "high"
+      ]
+    },
+    "monthly_photo_quota": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fallback_policy": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": true
+}

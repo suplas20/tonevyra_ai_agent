@@ -27,7 +27,7 @@ FIXTURE_IMAGE = ROOT / "harness" / "fixtures" / "images" / "sample_underwater_01
 RUNTIME_DIR = ROOT / "runtime" / "harness" / "lightroom_t019_contract"
 ALLOWED_SETTINGS = {
     "exposure", "contrast", "highlights", "shadows", "whites", "blacks",
-    "temp", "tint", "vibrance", "saturation", "texture", "clarity", "dehaze",
+    "temp", "temperature_delta", "tint", "vibrance", "saturation", "texture", "clarity", "dehaze",
     "sharpening", "noise_reduction",
 }
 BANNED_KEYS = {"selected" + "_count", "selected" + "_photo_detected"}
@@ -179,10 +179,10 @@ def run_python_bridge_roundtrip() -> None:
         request_payload = LightroomApplyRequestPayload.model_validate(json.loads(request.request_path.read_text(encoding="utf-8")))
         if request_payload.command != "APPLY_LIGHTROOM_SETTINGS":
             raise ValueError("Python bridge wrote the wrong command")
-        if request_payload.develop_settings.get("temp") != 350:
-            raise ValueError("temperature_delta was not mapped to temp")
-        if "temperature_delta" in request_payload.develop_settings:
-            raise ValueError("internal planner key leaked into apply request")
+        if "temp" in request_payload.develop_settings:
+            raise ValueError("relative temperature_delta must not be sent as absolute Lightroom temp")
+        if request_payload.develop_settings.get("temperature_delta") != 350:
+            raise ValueError("temperature_delta must stay relative for plugin-side resolution")
 
         result_payload = LightroomApplyResultPayload(
             request_id=request_payload.request_id,
@@ -207,8 +207,8 @@ def run_python_bridge_roundtrip() -> None:
             raise ValueError("Lightroom apply result was not ingested as success")
 
         refreshed = task_repo.get(session, task.id)
-        if refreshed is None or refreshed.status != TaskStatus.REVIEW_REQUIRED.value:
-            raise ValueError("Lightroom apply success should end in REVIEW_REQUIRED for manual Lightroom review")
+        if refreshed is None or refreshed.status != TaskStatus.LIGHTROOM_PROCESSING.value:
+            raise ValueError("Lightroom apply success should remain export-eligible in LIGHTROOM_PROCESSING")
 
         artifact_types = {artifact.artifact_type for artifact in artifact_repo.list_for_task(session, task.id)}
         if ArtifactType.LIGHTROOM_REQUEST.value not in artifact_types:
@@ -224,7 +224,8 @@ def run_python_bridge_roundtrip() -> None:
         if not any(
             event.event_type == TaskEventType.LIGHTROOM_REQUESTED.value
             and event.payload_json.get("command") == "APPLY_LIGHTROOM_SETTINGS"
-            and event.payload_json.get("develop_settings", {}).get("temp") == 350
+            and event.payload_json.get("develop_settings", {}).get("temperature_delta") == 350
+            and event.payload_json.get("develop_settings", {}).get("exposure") == 0.25
             for event in events
         ):
             raise ValueError("apply request event payload_json evidence is missing")

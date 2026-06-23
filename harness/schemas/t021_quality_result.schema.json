@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t021.quality.result.v1",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "job_id",
+    "attempt_id",
+    "provider_type",
+    "status",
+    "scores",
+    "reason_codes",
+    "retry_recommendation",
+    "source_limit_evidence",
+    "created_at"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t021.quality.result.v1"
+    },
+    "provider_type": {
+      "enum": [
+        "module",
+        "model"
+      ]
+    },
+    "status": {
+      "enum": [
+        "APPROVED",
+        "RETRY_REQUIRED",
+        "SOURCE_LIMITED",
+        "TECHNICAL_FAILED",
+        "FINAL_FAILED"
+      ]
+    },
+    "scores": {
+      "type": "object"
+    },
+    "reason_codes": {
+      "type": "array"
+    },
+    "retry_recommendation": {
+      "type": "object"
+    },
+    "source_limit_evidence": {
+      "type": "array"
+    }
+  },
+  "additionalProperties": true
+}

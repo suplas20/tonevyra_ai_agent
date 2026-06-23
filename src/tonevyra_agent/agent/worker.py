@@ -92,7 +92,13 @@ class AgentWorker:
             else:
                 response_path = self._wait_for_lightroom_response(task_id, request_id=request_result.payload.request_id)
                 response_result = self._ingest_lightroom_response(task_id, response_path=response_path)
-        except TonevyraError:
+        except TonevyraError as exc:
+            self._mark_failed_if_needed(
+                task_id,
+                error_code=exc.code,
+                error_message=exc.message,
+                failed_stage=self._stage_from_error(task_id, exc),
+            )
             return self._current_result(task_id, processed=True)
         except Exception as exc:
             self._mark_failed(
@@ -112,7 +118,13 @@ class AgentWorker:
                 export_artifact=response_result.export_artifact,
                 correction_plan_artifact=correction_plan,
             )
-        except TonevyraError:
+        except TonevyraError as exc:
+            self._mark_failed_if_needed(
+                task_id,
+                error_code=exc.code,
+                error_message=exc.message,
+                failed_stage=self._stage_from_error(task_id, exc),
+            )
             return self._current_result(task_id, processed=True)
         if not quality_result.success or quality_result.detail is None:
             return self._current_result(task_id, processed=True)
@@ -393,6 +405,21 @@ class AgentWorker:
                     "evidence_artifacts": [],
                 },
             )
+
+    def _mark_failed_if_needed(self, task_id: UUID, *, error_code: ErrorCode, error_message: str, failed_stage: Stage) -> None:
+        with session_scope(self.settings) as session:
+            task = self._require_task(session, task_id)
+            if task.status == TaskStatus.FAILED.value:
+                return
+        self._mark_failed(task_id, error_code=error_code, error_message=error_message, failed_stage=failed_stage)
+
+    def _stage_from_error(self, task_id: UUID, error: TonevyraError) -> Stage:
+        if error.failed_stage:
+            try:
+                return Stage(error.failed_stage)
+            except ValueError:
+                pass
+        return self._current_stage_or_recovery(task_id)
 
     def _current_result(
         self,

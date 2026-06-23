@@ -1,0 +1,22 @@
+{
+  "schema_version": "t021.retry_sequence.v1",
+  "job_id": "job-module-001",
+  "plan": "t021_mvp",
+  "max_quality_retries": 2,
+  "attempts": [
+    {
+      "attempt_no": 0,
+      "attempt_id": "attempt-module-000",
+      "quality_status": "RETRY_REQUIRED",
+      "plan_delta_hash": "sha256:a1",
+      "score": 0.74
+    },
+    {
+      "attempt_no": 1,
+      "attempt_id": "attempt-module-001",
+      "quality_status": "APPROVED",
+      "plan_delta_hash": "sha256:b2",
+      "score": 0.9
+    }
+  ]
+}

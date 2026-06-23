@@ -1,0 +1,13 @@
+{
+  "schema_version": "t022.local_model_manifest.v1",
+  "model_id": "tonevyra-local-vision",
+  "model_revision": "pinned-revision-001",
+  "model_root": "models/tonevyra-local-vision",
+  "model_checksum": "sha256:2f5b0f8a4de92fc9e8cfd861d2f8db05c56f9a855d94cbfc104f37d3c198f607",
+  "runtime_backend": "local_qwen_vision",
+  "remote_api_enabled": false,
+  "runtime_download_enabled": false,
+  "external_image_url_enabled": false,
+  "allowed_model_root": "models",
+  "network_required": false
+}

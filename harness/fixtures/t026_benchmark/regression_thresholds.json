@@ -1,0 +1,12 @@
+{
+  "version": "threshold-1.0",
+  "critical": {
+    "technical_failure_rate_max": 0.03,
+    "final_approval_rate_min": 0.9
+  },
+  "genre": {
+    "portrait_human_score_min": 90,
+    "night_human_score_min": 85
+  },
+  "silent_relaxation_allowed": false
+}

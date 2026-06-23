@@ -1,0 +1,37 @@
+{
+  "ticket": "T-021",
+  "version": "t021-v1",
+  "baseline": "T-020",
+  "preservation": {
+    "baseline_skill_count": 25,
+    "expected_skill_count": 27,
+    "t019_regression_required": true,
+    "t020_regression_required": true
+  },
+  "added_skills": [
+    "skills/dual-mode-agent-core/SKILL.md",
+    "skills/closed-loop-quality-reprocessing/SKILL.md"
+  ],
+  "added_harness": [
+    "harness/CONTRACT_T021_DUAL_MODE_CLOSED_LOOP.md",
+    "harness/HARNESS_ENV_T021_DUAL_MODE.example",
+    "harness/scripts/verify_t021_dual_mode_closed_loop.py",
+    "harness/fixtures/t021_dual_mode/",
+    "harness/schemas/t021_analysis_result.schema.json",
+    "harness/schemas/t021_quality_result.schema.json",
+    "harness/schemas/t021_job.schema.json"
+  ],
+  "required_states": [
+    "CREATED",
+    "ANALYZING",
+    "ADJUSTMENT_READY",
+    "LIGHTROOM_PROCESSING",
+    "EXPORTED",
+    "EVALUATING",
+    "RETRY_REQUIRED",
+    "APPROVED",
+    "SOURCE_LIMITED",
+    "TECHNICAL_FAILED",
+    "FINAL_FAILED"
+  ]
+}

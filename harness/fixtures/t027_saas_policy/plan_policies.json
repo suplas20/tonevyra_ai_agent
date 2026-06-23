@@ -1,0 +1,69 @@
+{
+  "policies": [
+    {
+      "schema_version": "t027.plan.policy.v1",
+      "plan_id": "free",
+      "version": 1,
+      "status": "ACTIVE",
+      "analysis_provider": "module",
+      "quality_provider": "module",
+      "max_quality_retries": 1,
+      "max_batch_size": 10,
+      "max_input_megapixels": 24,
+      "priority_class": "low",
+      "monthly_photo_quota": 100,
+      "fallback_policy": {
+        "enabled": false
+      }
+    },
+    {
+      "schema_version": "t027.plan.policy.v1",
+      "plan_id": "lite",
+      "version": 1,
+      "status": "ACTIVE",
+      "analysis_provider": "module",
+      "quality_provider": "module",
+      "max_quality_retries": 2,
+      "max_batch_size": 50,
+      "max_input_megapixels": 45,
+      "priority_class": "normal",
+      "monthly_photo_quota": 1000,
+      "fallback_policy": {
+        "enabled": false
+      }
+    },
+    {
+      "schema_version": "t027.plan.policy.v1",
+      "plan_id": "standard",
+      "version": 1,
+      "status": "ACTIVE",
+      "analysis_provider": "model",
+      "quality_provider": "model",
+      "max_quality_retries": 2,
+      "max_batch_size": 100,
+      "max_input_megapixels": 60,
+      "priority_class": "normal",
+      "monthly_photo_quota": 3000,
+      "fallback_policy": {
+        "enabled": false
+      }
+    },
+    {
+      "schema_version": "t027.plan.policy.v1",
+      "plan_id": "pro",
+      "version": 1,
+      "status": "ACTIVE",
+      "analysis_provider": "model",
+      "quality_provider": "model",
+      "max_quality_retries": 3,
+      "max_batch_size": 500,
+      "max_input_megapixels": 100,
+      "priority_class": "high",
+      "monthly_photo_quota": 10000,
+      "fallback_policy": {
+        "enabled": true,
+        "requires_evidence": true
+      }
+    }
+  ]
+}

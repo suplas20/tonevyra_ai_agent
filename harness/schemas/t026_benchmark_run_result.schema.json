@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T-026 Benchmark Run Result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "run_id",
+    "dataset_id",
+    "dataset_version",
+    "candidate_version",
+    "baseline_version",
+    "conditions_hash",
+    "aggregate_metrics",
+    "genre_metrics",
+    "regression_decision"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t026.benchmark.run.v1"
+    },
+    "run_id": {
+      "type": "string"
+    },
+    "dataset_id": {
+      "type": "string"
+    },
+    "dataset_version": {
+      "type": "string"
+    },
+    "candidate_version": {
+      "type": "string"
+    },
+    "baseline_version": {
+      "type": "string"
+    },
+    "conditions_hash": {
+      "type": "string"
+    },
+    "aggregate_metrics": {
+      "type": "object"
+    },
+    "genre_metrics": {
+      "type": "object"
+    },
+    "regression_decision": {
+      "enum": [
+        "PASS",
+        "FAIL"
+      ]
+    }
+  },
+  "additionalProperties": true
+}

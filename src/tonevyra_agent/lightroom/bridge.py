@@ -1203,10 +1203,9 @@ def _validate_apply_result_for_export(response: LightroomApplyResultPayload) -> 
 def _develop_settings_from_plan(plan: CorrectionPlan) -> dict[str, float]:
     """Translate planner keys to the T-019 Lightroom apply contract."""
 
-    key_map = {"temperature_delta": "temp"}
     develop_settings: dict[str, float] = {}
     for key, value in plan.adjustments_json.items():
-        apply_key = key_map.get(key, key)
+        apply_key = key
         if apply_key not in LIGHTROOM_APPLY_ALLOWED_SETTINGS:
             continue
         develop_settings[apply_key] = float(value)

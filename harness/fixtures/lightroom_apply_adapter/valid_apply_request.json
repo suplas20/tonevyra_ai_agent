@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "request_id": "lr_apply_001",
   "task_id": "task_001",
-  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\test.jpg",
+  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\test.ARW",
   "operation": "apply_develop_settings",
   "develop_settings": {
     "Exposure": 0.3,

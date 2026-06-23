@@ -1,0 +1,33 @@
+{
+  "schema_version": "t022.plan_routing_cases.v1",
+  "cases": [
+    {
+      "plan": "free",
+      "analysis_provider": "module",
+      "quality_provider": "module",
+      "allow_model_loading": false,
+      "allow_module_fallback": false
+    },
+    {
+      "plan": "lite",
+      "analysis_provider": "module",
+      "quality_provider": "module",
+      "allow_model_loading": false,
+      "allow_module_fallback": false
+    },
+    {
+      "plan": "standard",
+      "analysis_provider": "model",
+      "quality_provider": "model",
+      "allow_model_loading": true,
+      "allow_module_fallback": false
+    },
+    {
+      "plan": "pro",
+      "analysis_provider": "model",
+      "quality_provider": "model",
+      "allow_model_loading": true,
+      "allow_module_fallback": false
+    }
+  ]
+}

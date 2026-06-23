@@ -1,0 +1,14 @@
+{
+  "schema_version": "t025.style.profile.v1",
+  "profile_id": "bad",
+  "user_scope_id": "user-1",
+  "version": 1,
+  "status": "ACTIVE",
+  "source": "explicit",
+  "preferences": {},
+  "constraints": {},
+  "confidence": 1,
+  "minimum_evidence_count": 0,
+  "preset_path": "C:/unsafe.xmp",
+  "plugin_command": "apply_preset"
+}

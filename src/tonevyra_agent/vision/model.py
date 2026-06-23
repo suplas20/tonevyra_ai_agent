@@ -11,6 +11,8 @@ from typing import Any, Protocol
 from tonevyra_agent.core.config import Settings, get_settings
 from tonevyra_agent.core.enums import ErrorCode, Stage
 from tonevyra_agent.core.errors import TonevyraError
+from tonevyra_agent.providers.module_analysis import ModuleAnalysisProvider, analysis_to_vision_payload
+from tonevyra_agent.schemas.analysis import AnalysisRequest
 
 REQUIRED_OFFLINE_ENV = {
     "HF_HUB_OFFLINE": "1",
@@ -60,6 +62,45 @@ class MockVisionBackend:
             payload.setdefault("model_backend", self.backend_name)
             payload.setdefault("model_name", self.model_name)
         return payload
+
+
+class ModuleVisionBackend:
+    """T-021 deterministic module provider adapted to the existing vision contract."""
+
+    backend_name = "module"
+    model_name = "module-analysis-v1"
+
+    def __init__(self, provider: ModuleAnalysisProvider | None = None) -> None:
+        self.provider = provider or ModuleAnalysisProvider()
+
+    def analyze(self, *, preview_path: Path, metadata: dict[str, Any], prompt: str) -> dict[str, Any]:
+        if not preview_path.exists():
+            raise TonevyraError(
+                code=ErrorCode.MODEL_INFERENCE_FAILED,
+                message=f"Preview artifact is missing: {preview_path}",
+                failed_stage=Stage.VISION.value,
+            )
+
+        job_id = _job_id_from_preview(preview_path)
+        request = AnalysisRequest(
+            job_id=job_id,
+            attempt_id=f"{job_id}-attempt-0",
+            preview_path=preview_path,
+            metadata=metadata,
+            plan="t021_mvp",
+            previous_attempt_context=None,
+        )
+        try:
+            result = self.provider.analyze(request)
+        except TonevyraError:
+            raise
+        except Exception as exc:
+            raise TonevyraError(
+                code=ErrorCode.MODEL_INFERENCE_FAILED,
+                message=f"Module analysis provider failed: {exc}",
+                failed_stage=Stage.VISION.value,
+            ) from exc
+        return analysis_to_vision_payload(result)
 
 
 class QwenVisionRuntime(Protocol):
@@ -200,6 +241,8 @@ def create_vision_backend(settings: Settings | None = None, *, fixture_path: Pat
     if backend_name == "mock":
         configured_fixture = fixture_path or config.project_path(config.vision_mock_fixture)
         return MockVisionBackend(configured_fixture)
+    if backend_name in {"module", "module-analysis", "t021_module"}:
+        return ModuleVisionBackend()
     if backend_name in {"qwen", "qwen2.5-vl", "qwen25vl"}:
         return QwenVisionBackend(config)
     raise TonevyraError(
@@ -311,6 +354,13 @@ def _parse_model_json(text: str) -> dict[str, Any]:
     if not isinstance(payload, dict):
         return {"model_backend": "qwen", "model_name": "unknown", "raw_text": text}
     return payload
+
+
+def _job_id_from_preview(preview_path: Path) -> str:
+    parent_name = preview_path.parent.name.strip()
+    if parent_name:
+        return parent_name
+    return preview_path.stem or "module-job"
 
 
 def _is_relative_to(path: Path, root: Path) -> bool:

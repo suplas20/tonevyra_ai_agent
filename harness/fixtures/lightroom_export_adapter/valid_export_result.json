@@ -3,7 +3,7 @@
   "request_id": "export-request-001",
   "task_id": "task-001",
   "apply_request_id": "apply-request-001",
-  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\test.jpg",
+  "source_path": "F:\\tonevyra_ai_agent\\runtime\\input\\test.ARW",
   "export_path": "F:\\tonevyra_ai_agent\\runtime\\output\\temp\\task-001\\test_tonevyra.jpg",
   "status": "exported",
   "export_settings": {
