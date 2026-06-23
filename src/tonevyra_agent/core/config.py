@@ -36,19 +36,21 @@ class Settings(BaseSettings):
     bridge_dir: Path = Field(default=PROJECT_ROOT / "runtime" / "bridge")
     log_dir: Path = Field(default=PROJECT_ROOT / "logs")
     models_dir: Path = Field(default=PROJECT_ROOT / "models")
+    external_models_dir: Path | None = None
     vision_backend: str = "mock"
     vision_mock_fixture: Path = Field(default=PROJECT_ROOT / "harness" / "fixtures" / "vision" / "valid_underwater.json")
     qwen_model_path: Path = Field(default=PROJECT_ROOT / "models" / "qwen2.5-vl-3b-instruct-4bit")
     qwen_model_name: str = "Qwen2.5-VL-3B-Instruct-4bit"
     qwen_model_revision: str = "local"
     qwen_model_sha256: str | None = None
-    qwen3_model_path: Path = Field(default=PROJECT_ROOT / "models" / "qwen3-vl-4b-instruct-4bit")
-    qwen3_model_name: str = "Qwen3-VL-4B-Instruct-4bit"
-    qwen3_model_revision: str = "local"
+    qwen3_model_path: Path = Field(default=Path("D:/Tonevyra/models/Qwen3-VL-4B-Instruct"))
+    qwen3_model_name: str = "Qwen3-VL-4B-Instruct"
+    qwen3_model_revision: str = "local-2025-06"
     qwen3_model_sha256: str | None = None
+    qwen3_manifest_path: Path = Field(default=PROJECT_ROOT / "models" / "qwen3-vl-4b-instruct" / "model_manifest.json")
     qwen_max_new_tokens: int = 768
-    model_manifest_path: Path = Field(default=PROJECT_ROOT / "models" / "tonevyra-local-vision" / "model_manifest.json")
-    model_confidence_threshold: float = 0.7
+    model_manifest_path: Path = Field(default=PROJECT_ROOT / "models" / "qwen3-vl-4b-instruct" / "model_manifest.json")
+    model_confidence_threshold: float = 0.6
     model_runtime_version: str = "1.0.0"
     vision_review_confidence_threshold: float = 0.7
     planner_review_confidence_threshold: float = 0.7

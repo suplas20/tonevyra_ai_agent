@@ -193,6 +193,7 @@ def plan_task_correction(
 def _map_analysis_to_adjustments(analysis: VisionAnalysisResult) -> tuple[dict[str, float], list[str]]:
     issues = analysis.issues.model_dump(exclude_none=True)
     adjustments = _zero_adjustments()
+    is_underwater = "underwater" in analysis.scene_type.lower()
     reasons: list[str] = [f"scene={analysis.scene_type}", f"confidence={analysis.confidence:.2f}"]
 
     exposure = _issue_value(issues, "exposure")
@@ -211,6 +212,11 @@ def _map_analysis_to_adjustments(analysis: VisionAnalysisResult) -> tuple[dict[s
         adjustments["shadows"] += 38
         adjustments["highlights"] -= 22
         reasons.append("underexposed image")
+    elif "severely_overexposed" in exposure:
+        adjustments["exposure"] -= 0.9
+        adjustments["highlights"] -= 70
+        adjustments["whites"] -= 25
+        reasons.append("severe overexposure recovery")
     elif "overexposed" in exposure:
         adjustments["exposure"] -= 0.35
         adjustments["highlights"] -= 35
@@ -229,25 +235,38 @@ def _map_analysis_to_adjustments(analysis: VisionAnalysisResult) -> tuple[dict[s
         adjustments["contrast"] -= 10
         reasons.append("high contrast")
 
+    # color_cast: canonical vocabulary (cool/strong_cool/warm/strong_warm/green/magenta)
+    # plus legacy blue_green_* tokens. Lightroom convention:
+    #   temperature_delta +  -> warmer (removes cool/blue cast)
+    #   temperature_delta -  -> cooler (removes warm cast)
+    #   tint +  -> magenta (removes green cast); tint -  -> green (removes magenta cast)
     color_cast = _issue_value(issues, "color_cast")
-    if "blue_green_extreme" in color_cast:
-        adjustments["temperature_delta"] += 2600
-        adjustments["tint"] += 70
-        adjustments["vibrance"] += 75
-        reasons.append("extreme blue-green cast")
-    elif "blue_green_strong" in color_cast:
-        adjustments["temperature_delta"] += 1200
-        adjustments["tint"] += 18
-        adjustments["vibrance"] += 24
-        reasons.append("strong blue-green cast")
-    elif "blue_green" in color_cast:
-        adjustments["temperature_delta"] += 800
-        adjustments["tint"] += 12
-        adjustments["vibrance"] += 18
-        reasons.append("blue-green cast")
+    if _match(color_cast, "strong_cool", "blue_green_strong", "blue_green_extreme") or (
+        is_underwater and "cool" in color_cast
+    ):
+        # Underwater scenes lose the red channel; push warm white balance hard and
+        # add magenta tint + vibrance to recover what white balance can restore.
+        adjustments["temperature_delta"] += 3000
+        adjustments["tint"] += 20
+        adjustments["vibrance"] += 30
+        reasons.append("strong cool/underwater cast correction (warm up)")
+    elif _match(color_cast, "cool", "blue_green"):
+        adjustments["temperature_delta"] += 950
+        adjustments["tint"] += 8
+        adjustments["vibrance"] += 14
+        reasons.append("cool cast correction (warm up)")
+    elif "strong_warm" in color_cast:
+        adjustments["temperature_delta"] -= 650
+        reasons.append("strong warm cast correction (cool down)")
     elif "warm" in color_cast:
-        adjustments["temperature_delta"] -= 350
-        reasons.append("warm color cast")
+        adjustments["temperature_delta"] -= 320
+        reasons.append("warm cast correction (cool down)")
+    elif "magenta" in color_cast:
+        adjustments["tint"] -= 16
+        reasons.append("magenta cast correction (toward green)")
+    elif "green" in color_cast:
+        adjustments["tint"] += 16
+        reasons.append("green cast correction (toward magenta)")
 
     haze = _issue_value(issues, "haze") or _issue_value(issues, "haze_turbidity")
     if "extreme" in haze:
@@ -267,28 +286,36 @@ def _map_analysis_to_adjustments(analysis: VisionAnalysisResult) -> tuple[dict[s
         reasons.append("medium haze")
 
     sharpness = _issue_value(issues, "sharpness")
-    if "soft" in sharpness:
-        adjustments["sharpening"] += 95
-        adjustments["texture"] += 12
+    if "very_soft" in sharpness:
+        adjustments["sharpening"] += 75
+        adjustments["texture"] += 15
+        reasons.append("very soft image")
+    elif "soft" in sharpness:
+        adjustments["sharpening"] += 45
+        adjustments["texture"] += 10
         reasons.append("soft image")
     elif "acceptable" in sharpness:
         adjustments["sharpening"] += 25
 
     noise = _issue_value(issues, "noise")
     if "high" in noise:
-        adjustments["noise_reduction"] += 75
+        adjustments["noise_reduction"] += 55
         reasons.append("high noise")
-    elif "medium" in noise:
-        adjustments["noise_reduction"] += 25
-        reasons.append("medium noise")
+    elif _match(noise, "moderate", "medium"):
+        adjustments["noise_reduction"] += 30
+        reasons.append("moderate noise")
     elif "low" in noise:
         adjustments["noise_reduction"] += 10
 
-    if "underwater" in analysis.scene_type:
+    if is_underwater:
         adjustments["saturation"] -= 2
         adjustments["whites"] += 8
 
     return adjustments, reasons
+
+
+def _match(text: str, *needles: str) -> bool:
+    return any(needle in text for needle in needles)
 
 
 def _clamp_adjustments(adjustments: dict[str, float]) -> tuple[dict[str, float], bool]:

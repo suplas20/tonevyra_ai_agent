@@ -17,8 +17,8 @@ class RetryDecision:
     retry: bool
     next_attempt_no: int | None
     reason: str
-    strategy: str | None = None
-    expected_gain: float = 0.0
+    strategy: list[str] | None = None
+    expected_improvement: float = 0.0
     plan_delta_hash: str | None = None
 
 
@@ -38,8 +38,8 @@ def decide_quality_retry(
     recommendation = quality.retry_recommendation
     if not recommendation.recommended or not recommendation.strategy:
         return RetryDecision(False, None, "retry recommendation is missing a strategy")
-    if recommendation.expected_gain <= 0:
-        return RetryDecision(False, None, "retry recommendation has no expected gain")
+    if recommendation.expected_improvement <= 0:
+        return RetryDecision(False, None, "retry recommendation has no expected improvement")
 
     plan_delta_hash = _strategy_hash(
         {
@@ -56,7 +56,7 @@ def decide_quality_retry(
         context.attempt_no + 1,
         "retry budget remains and strategy is actionable",
         recommendation.strategy,
-        recommendation.expected_gain,
+        recommendation.expected_improvement,
         plan_delta_hash,
     )
 

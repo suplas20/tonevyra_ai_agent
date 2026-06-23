@@ -126,8 +126,8 @@ def test_model_quality_provider_evaluates_source_export_pair(tmp_path: Path) -> 
 
     assert result.provider_type == "model"
     assert result.status == "RETRY_REQUIRED"
-    assert result.retry_recommendation.strategy == "reduce warm skin cast; protect facial highlights"
-    assert result.retry_recommendation.expected_gain == pytest.approx(0.16)
+    assert result.retry_recommendation.strategy == ["reduce warm skin cast", "protect facial highlights"]
+    assert result.retry_recommendation.expected_improvement == pytest.approx(0.16)
     assert quality_provider.last_runtime_envelope is not None
     assert quality_provider.last_runtime_envelope.source_checksum
     assert quality_provider.last_runtime_envelope.export_checksum

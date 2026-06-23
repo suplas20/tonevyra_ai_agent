@@ -115,16 +115,18 @@ def _retry_recommendation(value: Any) -> RetryRecommendation:
         return RetryRecommendation(recommended=False)
     strategy = value.get("strategy")
     if isinstance(strategy, list):
-        strategy_text = "; ".join(str(item) for item in strategy if str(item).strip())
+        strategy_list = [str(item) for item in strategy if str(item).strip()]
     elif strategy is None:
-        strategy_text = None
+        strategy_list = []
     else:
-        strategy_text = str(strategy)
-    expected = value.get("expected_gain", value.get("expected_improvement", 0.0))
+        strategy_list = [str(strategy)] if str(strategy).strip() else []
+    expected = value.get("expected_improvement", value.get("expected_gain", 0.0))
+    extra = {k: v for k, v in value.items() if k not in {"recommended", "strategy", "expected_improvement", "expected_gain"}}
     return RetryRecommendation(
         recommended=bool(value.get("recommended", False)),
-        strategy=strategy_text,
-        expected_gain=float(expected or 0.0),
+        strategy=strategy_list,
+        expected_improvement=min(1.0, float(expected or 0.0)),
+        **extra,
     )
 
 

@@ -38,11 +38,11 @@ class QualityRequest(BaseModel):
 class RetryRecommendation(BaseModel):
     """Provider recommendation; final retry permission belongs to RetryController."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(extra="allow")
 
     recommended: bool = False
-    strategy: str | None = None
-    expected_gain: float = Field(default=0.0, ge=0.0, le=1.0)
+    strategy: list[str] = Field(default_factory=list)
+    expected_improvement: float = Field(default=0.0, ge=0.0, le=1.0)
 
 
 class T021QualityResult(BaseModel):

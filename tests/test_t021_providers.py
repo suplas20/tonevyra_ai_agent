@@ -113,8 +113,8 @@ def test_retry_controller_is_bounded_and_evidence_based() -> None:
         reason_codes=["COLOR_CAST"],
         retry_recommendation=RetryRecommendation(
             recommended=True,
-            strategy="rebalance_white_balance_and_color_cast",
-            expected_gain=0.08,
+            strategy=["rebalance_white_balance_and_color_cast"],
+            expected_improvement=0.08,
         ),
     )
     policy = get_plan_policy("t021_mvp")

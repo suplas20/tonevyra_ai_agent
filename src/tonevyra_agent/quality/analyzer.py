@@ -81,6 +81,12 @@ class QualityGate:
             source, override_reasons = self._source_context(correction_plan_artifact)
             decision = _apply_review_cap(decision, override_reasons)
             reasons = [*score_reasons, *override_reasons]
+            # AGENTS.md 32.7: legacy worker path expresses SOURCE_LIMITED as
+            # FAILED + failure_class (no new status enum / DB constraint).
+            failure_class = _detect_failure_class(decision, metrics)
+            if failure_class:
+                source = {**source, "failure_class": failure_class}
+                reasons.append(_failure_class_reason(failure_class))
             reason_summary = _reason_summary(decision, scores.overall_score, reasons)
             detail = QualityDetail(
                 task_id=str(task.id),
@@ -299,6 +305,39 @@ def _apply_review_cap(decision: QualityDecision, review_reasons: list[str]) -> Q
     if decision == QualityDecision.PASS and review_reasons:
         return QualityDecision.REVIEW_REQUIRED
     return decision
+
+
+# Thresholds for classifying an unrecoverable source. Deep-water captures lose the
+# red channel entirely; once red is this low with a strong residual blue-green cast,
+# white balance cannot restore color and the failure is the source's, not the agent's.
+_SOURCE_LIMITED_RED_MAX = 45.0
+_SOURCE_LIMITED_CAST_MIN = 55.0
+
+
+def _detect_failure_class(decision: QualityDecision, metrics: dict[str, Any]) -> str | None:
+    """Return a failure_class for a FAILED export, or None.
+
+    Distinguishes a source limitation (irrecoverable capture) from a correctable
+    quality miss, without introducing a new status value.
+    """
+
+    if decision != QualityDecision.FAILED:
+        return None
+    underwater = metrics.get("underwater_cast", {}) if isinstance(metrics, dict) else {}
+    red_mean = float(underwater.get("red_mean", 255.0))
+    blue_green_minus_red = float(underwater.get("blue_green_minus_red", 0.0))
+    if red_mean <= _SOURCE_LIMITED_RED_MAX and blue_green_minus_red >= _SOURCE_LIMITED_CAST_MIN:
+        return "SOURCE_LIMITED_UNDERWATER_RED_CHANNEL_LOSS"
+    return None
+
+
+def _failure_class_reason(failure_class: str) -> str:
+    if failure_class == "SOURCE_LIMITED_UNDERWATER_RED_CHANNEL_LOSS":
+        return (
+            "source-limited: underwater red-channel loss is not recoverable by white "
+            "balance (failure_class=SOURCE_LIMITED_UNDERWATER_RED_CHANNEL_LOSS)"
+        )
+    return f"failure_class={failure_class}"
 
 
 def _reason_summary(decision: QualityDecision, overall_score: float, reasons: list[str]) -> str:

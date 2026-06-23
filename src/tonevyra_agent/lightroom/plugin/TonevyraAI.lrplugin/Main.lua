@@ -223,11 +223,29 @@ local DEVELOP_SETTING_KEYS = {
   sharpening = "Sharpness",
 }
 
-local function buildDevelopSettings(adjustments)
+local function clamp(value, low, high)
+  if value < low then
+    return low
+  end
+  if value > high then
+    return high
+  end
+  return value
+end
+
+local function buildDevelopSettings(photo, adjustments)
   local developSettings = {}
   for tonevyraKey, lightroomKey in pairs(DEVELOP_SETTING_KEYS) do
     if adjustments[tonevyraKey] ~= nil then
       developSettings[lightroomKey] = adjustments[tonevyraKey]
+    end
+  end
+  if adjustments.temperature_delta ~= nil then
+    local current = photo:getDevelopSettings()
+    local baseTemperature = tonumber(current and current.Temperature)
+    local delta = tonumber(adjustments.temperature_delta)
+    if baseTemperature ~= nil and delta ~= nil then
+      developSettings.Temperature = clamp(baseTemperature + clamp(delta, -2000, 2000), 2500, 50000)
     end
   end
   return developSettings
@@ -251,8 +269,8 @@ local function findOrImportPhoto(catalog, sourcePath)
 end
 
 local function applyDevelopSettings(catalog, photo, adjustments)
-  local developSettings = buildDevelopSettings(adjustments)
   catalog:withWriteAccessDo("Tonevyra AI Apply Adjustments", function()
+    local developSettings = buildDevelopSettings(photo, adjustments)
     photo:applyDevelopSettings(developSettings)
   end)
 end

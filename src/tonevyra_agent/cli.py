@@ -96,6 +96,13 @@ def _vision_backend_check(settings: Settings) -> CheckResult:
             model_path.exists(),
             f"{settings.vision_backend} local_model={model_path}",
         )
+    if backend in {"qwen3vl", "qwen3-vl", "qwen3"}:
+        model_path = settings.project_path(settings.qwen3_model_path)
+        return CheckResult(
+            "vision backend",
+            model_path.exists(),
+            f"{settings.vision_backend} local_model={model_path}",
+        )
     return CheckResult("vision backend", False, f"unsupported backend={settings.vision_backend}")
 
 
@@ -127,7 +134,13 @@ def doctor() -> None:
         )
     )
     results.append(_vision_backend_check(settings))
-    results.append(CheckResult("fake lightroom backend", settings.lightroom_backend == "fake", settings.lightroom_backend))
+    results.append(
+        CheckResult(
+            "lightroom backend",
+            settings.lightroom_backend in {"fake", "lightroom"},
+            settings.lightroom_backend,
+        )
+    )
 
     try:
         engine = create_db_engine(settings)

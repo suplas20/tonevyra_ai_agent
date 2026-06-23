@@ -81,8 +81,26 @@ class LocalVisionModelRuntime:
     def runner(self) -> LocalRuntimeRunner:
         if self._runner is None:
             model_path = self._model_path or self.manifest.verify_checksum(self.settings)
-            self._runner = JsonLocalRuntimeRunner(model_path)
+            self._runner = self._build_runner(model_path)
         return self._runner
+
+    def _build_runner(self, model_path: Path) -> LocalRuntimeRunner:
+        """Select a runner from the manifest backend.
+
+        ``transformers_qwen3vl`` (and similar real backends) load the actual local
+        vision model. Everything else falls back to the JSON fixture runner used by
+        deterministic tests and pre-provisioned JSON model fixtures.
+        """
+
+        backend = (self.manifest.runtime_backend or "").lower()
+        if backend.startswith("transformers") or "qwen3vl" in backend or "qwen3_vl" in backend:
+            from tonevyra_agent.model_runtime.qwen_runner import QwenLocalRuntimeRunner
+
+            return QwenLocalRuntimeRunner(
+                model_path,
+                max_new_tokens=self.settings.qwen_max_new_tokens,
+            )
+        return JsonLocalRuntimeRunner(model_path)
 
     def analyze(self, request: AnalysisRequest) -> tuple[AnalysisResult, ModelRuntimeEnvelope]:
         raw, envelope_base = self._call_model(

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Literal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -33,6 +33,11 @@ class LocalModelManifest(BaseModel):
     device: str = "cpu"
     dtype: str = "float32"
     quantization: str = "none"
+    # checksum_mode controls how model integrity is verified.
+    # "directory" (default): hash all files recursively — correct but slow for large models.
+    # "index_file": hash only the named file inside model_root — fast for sharded models.
+    checksum_mode: Literal["directory", "index_file"] = "directory"
+    checksum_target_file: Optional[str] = None
 
     @field_validator("model_id", "model_revision", "runtime_backend")
     @classmethod
@@ -106,7 +111,18 @@ class LocalModelManifest(BaseModel):
 
     def verify_checksum(self, settings: Settings) -> Path:
         model_path = self.resolve_model_path(settings)
-        actual = f"sha256:{_hash_path(model_path)}"
+        if self.checksum_mode == "index_file":
+            target_name = self.checksum_target_file or "model.safetensors.index.json"
+            target = (model_path / target_name) if model_path.is_dir() else model_path
+            if not target.exists():
+                raise TonevyraError(
+                    code=ErrorCode.MODEL_LOAD_FAILED,
+                    message=f"Checksum target file does not exist: {target}",
+                    failed_stage=Stage.VISION.value,
+                )
+            actual = f"sha256:{hashlib.sha256(target.read_bytes()).hexdigest()}"
+        else:
+            actual = f"sha256:{_hash_path(model_path)}"
         if actual != self.model_checksum:
             raise TonevyraError(
                 code=ErrorCode.MODEL_LOAD_FAILED,

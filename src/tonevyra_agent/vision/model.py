@@ -13,6 +13,7 @@ from tonevyra_agent.core.enums import ErrorCode, Stage
 from tonevyra_agent.core.errors import TonevyraError
 from tonevyra_agent.providers.module_analysis import ModuleAnalysisProvider, analysis_to_vision_payload
 from tonevyra_agent.schemas.analysis import AnalysisRequest
+from tonevyra_agent.vision.vocabulary import normalize_issues
 
 REQUIRED_OFFLINE_ENV = {
     "HF_HUB_OFFLINE": "1",
@@ -156,6 +157,7 @@ class QwenVisionBackend:
             ) from exc
 
         payload = raw_output if isinstance(raw_output, dict) else _parse_model_json(raw_output)
+        payload = _coerce_vision_result(payload)
         payload.setdefault("model_backend", self.backend_name)
         payload.setdefault("model_name", self.model_name)
         return payload
@@ -186,17 +188,24 @@ class TransformersQwenRuntime:
 
         self._image_class = Image
         try:
+            import torch
+
             model_path_text = str(model_path)
             self.processor = AutoProcessor.from_pretrained(
                 model_path_text,
                 local_files_only=True,
                 trust_remote_code=False,
             )
+            use_cuda = torch.cuda.is_available()
             self.model = ModelClass.from_pretrained(
                 model_path_text,
                 local_files_only=True,
                 trust_remote_code=False,
+                dtype=torch.bfloat16 if use_cuda else torch.float32,
+                low_cpu_mem_usage=True,
             )
+            if hasattr(self.model, "to"):
+                self.model = self.model.to("cuda:0" if use_cuda else "cpu")
             if hasattr(self.model, "eval"):
                 self.model.eval()
         except Exception as exc:
@@ -224,15 +233,19 @@ class TransformersQwenRuntime:
             text = instruction
 
         inputs = self.processor(text=[text], images=[image], return_tensors="pt")
+        input_length = inputs["input_ids"].shape[1]
         device = getattr(self.model, "device", None)
         if device is not None:
             inputs = {key: value.to(device) if hasattr(value, "to") else value for key, value in inputs.items()}
-        generated_ids = self.model.generate(**inputs, max_new_tokens=self.max_new_tokens)
+        generated_ids = self.model.generate(**inputs, max_new_tokens=self.max_new_tokens, do_sample=False)
+        # Decode only the newly generated tokens so the echoed prompt (which contains a
+        # JSON example) does not corrupt downstream JSON parsing.
+        new_tokens = generated_ids[:, input_length:]
         if hasattr(self.processor, "batch_decode"):
-            return self.processor.batch_decode(generated_ids, skip_special_tokens=True)[0]
+            return self.processor.batch_decode(new_tokens, skip_special_tokens=True)[0]
         if hasattr(self.processor, "decode"):
-            return self.processor.decode(generated_ids[0], skip_special_tokens=True)
-        return str(generated_ids)
+            return self.processor.decode(new_tokens[0], skip_special_tokens=True)
+        return str(new_tokens)
 
 
 def create_vision_backend(settings: Settings | None = None, *, fixture_path: Path | None = None) -> VisionModelBackend:
@@ -245,6 +258,8 @@ def create_vision_backend(settings: Settings | None = None, *, fixture_path: Pat
         return ModuleVisionBackend()
     if backend_name in {"qwen", "qwen2.5-vl", "qwen25vl"}:
         return QwenVisionBackend(config)
+    if backend_name in {"qwen3vl", "qwen3-vl", "qwen3"}:
+        return QwenVisionBackend(config, model_path=config.qwen3_model_path, model_name=config.qwen3_model_name)
     raise TonevyraError(
         code=ErrorCode.MODEL_LOAD_FAILED,
         message=f"Unsupported vision backend for current MVP ticket: {config.vision_backend}",
@@ -259,15 +274,16 @@ def _ensure_offline_environment() -> None:
 
 def _validated_model_path(settings: Settings, model_path: Path) -> Path:
     path = settings.project_path(model_path).resolve()
-    models_root = settings.project_path(settings.models_dir).resolve()
-    try:
-        path.relative_to(models_root)
-    except ValueError as exc:
+    allowed_roots = [settings.project_path(settings.models_dir).resolve()]
+    if settings.external_models_dir is not None:
+        allowed_roots.append(settings.project_path(settings.external_models_dir).resolve())
+    if not any(_is_relative_to(path, root) for root in allowed_roots):
+        roots_str = ", ".join(str(r) for r in allowed_roots)
         raise TonevyraError(
             code=ErrorCode.SECURITY_NETWORK_ACCESS_BLOCKED,
-            message=f"Qwen model path must be inside configured models_dir: {models_root}",
+            message=f"Qwen model path must be inside configured models_dir or external_models_dir: {roots_str}",
             failed_stage=Stage.VISION.value,
-        ) from exc
+        )
     if not path.exists():
         raise TonevyraError(
             code=ErrorCode.MODEL_LOAD_FAILED,
@@ -331,10 +347,97 @@ def _qwen_instruction(*, prompt: str, metadata: dict[str, Any]) -> str:
     return (
         f"{prompt}\n"
         "Use only the local preview image and metadata supplied in this request.\n"
-        "Return one JSON object matching Tonevyra AI VisionAnalysisResult. "
-        "Do not include Markdown fences or Lightroom adjustment values.\n"
+        "Return ONE JSON object only, no Markdown fences, no Lightroom adjustment values.\n"
+        "The JSON object MUST use exactly this structure and keys:\n"
+        "{\n"
+        '  "scene_type": "<short scene label, e.g. underwater, portrait, landscape>",\n'
+        '  "main_subject": "<short subject label>",\n'
+        '  "usable": true,\n'
+        '  "issues": {\n'
+        '    "exposure": "<none|slightly_underexposed|underexposed|severely_underexposed|overexposed|severely_overexposed>",\n'
+        '    "color_cast": "<none|cool|strong_cool|warm|strong_warm|green|magenta>",\n'
+        '    "contrast": "<none|low|very_low|high>",\n'
+        '    "sharpness": "<ok|soft|very_soft>",\n'
+        '    "noise": "<none|low|moderate|high>"\n'
+        "  },\n"
+        '  "edit_intent": "<one sentence describing correction intent>",\n'
+        '  "confidence": 0.85,\n'
+        '  "risk_flags": []\n'
+        "}\n"
+        "Judge color_cast by the dominant unwanted tint: underwater or blue/cyan scenes are\n"
+        "usually 'cool' or 'strong_cool'; describe the strength honestly.\n"
+        "All issues subfields are required and must be non-empty strings.\n"
         f"Metadata visible to model: {metadata}\n"
     )
+
+
+# Fields VisionAnalysisResult accepts at the top level (model_backend/model_name added later).
+_VISION_KNOWN_FIELDS = {
+    "schema_version",
+    "scene_type",
+    "main_subject",
+    "usable",
+    "issues",
+    "edit_intent",
+    "confidence",
+    "risk_flags",
+    "requires_review",
+}
+_VISION_ISSUE_FIELDS = {
+    "exposure",
+    "color_cast",
+    "haze",
+    "haze_turbidity",
+    "contrast",
+    "sharpness",
+    "noise",
+    "skin_tone",
+}
+_REQUIRED_ISSUE_FIELDS = ("exposure", "color_cast", "contrast", "sharpness", "noise")
+
+
+def _coerce_vision_result(payload: dict[str, Any]) -> dict[str, Any]:
+    """Normalize raw model output into a VisionAnalysisResult-compatible dict.
+
+    The schema uses extra="forbid", so unknown keys produced by the model must be
+    dropped, and required issue subfields must be guaranteed to exist. This keeps
+    the real-model worker path resilient without inventing analysis content.
+    """
+
+    if not isinstance(payload, dict):
+        return payload
+
+    coerced: dict[str, Any] = {key: value for key, value in payload.items() if key in _VISION_KNOWN_FIELDS}
+
+    raw_issues = payload.get("issues")
+    issues: dict[str, Any] = {}
+    if isinstance(raw_issues, dict):
+        issues = {key: value for key, value in raw_issues.items() if key in _VISION_ISSUE_FIELDS}
+    # Map the model's free-text issue values onto canonical planner vocabulary so
+    # the Correction Planner can translate them into Lightroom adjustments.
+    issues = normalize_issues(issues)
+    for field in _REQUIRED_ISSUE_FIELDS:
+        value = issues.get(field)
+        if not isinstance(value, str) or not value.strip():
+            issues[field] = "none"
+    coerced["issues"] = issues
+
+    scene = coerced.get("scene_type")
+    if not isinstance(scene, str) or not scene.strip():
+        coerced["scene_type"] = "general_photo"
+    intent = coerced.get("edit_intent")
+    if not isinstance(intent, str) or not intent.strip():
+        coerced["edit_intent"] = "balanced_general_correction"
+    if not isinstance(coerced.get("usable"), bool):
+        coerced["usable"] = True
+    try:
+        confidence = float(coerced.get("confidence", 0.0))
+    except (TypeError, ValueError):
+        confidence = 0.0
+    coerced["confidence"] = max(0.0, min(1.0, confidence))
+    if not isinstance(coerced.get("risk_flags"), list):
+        coerced["risk_flags"] = []
+    return coerced
 
 
 def _parse_model_json(text: str) -> dict[str, Any]:

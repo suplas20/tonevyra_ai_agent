@@ -28,7 +28,7 @@ class ModuleQualityProvider:
             retry = RetryRecommendation(
                 recommended=True,
                 strategy=_strategy_from_reasons(reason_codes),
-                expected_gain=0.08,
+                expected_improvement=0.08,
             )
         else:
             status = "FINAL_FAILED"
@@ -90,11 +90,14 @@ def _source_limit_evidence(metrics: dict) -> list[str]:
     return evidence
 
 
-def _strategy_from_reasons(reason_codes: list[str]) -> str:
+def _strategy_from_reasons(reason_codes: list[str]) -> list[str]:
+    strategies: list[str] = []
     if "UNDEREXPOSED" in reason_codes or "SHADOW_CRUSHED" in reason_codes:
-        return "recover_exposure_and_shadow_detail"
+        strategies.append("recover_exposure_and_shadow_detail")
     if "WHITE_BALANCE_OFF" in reason_codes or "COLOR_CAST" in reason_codes:
-        return "rebalance_white_balance_and_color_cast"
+        strategies.append("rebalance_white_balance_and_color_cast")
     if "NOISE_ELEVATED" in reason_codes:
-        return "reduce_noise_and_limit_sharpening"
-    return "conservative_quality_recovery"
+        strategies.append("reduce_noise_and_limit_sharpening")
+    if "HIGHLIGHT_CLIPPED" in reason_codes:
+        strategies.append("reduce_highlights_protect_clipping")
+    return strategies or ["conservative_quality_recovery"]
