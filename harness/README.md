@@ -6,8 +6,8 @@ The `harness/` directory is an acceptance gate for Tonevyra AI Agent. It does no
 
 Harness checks should prove that:
 
-- Mock Vision passes before real local model integration.
-- Fake Lightroom passes before real Lightroom Classic apply-adapter integration.
+- Real local model and real Lightroom Classic evidence are the required completion gate for new work.
+- Mock Vision and Fake Lightroom may remain as regression diagnostics, but they are not sufficient completion evidence.
 - PostgreSQL is the operational state source of truth.
 - Artifact files exist, checksums match, and large payloads stay out of the database.
 - `task_events.payload_json` contains loop evidence for autonomous product loops.
@@ -23,10 +23,11 @@ Harness checks should prove that:
 | Runtime reset | `harness/scripts/reset_runtime.py` | Create or clear runtime test folders safely. |
 | Watcher | `harness/scripts/run_watcher_test.py` | Verify Agent-owned file detection, ignore rules, stabilization, and watch loop evidence. |
 | Metadata/preview | `harness/scripts/run_metadata_preview_test.py` | Verify EXIF/basic metadata and 1024px sRGB preview artifacts. |
-| Mock vision | `harness/scripts/run_vision_mock_test.py` | Verify schema-validated mock analysis and vision artifacts. |
+| Live runtime gate | `harness/scripts/verify_live_runtime_gate.py` | Verify active real local model + Lightroom configuration and optional live apply/export evidence. |
+| Mock vision diagnostic | `harness/scripts/run_vision_mock_test.py` | Verify schema-validated mock analysis and vision artifacts as a regression diagnostic. |
 | Qwen backend | `harness/scripts/run_qwen_backend_test.py` | Verify local-only Qwen backend boundaries with fake runtime. |
 | Correction planner | `harness/scripts/run_correction_planner_test.py` | Verify clamped Lightroom adjustment plans. |
-| Fake Lightroom | `harness/scripts/run_fake_lightroom_test.py` | Verify file-based fake request/response/export behavior. |
+| Fake Lightroom diagnostic | `harness/scripts/run_fake_lightroom_test.py` | Verify file-based fake request/response/export behavior as a regression diagnostic. |
 | T-019 Apply Adapter role | `harness/scripts/verify_lightroom_apply_adapter_role.py` | Verify that the real Lightroom plugin is an apply adapter and not a folder watcher, AI runner, quality gate, or selected-photo workflow. |
 | Quality gate | `harness/scripts/run_quality_gate_test.py` | Verify scoring, decision, quality artifacts, and DB rows. |
 | Worker pipeline | `harness/scripts/run_worker_pipeline_test.py` | Verify one task reaches a terminal status through the pipeline. |
@@ -47,6 +48,7 @@ cd F:\tonevyra_ai_agent
 .\.venv\Scripts\python.exe harness/scripts/run_security_check.py
 .\.venv\Scripts\python.exe -m pytest tests/test_security_harness.py
 .\.venv\Scripts\python.exe -m tonevyra_agent.cli doctor
+.\.venv\Scripts\python.exe harness/scripts/verify_live_runtime_gate.py
 .\.venv\Scripts\python.exe harness/scripts/run_watcher_test.py
 .\.venv\Scripts\python.exe harness/scripts/run_metadata_preview_test.py
 .\.venv\Scripts\python.exe harness/scripts/run_vision_mock_test.py
@@ -79,10 +81,12 @@ Use Tonevyra names as primary environment variables.
 ```env
 TONEVYRA_DATABASE_URL=postgresql+psycopg://tonevyra_app:<password>@localhost:5432/tonevyra_agent
 TONEVYRA_RUNTIME_DIR=runtime
-TONEVYRA_VISION_BACKEND=mock
-TONEVYRA_LIGHTROOM_BACKEND=fake
+TONEVYRA_VISION_BACKEND=qwen3vl
+TONEVYRA_LIGHTROOM_BACKEND=lightroom
 TONEVYRA_MODEL_OFFLINE=true
 TONEVYRA_WORKER_CONCURRENCY=1
+TONEVYRA_QWEN3_MODEL_PATH=D:/Tonevyra/models/Qwen3-VL-4B-Instruct
+TONEVYRA_MODEL_MANIFEST_PATH=models/qwen3-vl-4b-instruct/model_manifest.json
 HF_HUB_OFFLINE=1
 TRANSFORMERS_OFFLINE=1
 HF_HUB_DISABLE_TELEMETRY=1
@@ -149,4 +153,3 @@ python .\harness\scripts\verify_t021_dual_mode_closed_loop.py --project-root F:\
 ```
 
 Run T-019 Apply Adapter and T-020 Final Export Adapter verifiers before T-021. T-021 requires all 25 baseline skills and adds two new skills for a cumulative total of 27.
-

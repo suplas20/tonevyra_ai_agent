@@ -14,6 +14,7 @@ ADJUSTMENT_RANGES: dict[str, tuple[float, float]] = {
     "shadows": (-40.0, 80.0),
     "whites": (-50.0, 50.0),
     "blacks": (-50.0, 50.0),
+    "temp": (2500.0, 50000.0),
     "temperature_delta": (-3500.0, 3500.0),
     "tint": (-50.0, 50.0),
     "vibrance": (-30.0, 60.0),
@@ -23,6 +24,30 @@ ADJUSTMENT_RANGES: dict[str, tuple[float, float]] = {
     "dehaze": (0.0, 35.0),
     "noise_reduction": (0.0, 60.0),
     "sharpening": (0.0, 80.0),
+    "red_saturation": (-100.0, 100.0),
+    "orange_saturation": (-100.0, 100.0),
+    "yellow_saturation": (-100.0, 100.0),
+    "green_saturation": (-100.0, 100.0),
+    "aqua_saturation": (-100.0, 100.0),
+    "blue_saturation": (-100.0, 100.0),
+    "purple_saturation": (-100.0, 100.0),
+    "magenta_saturation": (-100.0, 100.0),
+    "red_hue": (-100.0, 100.0),
+    "orange_hue": (-100.0, 100.0),
+    "yellow_hue": (-100.0, 100.0),
+    "green_hue": (-100.0, 100.0),
+    "aqua_hue": (-100.0, 100.0),
+    "blue_hue": (-100.0, 100.0),
+    "purple_hue": (-100.0, 100.0),
+    "magenta_hue": (-100.0, 100.0),
+    "red_luminance": (-100.0, 100.0),
+    "orange_luminance": (-100.0, 100.0),
+    "yellow_luminance": (-100.0, 100.0),
+    "green_luminance": (-100.0, 100.0),
+    "aqua_luminance": (-100.0, 100.0),
+    "blue_luminance": (-100.0, 100.0),
+    "purple_luminance": (-100.0, 100.0),
+    "magenta_luminance": (-100.0, 100.0),
 }
 
 
@@ -35,6 +60,7 @@ class CorrectionPlan(BaseModel):
     base_preset: str
     style_target: str
     adjustments_json: dict[str, float] = Field(default_factory=dict)
+    local_adjustments_json: dict[str, Any] = Field(default_factory=dict)
     confidence: float = Field(ge=0.0, le=1.0)
     requires_review: bool = False
     clamped: bool = False
@@ -69,5 +95,6 @@ class CorrectionPlan(BaseModel):
             "clamped": self.clamped,
             "reason_summary": self.reason_summary,
             "adjustments_json": self.adjustments_json,
+            "local_adjustments_json": self.local_adjustments_json,
             "source": self.source,
         }

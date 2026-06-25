@@ -178,6 +178,19 @@ def _mask_type_for_region(region: SemanticRegion) -> SupportedMaskType:
 
 
 def _intents_for_region(region: SemanticRegion) -> dict[str, float]:
+    risks = {str(risk).lower() for risk in region.quality_risks}
+    exposure_issue = str(region.attributes.get("exposure_issue", "")).lower()
+    is_underexposed = "underexposed" in exposure_issue or any("underexposed" in risk for risk in risks)
+    if is_underexposed and region.region_type in {"primary_subject", "person", "face", "skin", "product", "object"}:
+        return {
+            "exposure_delta": 0.7,
+            "shadows_delta": 0.5,
+            "texture_delta": 0.08,
+            "noise_reduction_delta": 8.0,
+            "sharpening_delta": 10.0,
+        }
+    if is_underexposed and region.region_type == "background":
+        return {"exposure_delta": 0.25, "shadows_delta": 0.2, "saturation_delta": -0.02}
     if region.region_type in {"person", "face", "skin"}:
         return {"exposure_delta": 0.2, "highlights_delta": -0.15, "texture_delta": -0.1}
     if region.region_type == "sky":

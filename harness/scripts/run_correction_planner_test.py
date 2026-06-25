@@ -209,8 +209,12 @@ def main() -> int:
     error = _assert_plan_adjustments_safe(clamped.plan.adjustments_json)
     if error:
         return _fail(error)
-    if clamped.plan.adjustments_json["temperature_delta"] != 2000.0:
-        return _fail("temperature_delta should be clamped to 2000")
+    if clamped.plan.adjustments_json["exposure"] != 2.0:
+        return _fail("exposure should be clamped to 2")
+    if clamped.plan.adjustments_json["highlights"] != -80.0:
+        return _fail("highlights should be clamped to -80")
+    if clamped.plan.adjustments_json["shadows"] != 80.0:
+        return _fail("shadows should be clamped to 80")
     if clamped.plan.adjustments_json["dehaze"] != 35.0:
         return _fail("dehaze should be clamped to 35")
     print("OK clamped correction plan is safe and requires review")
@@ -228,6 +232,19 @@ def main() -> int:
             artifact_types = {artifact.artifact_type for artifact in artifact_repo.list_for_task(session, task_id)}
             if ArtifactType.CORRECTION_PLAN.value not in artifact_types:
                 return _fail(f"task missing CORRECTION_PLAN artifact: {task_id}")
+            comparison_artifact = artifact_repo.get_for_task_type_version(
+                session,
+                task_id=task_id,
+                artifact_type=ArtifactType.CORRECTION_PLAN,
+                version=2,
+            )
+            if comparison_artifact is None:
+                return _fail(f"task missing model/planner comparison log artifact: {task_id}")
+            comparison_log = storage.load_json(comparison_artifact)
+            if comparison_log.get("direct_model_application_allowed") is not False:
+                return _fail("comparison log must preserve planner execution boundary")
+            if comparison_log.get("lightroom_applied_source") != "planner_validated_adjustments":
+                return _fail("comparison log must identify planner values as Lightroom source")
 
             stage_status = {(row.stage, row.stage_status) for row in stage_repo.list_for_task(session, task_id)}
             if (Stage.CORRECTION_PLAN.value, StageStatus.SUCCEEDED.value) not in stage_status:

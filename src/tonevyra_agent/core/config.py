@@ -32,6 +32,7 @@ class Settings(BaseSettings):
     input_dir: Path = Field(default=PROJECT_ROOT / "runtime" / "input")
     output_dir: Path = Field(default=PROJECT_ROOT / "runtime" / "output")
     artifact_dir: Path = Field(default=PROJECT_ROOT / "runtime" / "artifacts")
+    calibration_recipe_dir: Path = Field(default=PROJECT_ROOT / "runtime" / "calibration" / "recipes")
     preview_dir: Path = Field(default=PROJECT_ROOT / "runtime" / "previews")
     bridge_dir: Path = Field(default=PROJECT_ROOT / "runtime" / "bridge")
     log_dir: Path = Field(default=PROJECT_ROOT / "logs")
@@ -54,6 +55,16 @@ class Settings(BaseSettings):
     model_runtime_version: str = "1.0.0"
     vision_review_confidence_threshold: float = 0.7
     planner_review_confidence_threshold: float = 0.7
+    # Correction Planner selection. "legacy" keeps the original rule mapping.
+    # "target_based" enables the measurement-driven target planner. Default stays
+    # legacy so existing pipelines are unchanged until explicitly opted in.
+    planner_mode: str = "legacy"
+    # Nominal as-shot temperature (Kelvin) used to convert the planner's relative
+    # temperature_delta into an ABSOLUTE Lightroom temperature in the apply
+    # request. Sending an absolute temperature keeps reprocessing/retries
+    # idempotent; the plugin's relative-delta path reads the photo's current
+    # temperature and would otherwise accumulate the delta on every run.
+    nominal_as_shot_temperature: float = 6500.0
     lightroom_backend: str = "fake"
     model_offline: bool = True
     worker_concurrency: int = 1
@@ -65,6 +76,20 @@ class Settings(BaseSettings):
     quality_noise_weight: float = 0.10
     quality_saturation_weight: float = 0.10
     quality_underwater_cast_weight: float = 0.10
+    # Scene-aware quality tolerances. Underwater scenes naturally retain higher
+    # chroma and a blue-green channel balance; scoring them with neutral-scene
+    # ideals over-penalizes correctly-corrected, colorful results (and rewards the
+    # washed-out / near-monochrome look). These are configurable and reversible.
+    quality_saturation_ideal: float = 0.34
+    # Underwater scenes are blue-green dominant with the red channel absorbed by
+    # water, so a vibrant, clean underwater result legitimately has high
+    # saturation, an imbalanced channel spread, and a residual cool cast. The
+    # underwater tolerances are therefore much more lenient than neutral scenes.
+    quality_underwater_saturation_ideal: float = 0.74
+    quality_color_spread_scale: float = 90.0
+    quality_underwater_color_spread_scale: float = 480.0
+    quality_cast_allowance: float = 12.0
+    quality_underwater_cast_allowance: float = 85.0
     supported_extensions: str = ".cr3,.cr2,.nef,.arw,.dng,.jpg,.jpeg"
     file_stable_checks: int = 3
     file_stable_interval_seconds: float = 1.0

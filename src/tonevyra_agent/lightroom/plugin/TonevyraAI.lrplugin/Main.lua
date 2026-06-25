@@ -221,6 +221,30 @@ local DEVELOP_SETTING_KEYS = {
   dehaze = "Dehaze",
   noise_reduction = "LuminanceSmoothing",
   sharpening = "Sharpness",
+  red_saturation = "SaturationAdjustmentRed",
+  orange_saturation = "SaturationAdjustmentOrange",
+  yellow_saturation = "SaturationAdjustmentYellow",
+  green_saturation = "SaturationAdjustmentGreen",
+  aqua_saturation = "SaturationAdjustmentAqua",
+  blue_saturation = "SaturationAdjustmentBlue",
+  purple_saturation = "SaturationAdjustmentPurple",
+  magenta_saturation = "SaturationAdjustmentMagenta",
+  red_hue = "HueAdjustmentRed",
+  orange_hue = "HueAdjustmentOrange",
+  yellow_hue = "HueAdjustmentYellow",
+  green_hue = "HueAdjustmentGreen",
+  aqua_hue = "HueAdjustmentAqua",
+  blue_hue = "HueAdjustmentBlue",
+  purple_hue = "HueAdjustmentPurple",
+  magenta_hue = "HueAdjustmentMagenta",
+  red_luminance = "LuminanceAdjustmentRed",
+  orange_luminance = "LuminanceAdjustmentOrange",
+  yellow_luminance = "LuminanceAdjustmentYellow",
+  green_luminance = "LuminanceAdjustmentGreen",
+  aqua_luminance = "LuminanceAdjustmentAqua",
+  blue_luminance = "LuminanceAdjustmentBlue",
+  purple_luminance = "LuminanceAdjustmentPurple",
+  magenta_luminance = "LuminanceAdjustmentMagenta",
 }
 
 local function clamp(value, low, high)
@@ -241,11 +265,16 @@ local function buildDevelopSettings(photo, adjustments)
     end
   end
   if adjustments.temperature_delta ~= nil then
+    -- Idempotent white balance: reset to "As Shot" so temperature_delta resolves
+    -- from the original as-shot temperature, not a previously corrected value.
+    -- Otherwise reprocessing/retry accumulates the delta and the temperature
+    -- runs away into an extreme warm/yellow cast.
+    photo:applyDevelopSettings({ WhiteBalance = "As Shot" })
     local current = photo:getDevelopSettings()
     local baseTemperature = tonumber(current and current.Temperature)
     local delta = tonumber(adjustments.temperature_delta)
     if baseTemperature ~= nil and delta ~= nil then
-      developSettings.Temperature = clamp(baseTemperature + clamp(delta, -2000, 2000), 2500, 50000)
+      developSettings.Temperature = clamp(baseTemperature + clamp(delta, -3500, 3500), 2500, 50000)
     end
   end
   return developSettings

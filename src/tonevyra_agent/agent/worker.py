@@ -76,7 +76,11 @@ class AgentWorker:
         try:
             metadata_artifact, preview_artifact = self._run_metadata_preview(task_id)
             vision_artifacts = self._run_vision(task_id, metadata_artifact=metadata_artifact, preview_artifact=preview_artifact)
-            correction_plan = self._run_correction_plan(task_id, vision_artifact=vision_artifacts.structured_artifact)
+            correction_plan = self._run_correction_plan(
+                task_id,
+                vision_artifact=vision_artifacts.structured_artifact,
+                preview_artifact=preview_artifact,
+            )
             request_result = self._write_lightroom_request(task_id, correction_plan_artifact=correction_plan)
             if self.settings.lightroom_backend == "lightroom":
                 apply_result_path = self._wait_for_lightroom_response(task_id, request_id=request_result.payload.request_id)
@@ -188,11 +192,22 @@ class AgentWorker:
                 session.commit()
                 raise
 
-    def _run_correction_plan(self, task_id: UUID, *, vision_artifact: ArtifactRef) -> ArtifactRef:
+    def _run_correction_plan(
+        self,
+        task_id: UUID,
+        *,
+        vision_artifact: ArtifactRef,
+        preview_artifact: ArtifactRef | None = None,
+    ) -> ArtifactRef:
         with session_scope(self.settings) as session:
             task = self._require_task(session, task_id)
             try:
-                result = self.correction_planner.plan_from_artifact(session, task=task, vision_artifact=vision_artifact)
+                result = self.correction_planner.plan_from_artifact(
+                    session,
+                    task=task,
+                    vision_artifact=vision_artifact,
+                    preview_artifact=preview_artifact,
+                )
                 return result.artifact
             except TonevyraError:
                 session.commit()

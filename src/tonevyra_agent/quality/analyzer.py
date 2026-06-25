@@ -74,11 +74,13 @@ class QualityGate:
         resolved_export_path = self._resolve_export_path(export_path=export_path, export_artifact=export_artifact)
 
         try:
-            scores, metrics, score_reasons = score_export_image(resolved_export_path, settings=self.settings)
+            source, override_reasons, scene_type = self._source_context(correction_plan_artifact)
+            scores, metrics, score_reasons = score_export_image(
+                resolved_export_path, settings=self.settings, scene_type=scene_type
+            )
             thresholds = thresholds_from_settings(self.settings)
             weights = weights_from_settings(self.settings)
             decision = decide_from_score(scores.overall_score, thresholds=thresholds)
-            source, override_reasons = self._source_context(correction_plan_artifact)
             decision = _apply_review_cap(decision, override_reasons)
             reasons = [*score_reasons, *override_reasons]
             # AGENTS.md 32.7: legacy worker path expresses SOURCE_LIMITED as
@@ -204,12 +206,15 @@ class QualityGate:
             failed_stage=Stage.QUALITY.value,
         )
 
-    def _source_context(self, correction_plan_artifact: ArtifactRef | None) -> tuple[dict[str, Any], list[str]]:
+    def _source_context(
+        self, correction_plan_artifact: ArtifactRef | None
+    ) -> tuple[dict[str, Any], list[str], str | None]:
         if correction_plan_artifact is None:
-            return {}, []
+            return {}, [], None
 
         payload = self.storage.load_json(correction_plan_artifact)
         plan = CorrectionPlan.model_validate(payload)
+        scene_type = plan.source.get("scene_type") if isinstance(plan.source, dict) else None
         reasons: list[str] = []
         if plan.requires_review:
             reasons.append("correction plan requires review")
@@ -221,7 +226,8 @@ class QualityGate:
             "planner_confidence": plan.confidence,
             "requires_review": plan.requires_review,
             "clamped": plan.clamped,
-        }, reasons
+            "scene_type": scene_type,
+        }, reasons, scene_type
 
     def _record_failure(
         self,

@@ -9,6 +9,7 @@ ALLOWED_RANGES = {
     "whites": (-100, 100),
     "blacks": (-100, 100),
     "temp": (1500, 50000),
+    "temperature_delta": (-3500, 3500),
     "tint": (-150, 150),
     "vibrance": (-100, 100),
     "saturation": (-100, 100),
@@ -40,6 +41,7 @@ def main():
         "exposure": 10,
         "contrast": -120,
         "vibrance": 10,
+        "temperature_delta": 9000,
         "unsupported_magic": 99,
         "clarity": "bad",
     }
@@ -47,6 +49,7 @@ def main():
     assert applied["exposure"] == 5.0
     assert applied["contrast"] == -100
     assert applied["vibrance"] == 10
+    assert applied["temperature_delta"] == 3500
     assert "unsupported_magic" in skipped
     assert "clarity" in skipped
     print("OK Lightroom worker mapping clamp/skipped behavior is valid")

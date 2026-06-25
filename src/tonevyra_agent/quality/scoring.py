@@ -35,20 +35,36 @@ def thresholds_from_settings(settings: Settings | None = None) -> QualityThresho
     )
 
 
-def score_export_image(export_path: str | Path, *, settings: Settings | None = None) -> tuple[QualityScores, dict[str, Any], list[str]]:
-    """Score an exported image using bounded local heuristics."""
+def score_export_image(
+    export_path: str | Path,
+    *,
+    settings: Settings | None = None,
+    scene_type: str | None = None,
+) -> tuple[QualityScores, dict[str, Any], list[str]]:
+    """Score an exported image using bounded local heuristics.
 
+    When ``scene_type`` indicates an underwater capture, color-balance, cast, and
+    saturation tolerances are relaxed so naturally colorful underwater results are
+    not penalized as if they were neutral studio scenes.
+    """
+
+    config = settings or get_settings()
     image = _load_rgb_array(export_path)
     gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
     hsv = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    weights = weights_from_settings(settings)
+    weights = weights_from_settings(config)
+    is_underwater = bool(scene_type) and "underwater" in scene_type.lower()
+
+    saturation_ideal = config.quality_underwater_saturation_ideal if is_underwater else config.quality_saturation_ideal
+    color_spread_scale = config.quality_underwater_color_spread_scale if is_underwater else config.quality_color_spread_scale
+    cast_allowance = config.quality_underwater_cast_allowance if is_underwater else config.quality_cast_allowance
 
     exposure_score, exposure_metrics, exposure_reasons = _score_exposure(gray)
-    color_score, color_metrics, color_reasons = _score_color_balance(image)
+    color_score, color_metrics, color_reasons = _score_color_balance(image, spread_scale=color_spread_scale)
     sharpness_score, sharpness_metrics, sharpness_reasons = _score_sharpness(gray)
     noise_score, noise_metrics, noise_reasons = _score_noise(gray)
-    saturation_score, saturation_metrics, saturation_reasons = _score_saturation(hsv)
-    underwater_cast_score, underwater_metrics, underwater_reasons = _score_underwater_cast(image)
+    saturation_score, saturation_metrics, saturation_reasons = _score_saturation(hsv, ideal=saturation_ideal)
+    underwater_cast_score, underwater_metrics, underwater_reasons = _score_underwater_cast(image, allowance=cast_allowance)
 
     weighted_total = (
         exposure_score * weights.exposure
@@ -64,6 +80,13 @@ def score_export_image(export_path: str | Path, *, settings: Settings | None = N
         "image": {
             "width": int(image.shape[1]),
             "height": int(image.shape[0]),
+        },
+        "scene_profile": {
+            "scene_type": scene_type,
+            "is_underwater": is_underwater,
+            "saturation_ideal": saturation_ideal,
+            "color_spread_scale": color_spread_scale,
+            "cast_allowance": cast_allowance,
         },
         "exposure": exposure_metrics,
         "color": color_metrics,
@@ -139,11 +162,11 @@ def _score_exposure(gray: np.ndarray) -> tuple[float, dict[str, Any], list[str]]
     }, reasons
 
 
-def _score_color_balance(image: np.ndarray) -> tuple[float, dict[str, Any], list[str]]:
+def _score_color_balance(image: np.ndarray, *, spread_scale: float = 90.0) -> tuple[float, dict[str, Any], list[str]]:
     channel_means = image.reshape(-1, 3).mean(axis=0)
     red_mean, green_mean, blue_mean = (float(value) for value in channel_means)
     spread = max(red_mean, green_mean, blue_mean) - min(red_mean, green_mean, blue_mean)
-    score = _bounded_score(100.0 - spread / 90.0 * 100.0)
+    score = _bounded_score(100.0 - spread / spread_scale * 100.0)
     reasons = []
     if score < 70:
         reasons.append("color channel balance is uneven")
@@ -174,9 +197,8 @@ def _score_noise(gray: np.ndarray) -> tuple[float, dict[str, Any], list[str]]:
     return score, {"residual_std": round(residual_std, 3)}, reasons
 
 
-def _score_saturation(hsv: np.ndarray) -> tuple[float, dict[str, Any], list[str]]:
+def _score_saturation(hsv: np.ndarray, *, ideal: float = 0.34) -> tuple[float, dict[str, Any], list[str]]:
     saturation_mean = float(hsv[:, :, 1].mean() / 255.0)
-    ideal = 0.34
     score = _bounded_score(100.0 - abs(saturation_mean - ideal) / ideal * 80.0)
     reasons = []
     if score < 70:
@@ -184,11 +206,11 @@ def _score_saturation(hsv: np.ndarray) -> tuple[float, dict[str, Any], list[str]
     return score, {"mean_saturation": round(saturation_mean, 4)}, reasons
 
 
-def _score_underwater_cast(image: np.ndarray) -> tuple[float, dict[str, Any], list[str]]:
+def _score_underwater_cast(image: np.ndarray, *, allowance: float = 12.0) -> tuple[float, dict[str, Any], list[str]]:
     channel_means = image.reshape(-1, 3).mean(axis=0)
     red_mean, green_mean, blue_mean = (float(value) for value in channel_means)
     blue_green_mean = (blue_mean + green_mean) / 2.0
-    cast_delta = max(0.0, blue_green_mean - red_mean - 12.0)
+    cast_delta = max(0.0, blue_green_mean - red_mean - allowance)
     score = _bounded_score(100.0 - min(100.0, cast_delta / 85.0 * 100.0))
     reasons = []
     if score < 70:

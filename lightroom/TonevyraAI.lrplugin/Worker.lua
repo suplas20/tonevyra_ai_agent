@@ -11,6 +11,7 @@ local Json = require "Json"
 local Worker = {}
 
 local running = false
+local start_requested = false
 local activeJob = false
 local last_error = nil
 local ORIGIN = "lightroom_" .. "plugin"
@@ -47,6 +48,30 @@ local KEY_MAP = {
   dehaze = "Dehaze",
   sharpening = "Sharpness",
   noise_reduction = "LuminanceSmoothing",
+  red_saturation = "SaturationAdjustmentRed",
+  orange_saturation = "SaturationAdjustmentOrange",
+  yellow_saturation = "SaturationAdjustmentYellow",
+  green_saturation = "SaturationAdjustmentGreen",
+  aqua_saturation = "SaturationAdjustmentAqua",
+  blue_saturation = "SaturationAdjustmentBlue",
+  purple_saturation = "SaturationAdjustmentPurple",
+  magenta_saturation = "SaturationAdjustmentMagenta",
+  red_hue = "HueAdjustmentRed",
+  orange_hue = "HueAdjustmentOrange",
+  yellow_hue = "HueAdjustmentYellow",
+  green_hue = "HueAdjustmentGreen",
+  aqua_hue = "HueAdjustmentAqua",
+  blue_hue = "HueAdjustmentBlue",
+  purple_hue = "HueAdjustmentPurple",
+  magenta_hue = "HueAdjustmentMagenta",
+  red_luminance = "LuminanceAdjustmentRed",
+  orange_luminance = "LuminanceAdjustmentOrange",
+  yellow_luminance = "LuminanceAdjustmentYellow",
+  green_luminance = "LuminanceAdjustmentGreen",
+  aqua_luminance = "LuminanceAdjustmentAqua",
+  blue_luminance = "LuminanceAdjustmentBlue",
+  purple_luminance = "LuminanceAdjustmentPurple",
+  magenta_luminance = "LuminanceAdjustmentMagenta",
 }
 
 local RANGES = {
@@ -72,7 +97,7 @@ local RANGES = {
   whites = { -100, 100 },
   blacks = { -100, 100 },
   temp = { 2500, 50000 },
-  temperature_delta = { -2000, 2000 },
+  temperature_delta = { -3500, 3500 },
   tint = { -150, 150 },
   vibrance = { -100, 100 },
   saturation = { -100, 100 },
@@ -81,10 +106,43 @@ local RANGES = {
   dehaze = { -100, 100 },
   sharpening = { 0, 150 },
   noise_reduction = { 0, 100 },
+  red_saturation = { -100, 100 },
+  orange_saturation = { -100, 100 },
+  yellow_saturation = { -100, 100 },
+  green_saturation = { -100, 100 },
+  aqua_saturation = { -100, 100 },
+  blue_saturation = { -100, 100 },
+  purple_saturation = { -100, 100 },
+  magenta_saturation = { -100, 100 },
+  red_hue = { -100, 100 },
+  orange_hue = { -100, 100 },
+  yellow_hue = { -100, 100 },
+  green_hue = { -100, 100 },
+  aqua_hue = { -100, 100 },
+  blue_hue = { -100, 100 },
+  purple_hue = { -100, 100 },
+  magenta_hue = { -100, 100 },
+  red_luminance = { -100, 100 },
+  orange_luminance = { -100, 100 },
+  yellow_luminance = { -100, 100 },
+  green_luminance = { -100, 100 },
+  aqua_luminance = { -100, 100 },
+  blue_luminance = { -100, 100 },
+  purple_luminance = { -100, 100 },
+  magenta_luminance = { -100, 100 },
 }
 
 local function now()
   return os.date("!%Y-%m-%dT%H:%M:%SZ")
+end
+
+local function safeWriteWorkerStatus(isRunning)
+  local ok, err = pcall(function()
+    Bridge.writeWorkerStatus(isRunning, last_error, start_requested)
+  end)
+  if not ok then
+    last_error = tostring(err)
+  end
 end
 
 local function clamp(value, low, high)
@@ -95,6 +153,32 @@ local function clamp(value, low, high)
     return high
   end
   return value
+end
+
+local function needsTemperatureBase(settings)
+  return settings ~= nil and settings.temperature_delta ~= nil
+end
+
+local function readDevelopSettingsWithRetry(photo)
+  local lastSettings = nil
+  local lastError = nil
+  local attempt = 0
+  while attempt < 5 do
+    attempt = attempt + 1
+    local ok, settings = LrFunctionContext.pcallWithContext("tonevyra_read_develop_settings", function(context)
+      return photo:getDevelopSettings()
+    end)
+    if ok and type(settings) == "table" then
+      lastSettings = settings
+      if tonumber(settings.Temperature) ~= nil then
+        return settings, nil, attempt
+      end
+    else
+      lastError = tostring(settings)
+    end
+    LrTasks.sleep(0.4)
+  end
+  return lastSettings, lastError or "Temperature was not available in Lightroom develop settings.", attempt
 end
 
 local function baseResult(request, status)
@@ -123,6 +207,8 @@ local function baseResult(request, status)
       source_photo_found = false,
       source_photo_imported = false,
       develop_settings_applied = false,
+      local_adjustments_requested = request.local_adjustments ~= nil,
+      local_adjustments_applied = false,
     },
     evidence = {
       applied_at = now(),
@@ -327,6 +413,7 @@ local function mapSettings(settings, baseDevelopSettings)
           skipped.temperature_resolution = {
             reason = "resolved_relative_delta_to_absolute_temperature",
             base = baseTemperature,
+            base_reason = "lightroom_current_temperature",
             delta = delta,
             applied = target,
           }
@@ -401,12 +488,102 @@ local function applyWithWriteAccess(catalog, sourcePath, settings, existingPhoto
     error = nil,
   }
 
+  if not outcome.photo then
+    local importAttempt = 0
+    while importAttempt < WRITE_MAX_ATTEMPTS do
+      importAttempt = importAttempt + 1
+      local importInnerError = nil
+      local importTimedOut = false
+      local importOk, importErr = LrFunctionContext.pcallWithContext(
+        "tonevyra_import_photo",
+        function(context)
+          catalog:withWriteAccessDo(
+            "Tonevyra AI Import Photo",
+            function()
+              local importedPhoto = catalog:addPhoto(sourcePath)
+              if not importedPhoto then
+                importInnerError = "import_failed: addPhoto returned nil"
+                return
+              end
+              outcome.photo = importedPhoto
+              outcome.imported = true
+            end,
+            {
+              timeout = WRITE_TIMEOUT_SECONDS,
+              callbackTimeoutFunction = function()
+                importTimedOut = true
+              end,
+            }
+          )
+        end
+      )
+      if outcome.photo then
+        LrTasks.sleep(0.6)
+        break
+      end
+      if not importOk then
+        outcome.blocked = false
+        outcome.error = "import_callback_error: " .. tostring(importErr)
+        return outcome
+      end
+      if importInnerError ~= nil then
+        outcome.blocked = false
+        outcome.error = importInnerError
+        return outcome
+      end
+      outcome.blocked = true
+      if importTimedOut then
+        outcome.error = "write access blocked during import: catalog busy, timed out after "
+          .. tostring(WRITE_TIMEOUT_SECONDS) .. "s"
+      else
+        outcome.error = "write access not granted during import"
+      end
+      if importAttempt < WRITE_MAX_ATTEMPTS then
+        LrTasks.sleep(WRITE_RETRY_WAIT_SECONDS)
+        outcome.retry_count = outcome.retry_count + 1
+        outcome.wait_ms = outcome.wait_ms + math.floor(WRITE_RETRY_WAIT_SECONDS * 1000 + 0.5)
+      end
+    end
+    if not outcome.photo then
+      return outcome
+    end
+  end
+
   local attempt = 0
   while attempt < WRITE_MAX_ATTEMPTS do
     attempt = attempt + 1
 
     local innerError = nil
     local timedOut = false
+    local baseDevelopSettings = nil
+    if needsTemperatureBase(settings) then
+      -- Reset white balance to "As Shot" in its OWN committed write transaction
+      -- BEFORE reading the base temperature. A same-transaction reset+reread is
+      -- unreliable (Lightroom applies asynchronously), which let temperature_delta
+      -- accumulate onto a previously corrected value across reprocessing/retries.
+      -- A separate committed transaction guarantees the base read sees the
+      -- original as-shot temperature, making temperature_delta idempotent.
+      LrFunctionContext.pcallWithContext("tonevyra_reset_wb", function(context)
+        catalog:withWriteAccessDo(
+          "Tonevyra AI Reset WhiteBalance",
+          function()
+            outcome.photo:applyDevelopSettings({ WhiteBalance = "As Shot" })
+          end,
+          { timeout = WRITE_TIMEOUT_SECONDS }
+        )
+      end)
+
+      local readError = nil
+      local readAttempts = 0
+      baseDevelopSettings, readError, readAttempts = readDevelopSettingsWithRetry(outcome.photo)
+      outcome.evidence_read_attempts = readAttempts
+      outcome.as_shot_temperature = tonumber(baseDevelopSettings and baseDevelopSettings.Temperature)
+      if tonumber(baseDevelopSettings and baseDevelopSettings.Temperature) == nil then
+        outcome.blocked = false
+        outcome.error = "base_temperature_unavailable: " .. tostring(readError)
+        return outcome
+      end
+    end
 
     local protectedOk, protectedErr = LrFunctionContext.pcallWithContext(
       "tonevyra_write_access",
@@ -414,16 +591,8 @@ local function applyWithWriteAccess(catalog, sourcePath, settings, existingPhoto
         catalog:withWriteAccessDo(
           "Tonevyra AI Apply Settings",
           function()
-            if not outcome.photo then
-              local importedPhoto = catalog:addPhoto(sourcePath)
-              if not importedPhoto then
-                innerError = "import_failed: addPhoto returned nil"
-                return
-              end
-              outcome.photo = importedPhoto
-              outcome.imported = true
-            end
-            local baseDevelopSettings = outcome.photo:getDevelopSettings()
+            -- baseDevelopSettings was captured after an As Shot reset committed
+            -- in a separate transaction above, so it is the original as-shot WB.
             local develop, applied, skipped = mapSettings(settings, baseDevelopSettings)
             outcome.applied_settings = applied
             outcome.skipped_settings = skipped
@@ -492,6 +661,9 @@ local function recordWriteEvidence(result, outcome)
   if outcome.error then
     result.evidence.write_access_error = tostring(outcome.error)
   end
+  if outcome.evidence_read_attempts then
+    result.evidence.develop_settings_read_attempts = outcome.evidence_read_attempts
+  end
 end
 
 local function applyRequest(request)
@@ -520,6 +692,17 @@ local function applyRequest(request)
     result.skipped_parameters = outcome.skipped_settings
     result.applied_settings = outcome.applied_settings
     result.skipped_settings = outcome.skipped_settings
+    if request.local_adjustments ~= nil then
+      result.skipped_settings.local_adjustments = {
+        reason = "mask_execution_not_supported_by_current_plugin_adapter",
+        requested = true,
+      }
+      result.skipped_parameters.local_adjustments = result.skipped_settings.local_adjustments
+      result.evidence.local_adjustments = {
+        requested = true,
+        adapter_note = "Agent supplied a planner-owned local adjustment plan, but this plugin version only applies global Develop settings.",
+      }
+    end
     result.lightroom_result.source_photo_found = outcome.found
     result.lightroom_result.source_photo_imported = outcome.imported
     result.lightroom_result.develop_settings_applied = true
@@ -754,9 +937,10 @@ function Worker.start()
   if running then
     return
   end
+  start_requested = false
   running = true
   Bridge.ensureDirs()
-  Bridge.writeWorkerStatus(true, last_error)
+  safeWriteWorkerStatus(true)
   while running do
     local ok, items = pcall(function()
       return Bridge.pendingRequests()
@@ -778,10 +962,37 @@ function Worker.start()
     else
       last_error = tostring(exportItems)
     end
-    Bridge.writeWorkerStatus(true, last_error)
+    safeWriteWorkerStatus(true)
     LrTasks.sleep(2)
   end
-  Bridge.writeWorkerStatus(false, last_error)
+  safeWriteWorkerStatus(false)
+  return true
+end
+
+function Worker.startAsync(trigger)
+  if running or start_requested then
+    safeWriteWorkerStatus(running)
+    return false
+  end
+  start_requested = true
+  safeWriteWorkerStatus(false)
+  LrFunctionContext.postAsyncTaskWithContext(
+    "Tonevyra AI Bridge Worker",
+    function(context)
+      local ok, err = LrFunctionContext.pcallWithContext(
+        "tonevyra_bridge_worker_start",
+        function(innerContext)
+          return Worker.start(innerContext)
+        end
+      )
+      if not ok then
+        running = false
+        start_requested = false
+        last_error = tostring(err)
+        safeWriteWorkerStatus(false)
+      end
+    end
+  )
   return true
 end
 
@@ -792,15 +1003,15 @@ function Worker.processOnePending(trigger)
   end)
   if not ok then
     last_error = tostring(items)
-    Bridge.writeWorkerStatus(running, last_error)
+    safeWriteWorkerStatus(running)
     return "Bridge request scan failed: " .. last_error
   end
   if not items or #items == 0 then
-    Bridge.writeWorkerStatus(running, last_error)
+    safeWriteWorkerStatus(running)
     return "No pending apply request."
   end
   processPath(items[1], trigger or "diagnostic_menu")
-  Bridge.writeWorkerStatus(running, last_error)
+  safeWriteWorkerStatus(running)
   return "Processed apply request: " .. tostring(items[1])
 end
 
@@ -811,21 +1022,22 @@ function Worker.processOnePendingExport(trigger)
   end)
   if not ok then
     last_error = tostring(items)
-    Bridge.writeWorkerStatus(running, last_error)
+    safeWriteWorkerStatus(running)
     return "Bridge export request scan failed: " .. last_error
   end
   if not items or #items == 0 then
-    Bridge.writeWorkerStatus(running, last_error)
+    safeWriteWorkerStatus(running)
     return "No pending export request."
   end
   processExportPath(items[1], trigger or "diagnostic_menu")
-  Bridge.writeWorkerStatus(running, last_error)
+  safeWriteWorkerStatus(running)
   return "Processed export request: " .. tostring(items[1])
 end
 
 function Worker.stop()
   running = false
-  Bridge.writeWorkerStatus(false, last_error)
+  start_requested = false
+  safeWriteWorkerStatus(false)
 end
 
 function Worker.status()
@@ -841,6 +1053,7 @@ function Worker.status()
     export_request_dir = Bridge.export_request_dir,
     export_result_dir = Bridge.export_result_dir,
     last_error = last_error or "",
+    worker_start_requested = tostring(start_requested),
   }
 end
 

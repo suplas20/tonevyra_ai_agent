@@ -11,6 +11,7 @@ from typing import Any, Protocol
 from tonevyra_agent.core.config import Settings, get_settings
 from tonevyra_agent.core.enums import ErrorCode, Stage
 from tonevyra_agent.core.errors import TonevyraError
+from tonevyra_agent.learning.recipe_calibration import build_recipe_model_guidance
 from tonevyra_agent.providers.module_analysis import ModuleAnalysisProvider, analysis_to_vision_payload
 from tonevyra_agent.schemas.analysis import AnalysisRequest
 from tonevyra_agent.vision.vocabulary import normalize_issues
@@ -344,11 +345,15 @@ def _model_visible_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
 
 
 def _qwen_instruction(*, prompt: str, metadata: dict[str, Any]) -> str:
+    recipe_guidance = build_recipe_model_guidance()
     return (
         f"{prompt}\n"
         "Use only the local preview image and metadata supplied in this request.\n"
-        "Return ONE JSON object only, no Markdown fences, no Lightroom adjustment values.\n"
-        "The JSON object MUST use exactly this structure and keys:\n"
+        "Return ONE JSON object only, no Markdown fences, no natural-language correction prose.\n"
+        "The numeric correction_intents are advisory model suggestions. The planner will validate and clamp them.\n"
+        "Do not use forbidden keys: lightroom_adjustments, develop_settings, final_develop_settings, preset_path, plugin_command.\n"
+        "The JSON object MUST use this structure. Replace every <number> with an image-specific numeric value;\n"
+        "do not copy placeholder zeros unless that field truly needs no correction:\n"
         "{\n"
         '  "scene_type": "<short scene label, e.g. underwater, portrait, landscape>",\n'
         '  "main_subject": "<short subject label>",\n'
@@ -360,13 +365,53 @@ def _qwen_instruction(*, prompt: str, metadata: dict[str, Any]) -> str:
         '    "sharpness": "<ok|soft|very_soft>",\n'
         '    "noise": "<none|low|moderate|high>"\n'
         "  },\n"
-        '  "edit_intent": "<one sentence describing correction intent>",\n'
+        '  "correction_intents": {\n'
+        '    "exposure": <number>,\n'
+        '    "contrast": <number>,\n'
+        '    "highlights": <number>,\n'
+        '    "shadows": <number>,\n'
+        '    "whites": <number>,\n'
+        '    "blacks": <number>,\n'
+        '    "temp": <number>,\n'
+        '    "temperature_delta": <number>,\n'
+        '    "tint": <number>,\n'
+        '    "vibrance": <number>,\n'
+        '    "saturation": <number>,\n'
+        '    "texture": <number>,\n'
+        '    "clarity": <number>,\n'
+        '    "dehaze": <number>,\n'
+        '    "noise_reduction": <number>,\n'
+        '    "sharpening": <number>,\n'
+        '    "aqua_saturation": <number>,\n'
+        '    "blue_saturation": <number>,\n'
+        '    "red_saturation": <number>,\n'
+        '    "orange_luminance": <number>\n'
+        "  },\n"
         '  "confidence": 0.85,\n'
         '  "risk_flags": []\n'
         "}\n"
+        "Use Tonevyra planner units for correction_intents: exposure in stops; temp as absolute Kelvin; temperature_delta in Kelvin delta;\n"
+        "all other fields in Lightroom-like slider delta units. Use 0.0 for no correction.\n"
+        "Stay within these advisory ranges before planner validation: exposure -2..2, contrast -50..50,\n"
+        "highlights -80..40, shadows -40..80, whites -50..50, blacks -50..50,\n"
+        "temp 2500..50000, temperature_delta -3500..3500, tint -50..50, vibrance -30..60, saturation -30..30,\n"
+        "texture -20..35, clarity -20..35, dehaze 0..35, noise_reduction 0..60, sharpening 0..80.\n"
+        "HSL color mixer advisory ranges are -100..100 for hue/saturation/luminance keys.\n"
+        "Magnitude guide: cool cast usually needs temperature_delta +500..+1200; strong_cool underwater\n"
+        "near the calibrated action reference should prefer temp around 8200K, tint around +24, highlights near -70,\n"
+        "whites near -28, shadows around +38, and blue/aqua saturation mildly reduced rather than crushed.\n"
+        "Warm cast uses negative temperature_delta. Green cast uses positive tint; magenta cast uses negative tint.\n"
+        "High contrast usually uses contrast -5..-25; low contrast uses contrast +10..+35.\n"
+        "Underexposed images usually need exposure +0.8..+1.8 and shadows +35..+75; very dark or severely underexposed RAW previews may need exposure +1.6..+2.0.\n"
+        "Overexposed images usually need exposure -0.2..-1.0 and highlights -10..-60.\n"
+        "Hazy/turbid underwater images usually need dehaze +8..+28, clarity +4..+18, texture +4..+18.\n"
+        "Soft images need sharpening +20..+60; high noise needs noise_reduction +25..+60.\n"
+        "Consistency rule: if an issue is not 'none' or 'ok', at least one directly related correction_intents field must be non-zero.\n"
+        "For strong_cool underwater, temperature_delta and tint must be non-zero, and vibrance should be non-zero unless saturation is already excessive.\n"
         "Judge color_cast by the dominant unwanted tint: underwater or blue/cyan scenes are\n"
         "usually 'cool' or 'strong_cool'; describe the strength honestly.\n"
         "All issues subfields are required and must be non-empty strings.\n"
+        f"{recipe_guidance}\n"
         f"Metadata visible to model: {metadata}\n"
     )
 
@@ -378,6 +423,7 @@ _VISION_KNOWN_FIELDS = {
     "main_subject",
     "usable",
     "issues",
+    "correction_intents",
     "edit_intent",
     "confidence",
     "risk_flags",
@@ -394,6 +440,48 @@ _VISION_ISSUE_FIELDS = {
     "skin_tone",
 }
 _REQUIRED_ISSUE_FIELDS = ("exposure", "color_cast", "contrast", "sharpness", "noise")
+_VISION_CORRECTION_INTENT_FIELDS = {
+    "exposure",
+    "contrast",
+    "highlights",
+    "shadows",
+    "whites",
+    "blacks",
+    "temp",
+    "temperature_delta",
+    "tint",
+    "vibrance",
+    "saturation",
+    "texture",
+    "clarity",
+    "dehaze",
+    "noise_reduction",
+    "sharpening",
+    "red_saturation",
+    "orange_saturation",
+    "yellow_saturation",
+    "green_saturation",
+    "aqua_saturation",
+    "blue_saturation",
+    "purple_saturation",
+    "magenta_saturation",
+    "red_hue",
+    "orange_hue",
+    "yellow_hue",
+    "green_hue",
+    "aqua_hue",
+    "blue_hue",
+    "purple_hue",
+    "magenta_hue",
+    "red_luminance",
+    "orange_luminance",
+    "yellow_luminance",
+    "green_luminance",
+    "aqua_luminance",
+    "blue_luminance",
+    "purple_luminance",
+    "magenta_luminance",
+}
 
 
 def _coerce_vision_result(payload: dict[str, Any]) -> dict[str, Any]:
@@ -421,13 +509,25 @@ def _coerce_vision_result(payload: dict[str, Any]) -> dict[str, Any]:
         if not isinstance(value, str) or not value.strip():
             issues[field] = "none"
     coerced["issues"] = issues
+    raw_intents = payload.get("correction_intents")
+    if isinstance(raw_intents, dict):
+        intents: dict[str, float] = {}
+        for key, value in raw_intents.items():
+            if key not in _VISION_CORRECTION_INTENT_FIELDS:
+                continue
+            try:
+                intents[key] = float(value)
+            except (TypeError, ValueError):
+                continue
+        if intents:
+            coerced["correction_intents"] = intents
 
     scene = coerced.get("scene_type")
     if not isinstance(scene, str) or not scene.strip():
         coerced["scene_type"] = "general_photo"
     intent = coerced.get("edit_intent")
     if not isinstance(intent, str) or not intent.strip():
-        coerced["edit_intent"] = "balanced_general_correction"
+        coerced["edit_intent"] = "structured_numeric_correction"
     if not isinstance(coerced.get("usable"), bool):
         coerced["usable"] = True
     try:

@@ -46,6 +46,7 @@ EXCLUDE_FILES = {
     Path("harness/prompts/02_security_harness_prompt.md"),
 }
 TEXT_SUFFIXES = {".py", ".md", ".toml", ".yaml", ".yml", ".json"}
+JSON_SCHEMA_DRAFT_URL = "https://json-schema.org/draft/2020-12/schema"
 
 
 @dataclass(frozen=True)
@@ -117,7 +118,41 @@ def _allowed_http_literal(path: Path, text: str, index: int) -> bool:
         return True
     if "sqlalche.me/e/" in line:
         return True
+    if _is_json_schema_declaration(relative, line):
+        return True
+    if _is_negative_remote_fixture(relative, line):
+        return True
+    if _is_remote_detection_test_code(relative, line):
+        return True
     return False
+
+
+def _is_json_schema_declaration(relative: Path, line: str) -> bool:
+    return (
+        len(relative.parts) == 3
+        and relative.parts[0] == "harness"
+        and relative.parts[1] == "schemas"
+        and relative.name.endswith(".schema.json")
+        and '"$schema"' in line
+        and JSON_SCHEMA_DRAFT_URL in line
+    )
+
+
+def _is_negative_remote_fixture(relative: Path, line: str) -> bool:
+    return (
+        relative == Path("harness/fixtures/t022_model_provider/invalid_remote_config.json")
+        and '"model_root"' in line
+        and "https://example.invalid/model" in line
+    )
+
+
+def _is_remote_detection_test_code(relative: Path, line: str) -> bool:
+    return (
+        relative == Path("harness/scripts/verify_t022_model_provider_pipeline.py")
+        and "invalid_remote.get" in line
+        and "model_root" in line
+        and "startswith" in line
+    )
 
 
 def _check_env_contract(root: Path, *, strict_env: bool) -> list[str]:
@@ -140,13 +175,30 @@ def _check_env_contract(root: Path, *, strict_env: bool) -> list[str]:
     return errors
 
 
-def _check_default_settings() -> list[str]:
+def _check_runtime_settings() -> list[str]:
     settings = Settings()
     errors: list[str] = []
-    if settings.vision_backend != "mock":
-        errors.append(f"default vision backend must be mock, got {settings.vision_backend}")
-    if settings.lightroom_backend != "fake":
-        errors.append(f"default Lightroom backend must be fake, got {settings.lightroom_backend}")
+    vision_backend = settings.vision_backend.lower()
+    if vision_backend == "mock":
+        errors.append("active vision backend must be a real local backend, got mock")
+    if vision_backend in {"qwen3vl", "qwen3-vl", "qwen3"}:
+        model_path = settings.project_path(settings.qwen3_model_path).resolve()
+    elif vision_backend in {"qwen", "qwen2.5-vl", "qwen25vl"}:
+        model_path = settings.project_path(settings.qwen_model_path).resolve()
+    elif vision_backend in {"module", "module-analysis", "t021_module"}:
+        model_path = None
+    else:
+        errors.append(f"unsupported active vision backend: {settings.vision_backend}")
+        model_path = None
+    if model_path is not None and not model_path.exists():
+        errors.append(f"active local model path is missing: {model_path}")
+
+    manifest_path = settings.project_path(settings.model_manifest_path).resolve()
+    if not manifest_path.exists():
+        errors.append(f"active model manifest is missing: {manifest_path}")
+
+    if settings.lightroom_backend.lower() != "lightroom":
+        errors.append(f"active Lightroom backend must be lightroom, got {settings.lightroom_backend}")
     if not settings.model_offline:
         errors.append("TONEVYRA_MODEL_OFFLINE default must be true")
     if settings.worker_concurrency != 1:
@@ -162,15 +214,6 @@ def _check_default_settings() -> list[str]:
 
 def _check_backend_behavior(root: Path) -> list[str]:
     errors: list[str] = []
-    settings = Settings(
-        vision_backend="mock",
-        vision_mock_fixture=root / "harness" / "fixtures" / "vision" / "valid_underwater.json",
-        model_offline=True,
-    )
-    backend = create_vision_backend(settings)
-    if backend.backend_name != "mock":
-        errors.append(f"mock backend should be active, got {backend.backend_name}")
-
     try:
         create_vision_backend(
             Settings(
@@ -197,7 +240,7 @@ def main() -> int:
     root = Path(args.root).resolve()
     findings = _scan_static(root)
     env_errors = _check_env_contract(root, strict_env=args.strict_env)
-    settings_errors = _check_default_settings()
+    settings_errors = _check_runtime_settings()
     backend_errors = _check_backend_behavior(root)
 
     if findings or env_errors or settings_errors or backend_errors:
@@ -210,7 +253,7 @@ def main() -> int:
 
     print("OK static scan found no remote API, runtime download, unsafe model loading, or URL image loading")
     print("OK offline env contract is present in .env.example and harness/HARNESS_ENV.example")
-    print("OK default settings remain mock/fake/offline with worker_concurrency=1")
+    print(f"OK active runtime settings use {Settings().vision_backend} + Lightroom, offline mode, and worker_concurrency=1")
     print("OK qwen backend requires an existing local model path before any model load")
     print("Security harness passed.")
     return 0

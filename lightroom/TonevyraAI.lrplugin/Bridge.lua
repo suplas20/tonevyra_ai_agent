@@ -3,7 +3,7 @@ local LrPathUtils = import "LrPathUtils"
 
 local Bridge = {}
 
-Bridge.plugin_version = "t020-lightroom-final-export-adapter-20260622"
+Bridge.plugin_version = "t020-lightroom-final-export-adapter-hsl-20260624"
 Bridge.root = "F:\\tonevyra_ai_agent\\runtime\\bridge"
 Bridge.request_dir = Bridge.root .. "\\lightroom_apply_requests"
 Bridge.processing_dir = Bridge.root .. "\\lightroom_apply_processing"
@@ -148,10 +148,11 @@ function Bridge.writeEvidence(requestId, data)
   return writeAll(path, data)
 end
 
-function Bridge.writeWorkerStatus(isRunning, lastError)
+function Bridge.writeWorkerStatus(isRunning, lastError, startRequested)
   Bridge.ensureDirs()
   local data = table.concat({
     "worker_running=" .. tostring(isRunning),
+    "worker_start_requested=" .. tostring(startRequested or false),
     "plugin_version=" .. Bridge.plugin_version,
     "updated_at=" .. os.date("!%Y-%m-%dT%H:%M:%SZ"),
     "request_dir=" .. Bridge.request_dir,

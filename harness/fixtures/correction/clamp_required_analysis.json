@@ -2,19 +2,25 @@
   "schema_version": "1.0",
   "model_backend": "mock",
   "model_name": "mock-fixture-v1",
-  "scene_type": "underwater_portrait",
-  "main_subject": "diver",
+  "scene_type": "portrait",
+  "main_subject": "person",
   "usable": true,
   "issues": {
     "exposure": "severely_underexposed",
-    "color_cast": "blue_green_extreme",
+    "color_cast": "cool",
     "haze": "extreme",
     "contrast": "very_low",
     "sharpness": "soft",
     "noise": "high",
     "skin_tone": "uncertain"
   },
-  "edit_intent": "conservative_underwater_recovery_with_clamps",
+  "correction_intents": {
+    "temp": 90000,
+    "temperature_delta": 9000,
+    "vibrance": 120,
+    "dehaze": 100
+  },
+  "edit_intent": "model_numeric_correction_intents_clamp_fixture",
   "confidence": 0.78,
   "risk_flags": [
     "severe_recovery_required"

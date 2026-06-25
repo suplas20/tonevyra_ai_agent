@@ -38,6 +38,24 @@ def test_module_analysis_provider_keeps_general_warm_photo_out_of_underwater(tmp
     assert "develop_settings" not in result.model_dump()
 
 
+def test_module_analysis_provider_marks_very_dark_preview_as_severe_underexposure(tmp_path: Path) -> None:
+    preview_path = tmp_path / "very_dark.jpg"
+    _write_test_image(preview_path, base=(24, 24, 24))
+
+    result = ModuleAnalysisProvider().analyze(
+        AnalysisRequest(
+            job_id="job-dark",
+            attempt_id="attempt-0",
+            preview_path=preview_path,
+            metadata={"file": {"name": "very_dark.jpg"}},
+        )
+    )
+    payload = analysis_to_vision_payload(result)
+
+    assert payload["issues"]["exposure"] == "severely_underexposed"
+    assert "severely_underexposed" in payload["risk_flags"]
+
+
 def test_analysis_result_rejects_direct_lightroom_adjustment_fields() -> None:
     payload = {
         "job_id": "job-1",

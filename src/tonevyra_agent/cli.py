@@ -34,6 +34,7 @@ from tonevyra_agent.db.repositories import (
     run_db_smoke_test,
 )
 from tonevyra_agent.learning.feedback import FeedbackCaptureService
+from tonevyra_agent.learning.reference_pair import analyze_expert_reference_pair
 from tonevyra_agent.learning.schemas import DevelopSettingsSnapshot, FeedbackCaptureRequest
 from tonevyra_agent.vision.benchmark import run_model_benchmark
 from tonevyra_agent.vision.model import create_vision_backend
@@ -464,6 +465,74 @@ def feedback_reject(
             final_settings=DevelopSettingsSnapshot(source="cli_explicit_feedback"),
         ),
     )
+
+
+@feedback_app.command("expert-pair")
+def feedback_expert_pair(
+    task_id: UUID,
+    original_path: Path = typer.Option(..., "--original", help="Original/before image path."),
+    corrected_path: Path = typer.Option(..., "--corrected", help="Expert-corrected/after image path."),
+    use_for_learning: bool = typer.Option(True, "--use-for-learning/--no-use-for-learning"),
+) -> None:
+    """Analyze an expert before/after pair and store local calibration evidence."""
+
+    task_repo = ImageTaskRepository()
+    settings = get_settings()
+    try:
+        analysis = analyze_expert_reference_pair(original_path, corrected_path)
+    except ValueError as exc:
+        typer.echo(f"[FAIL] expert pair: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+    with session_scope(settings) as session:
+        task = task_repo.get(session, task_id)
+        if task is None:
+            typer.echo(f"Task not found: {task_id}", err=True)
+            raise typer.Exit(1)
+        if task.status not in {
+            TaskStatus.PASS.value,
+            TaskStatus.REVIEW_REQUIRED.value,
+            TaskStatus.FAILED.value,
+            TaskStatus.SKIPPED.value,
+        }:
+            typer.echo(f"Expert-pair feedback requires a terminal task status, got {task.status}", err=True)
+            raise typer.Exit(1)
+
+        zero_adjustments = {key: 0.0 for key in analysis.suggested_lightroom_delta}
+        flattened_metric_delta = {f"metric_delta_{key}": value for key, value in analysis.metric_delta.items()}
+        request = FeedbackCaptureRequest(
+            user_action=FeedbackUserAction.MANUAL_EDITED,
+            rating=5,
+            reason_tags=["expert_reference_pair", "planner_calibration"],
+            accepted=False,
+            approved_for_learning=use_for_learning,
+            comment=analysis.reason_summary,
+            ai_settings=DevelopSettingsSnapshot(
+                source="expert_pair_original",
+                settings={
+                    "reference_path": analysis.original_path,
+                    "confidence": analysis.confidence,
+                    **zero_adjustments,
+                },
+            ),
+            final_settings=DevelopSettingsSnapshot(
+                source="expert_pair_corrected",
+                settings={
+                    "reference_path": analysis.corrected_path,
+                    "confidence": analysis.confidence,
+                    **flattened_metric_delta,
+                    **analysis.suggested_lightroom_delta,
+                },
+            ),
+        )
+        persisted = FeedbackCaptureService(settings=settings).capture_feedback(session, task=task, request=request)
+        storage = persisted.manual_edit_delta_artifact
+
+    typer.echo(f"[OK] expert pair analyzed: confidence={analysis.confidence}")
+    typer.echo(f"suggested_lightroom_delta={_json_dump(analysis.suggested_lightroom_delta)}")
+    typer.echo(f"manual_edit_delta_artifact={storage.relative_path}")
+    if persisted.result.learning_sample_id:
+        typer.echo(f"learning_sample_id={persisted.result.learning_sample_id}")
 
 
 @app.command("benchmark-models")

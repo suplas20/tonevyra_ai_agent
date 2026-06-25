@@ -149,6 +149,8 @@ def _risk_labels(risks: list[Any]) -> list[str]:
 def _exposure_label(mean_luma: float, clipped_shadow_ratio: float, clipped_highlight_ratio: float) -> str:
     if clipped_highlight_ratio > 0.08 or mean_luma > 205:
         return "overexposed"
+    if clipped_shadow_ratio > 0.22 or mean_luma < 38:
+        return "severely_underexposed"
     if clipped_shadow_ratio > 0.12 or mean_luma < 55:
         return "underexposed"
     if mean_luma < 92:
@@ -227,7 +229,7 @@ def _risk_flags(
     noise_label: str,
 ) -> list[str]:
     flags: list[str] = []
-    if exposure in {"underexposed", "overexposed"}:
+    if exposure in {"severely_underexposed", "underexposed", "overexposed"}:
         flags.append(exposure)
     if clipped_shadow_ratio > 0.18 or clipped_highlight_ratio > 0.12:
         flags.append("source_irrecoverable_clipping")

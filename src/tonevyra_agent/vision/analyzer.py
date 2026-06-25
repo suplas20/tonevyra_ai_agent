@@ -19,6 +19,7 @@ from tonevyra_agent.db.repositories import (
     StageResultRepository,
     TaskEventRepository,
 )
+from tonevyra_agent.learning.recipe_calibration import build_recipe_model_guidance
 from tonevyra_agent.storage.artifacts import ArtifactRef, ArtifactStorage
 from tonevyra_agent.vision.model import VisionModelBackend, create_vision_backend
 from tonevyra_agent.vision.schemas import VisionAnalysisResult
@@ -248,10 +249,14 @@ def analyze_task_vision(
 def build_vision_prompt(*, metadata: dict[str, Any]) -> str:
     basic = metadata.get("basic", {})
     image = metadata.get("image", {})
+    recipe_guidance = build_recipe_model_guidance()
     return (
         "Analyze the provided 1024px sRGB JPEG preview and EXIF/basic metadata for Tonevyra AI.\n"
-        "Return JSON only with: scene_type, main_subject, usable, issues, edit_intent, confidence, risk_flags.\n"
-        "Do not suggest direct Lightroom values and do not edit the image.\n"
+        "Return JSON only with: scene_type, main_subject, usable, issues, correction_intents, confidence, risk_flags.\n"
+        "The correction_intents object must contain numeric correction suggestions for the planner to validate.\n"
+        "Use non-zero correction_intents when issues are detected; do not leave all values at zero for a correctable image.\n"
+        "Do not output natural-language correction prose, final_develop_settings, lightroom_adjustments, or plugin commands.\n"
+        f"{recipe_guidance}\n"
         f"Image metadata: {image}\n"
         f"Basic EXIF metadata: {basic}\n"
     )

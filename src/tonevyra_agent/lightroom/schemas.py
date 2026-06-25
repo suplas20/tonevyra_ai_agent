@@ -38,6 +38,30 @@ LIGHTROOM_APPLY_ALLOWED_SETTINGS = {
     "dehaze",
     "sharpening",
     "noise_reduction",
+    "red_saturation",
+    "orange_saturation",
+    "yellow_saturation",
+    "green_saturation",
+    "aqua_saturation",
+    "blue_saturation",
+    "purple_saturation",
+    "magenta_saturation",
+    "red_hue",
+    "orange_hue",
+    "yellow_hue",
+    "green_hue",
+    "aqua_hue",
+    "blue_hue",
+    "purple_hue",
+    "magenta_hue",
+    "red_luminance",
+    "orange_luminance",
+    "yellow_luminance",
+    "green_luminance",
+    "aqua_luminance",
+    "blue_luminance",
+    "purple_luminance",
+    "magenta_luminance",
 }
 
 
@@ -162,6 +186,7 @@ class LightroomApplyRequestPayload(BaseModel):
     correction_plan_id: str | None = None
     created_at: str
     develop_settings: dict[str, float]
+    local_adjustments: dict[str, Any] = Field(default_factory=dict)
     safety: dict[str, Any] = Field(default_factory=lambda: {"non_destructive_required": True})
     runtime_context: dict[str, str] = Field(default_factory=dict)
 

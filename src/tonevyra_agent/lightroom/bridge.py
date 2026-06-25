@@ -181,7 +181,7 @@ class LightroomBridge:
         try:
             correction_payload = self.storage.load_json(correction_plan_artifact)
             correction_plan = CorrectionPlan.model_validate(correction_payload)
-            develop_settings = _develop_settings_from_plan(correction_plan)
+            develop_settings = _develop_settings_from_plan(correction_plan, self.settings)
             payload = LightroomApplyRequestPayload(
                 request_id=str(task.id),
                 task_id=str(task.id),
@@ -189,8 +189,10 @@ class LightroomBridge:
                 correction_plan_id=str(correction_plan_artifact.artifact_id),
                 created_at=datetime.utcnow().isoformat(timespec="seconds") + "Z",
                 develop_settings=develop_settings,
+                local_adjustments=correction_plan.local_adjustments_json,
                 safety={
                     "clamped": correction_plan.clamped,
+                    "local_adjustments_requested": bool(correction_plan.local_adjustments_json),
                     "source_hash": task.source_hash,
                     "non_destructive_required": True,
                 },
@@ -249,6 +251,7 @@ class LightroomBridge:
                 "command": payload.command,
                 "operation": payload.operation,
                 "develop_settings": payload.develop_settings,
+                "local_adjustments": _local_adjustment_summary(payload.local_adjustments),
                 "evidence_artifacts": [
                     _artifact_summary(correction_plan_artifact),
                     _artifact_summary(request_artifact),
@@ -1200,11 +1203,31 @@ def _validate_apply_result_for_export(response: LightroomApplyResultPayload) -> 
         raise ValueError("Lightroom export requires source photo imported or found in catalog.")
 
 
-def _develop_settings_from_plan(plan: CorrectionPlan) -> dict[str, float]:
-    """Translate planner keys to the T-019 Lightroom apply contract."""
+def _develop_settings_from_plan(plan: CorrectionPlan, settings: Settings | None = None) -> dict[str, float]:
+    """Translate planner keys to the T-019 Lightroom apply contract.
+
+    The planner expresses white balance as a relative ``temperature_delta``. We
+    convert it to an ABSOLUTE ``temp`` (Kelvin) here using the nominal as-shot
+    temperature, because the plugin's relative-delta path resolves against the
+    photo's *current* temperature and therefore accumulates on every reprocess or
+    quality retry (runaway warm/yellow cast). An absolute temperature is fully
+    idempotent.
+    """
+
+    config = settings or get_settings()
+    nominal = float(config.nominal_as_shot_temperature)
+    has_absolute_temp = "temp" in plan.adjustments_json
 
     develop_settings: dict[str, float] = {}
     for key, value in plan.adjustments_json.items():
+        if key == "temperature_delta":
+            if has_absolute_temp:
+                continue  # an explicit absolute temp already wins
+            if float(value) == 0.0:
+                continue
+            if "temp" in LIGHTROOM_APPLY_ALLOWED_SETTINGS:
+                develop_settings["temp"] = max(2500.0, min(50000.0, nominal + float(value)))
+            continue
         apply_key = key
         if apply_key not in LIGHTROOM_APPLY_ALLOWED_SETTINGS:
             continue
@@ -1212,6 +1235,17 @@ def _develop_settings_from_plan(plan: CorrectionPlan) -> dict[str, float]:
     if not develop_settings:
         raise ValueError("correction plan did not contain any Lightroom apply settings")
     return develop_settings
+
+
+def _local_adjustment_summary(payload: dict[str, Any]) -> dict[str, Any]:
+    local_plan = payload.get("local_adjustment_plan") if isinstance(payload, dict) else None
+    plans = local_plan.get("plans", []) if isinstance(local_plan, dict) else []
+    return {
+        "requested": bool(plans),
+        "degraded_mode": bool(payload.get("degraded_mode")) if isinstance(payload, dict) else False,
+        "plan_count": len(plans) if isinstance(plans, list) else 0,
+        "schema_version": payload.get("schema_version") if isinstance(payload, dict) else None,
+    }
 
 
 def _absolute_project_path(path: str | Path) -> Path:
