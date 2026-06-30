@@ -1,0 +1,24 @@
+{
+  "schema_version": "t029.live.evidence.v1",
+  "ticket": "T029",
+  "phase0_passed": false,
+  "lightroom_version": "REPLACE_WITH_VERIFIED_VERSION",
+  "plugin_version": "REPLACE_WITH_PLUGIN_VERSION",
+  "native_mask_command_supported": false,
+  "native_target_detected": false,
+  "mask_applied_without_ui_drawing": false,
+  "target_alignment_passed": false,
+  "red_recovery_passed": false,
+  "background_spill_passed": false,
+  "idempotent_replay_passed": false,
+  "user_masks_preserved": false,
+  "rollback_verified": false,
+  "export_file_exists": false,
+  "export_path": "REPLACE_WITH_REAL_EXPORT_PATH",
+  "quality_evidence_present": false,
+  "regressions_passed": false,
+  "evidence_paths": [
+    "REPLACE_WITH_REAL_EVIDENCE_PATH"
+  ],
+  "note": "Template only. Radial fallback is excluded; do not mark true without real Lightroom native-mask evidence."
+}

@@ -1,0 +1,9 @@
+{
+  "case_id": "pause-resume",
+  "initial_state": "WATCHING",
+  "commands": ["PAUSE_WATCHING", "PAUSE_WATCHING", "RESUME_WATCHING", "RESUME_WATCHING", "RESCAN"],
+  "expected_states": ["PAUSED", "PAUSED", "WATCHING", "WATCHING", "WATCHING"],
+  "expected_duplicate_side_effects": 0,
+  "resume_rescan_required": true,
+  "expected_validation": "PASS"
+}

@@ -1,4 +1,4 @@
-﻿# Tonevyra AI PRD - ?쒗뭹 ?붽뎄?ы빆
+# Tonevyra AI PRD - ?쒗뭹 ?붽뎄?ы빆
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -210,3 +210,28 @@ Lightroom plugin folder: TonevyraAI.lrplugin
 ```
 
 Do not continue using `mw_photo_agent` or `mw-agent` in new implementation code unless compatibility wrappers are explicitly requested.
+
+## T-030 Product Addendum — Background Automation and Tray Presence
+
+Tonevyra Windows users may run the product continuously in their login session. The product watches a configured local input folder and starts the existing photo-correction pipeline after each new file is fully copied and verified stable.
+
+User-visible requirements:
+
+```text
+- Tonevyra system tray icon using the approved symbol
+- current status and queue summary
+- pause/resume/rescan controls
+- open configured folders and diagnostic/status UI
+- explicit degraded/error state
+- clean exit with no orphan process
+```
+
+Safety requirements:
+
+```text
+- no processing of partial files
+- no duplicate jobs from repeated filesystem events
+- no source overwrite/delete/move
+- no recursive processing of Tonevyra outputs
+- no Windows Service or admin requirement
+```

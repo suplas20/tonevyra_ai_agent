@@ -1,0 +1,6 @@
+{
+  "case_id": "invalid-source-overwrite",
+  "source_overwrite": true,
+  "source_delete_after_success": true,
+  "expected_validation": "FAIL"
+}

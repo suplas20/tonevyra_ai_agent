@@ -56,6 +56,11 @@ class VisionAnalyzer:
         self.stage_repository = stage_repository or StageResultRepository()
         self.event_repository = event_repository or TaskEventRepository()
 
+    def close(self) -> None:
+        close = getattr(self.backend, "close", None)
+        if callable(close):
+            close()
+
     def analyze(
         self,
         session: Session,

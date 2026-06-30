@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - Development Roadmap & Milestones
+# Tonevyra AI - Development Roadmap & Milestones
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -254,3 +254,48 @@ feedback storage foundation works
 real Lightroom PoC passes
 local Qwen backend works
 ```
+
+---
+
+## T-029 Roadmap Addendum
+
+```text
+T-029: Lightroom Native Mask Execution and Deterministic Radial Fallback
+```
+
+Deliverables:
+
+```text
+Phase 0 real-Lightroom radial preset proof
+normalized mask request/result schemas
+Mask Strategy Planner radial fallback
+versioned/checksum radial template library
+Plugin mask executor with snapshots, rollback, and idempotency
+background-person red-recovery live evidence
+static/runtime/strict-live harness gates
+```
+
+T-029 is complete only after the real Lightroom preset path retains geometry and the supplied small background-person case passes target recovery and spill-control validation.
+
+## T-030 Roadmap Addendum
+
+```text
+T-030: Windows Background Watcher and System Tray Agent
+```
+
+Deliverables:
+
+```text
+per-user Tray Shell and Background Worker
+single-instance guards
+continuous folder watch with stability and event coalescing
+PostgreSQL-backed idempotent task registration
+pause/resume/rescan
+Worker heartbeat and bounded restart
+current-user autostart abstraction
+graceful shutdown and restart recovery
+Tonevyra tray icon asset contract
+static/reference/implementation/Windows-live harness gates
+```
+
+T-030 is complete only after actual Windows live evidence proves the tray, stable-file gating, deduplication, pause/resume, Worker crash recovery, source integrity, and zero orphan processes.

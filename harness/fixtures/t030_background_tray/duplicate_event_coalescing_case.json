@@ -1,0 +1,9 @@
+{
+  "case_id": "duplicate-event-coalescing",
+  "events": ["CREATED", "MODIFIED", "MODIFIED", "RENAMED", "MODIFIED"],
+  "normalized_path": "d:\\tonevyra\\input\\photo.cr3",
+  "expected_coalesced_candidates": 1,
+  "expected_task_registrations": 1,
+  "expected_external_pipeline_executions": 1,
+  "expected_validation": "PASS"
+}

@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import gc
 from pathlib import Path
 from typing import Any, Protocol
 
@@ -163,6 +164,11 @@ class QwenVisionBackend:
         payload.setdefault("model_name", self.model_name)
         return payload
 
+    def close(self) -> None:
+        close = getattr(self.runtime, "close", None)
+        if callable(close):
+            close()
+
 
 class TransformersQwenRuntime:
     """Thin adapter around a locally installed Transformers-compatible Qwen model."""
@@ -247,6 +253,19 @@ class TransformersQwenRuntime:
         if hasattr(self.processor, "decode"):
             return self.processor.decode(new_tokens[0], skip_special_tokens=True)
         return str(new_tokens)
+
+    def close(self) -> None:
+        self.model = None
+        self.processor = None
+        gc.collect()
+        try:
+            import torch
+
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                torch.cuda.ipc_collect()
+        except Exception:
+            pass
 
 
 def create_vision_backend(settings: Settings | None = None, *, fixture_path: Path | None = None) -> VisionModelBackend:

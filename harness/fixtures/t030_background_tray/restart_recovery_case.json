@@ -1,0 +1,12 @@
+{
+  "case_id": "worker-restart-recovery",
+  "worker_crashed": true,
+  "tray_remains_alive": true,
+  "heartbeat_timeout_seconds": 20,
+  "restart_limit": 3,
+  "restart_attempt": 1,
+  "checkpoint_available": true,
+  "expected_action": "RESTART_AND_RECOVER",
+  "expected_duplicate_external_effects": 0,
+  "expected_validation": "PASS"
+}

@@ -1,0 +1,11 @@
+{
+  "expected_validation": "FAIL",
+  "provider_output": {
+    "region_id": "secondary-person-01-red-garment",
+    "plugin_command": "APPLY_LIGHTROOM_MASK_PLAN",
+    "preset_path": "C:/untrusted/radial.xmp",
+    "final_develop_settings": {
+      "Saturation": 80
+    }
+  }
+}

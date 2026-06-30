@@ -17,6 +17,10 @@ return {
       file = "ProcessPendingExport.lua",
     },
     {
+      title = "Tonevyra Diagnostics Process Pending Mask Request",
+      file = "ProcessPendingMask.lua",
+    },
+    {
       title = "Tonevyra Bridge Status",
       file = "Status.lua",
     },

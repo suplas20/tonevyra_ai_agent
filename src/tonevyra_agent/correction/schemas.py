@@ -16,7 +16,7 @@ ADJUSTMENT_RANGES: dict[str, tuple[float, float]] = {
     "blacks": (-50.0, 50.0),
     "temp": (2500.0, 50000.0),
     "temperature_delta": (-3500.0, 3500.0),
-    "tint": (-50.0, 50.0),
+    "tint": (-100.0, 100.0),
     "vibrance": (-30.0, 60.0),
     "saturation": (-30.0, 30.0),
     "texture": (-20.0, 35.0),

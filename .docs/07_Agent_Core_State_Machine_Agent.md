@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - Agent Core State Machine
+# Tonevyra AI - Agent Core State Machine
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -214,3 +214,17 @@ Example:
 ## 7. Feedback Loop Status Rule
 
 Feedback Loop should not change final task status by default. It creates feedback and learning records. Any planner calibration update requires explicit local approval, versioning, and rollback capability.
+
+## T-030 Agent Runtime State Addendum
+
+Agent process state is separate from photo task state:
+
+```text
+STARTING → WATCHING ↔ PROCESSING
+WATCHING/PROCESSING → PAUSED → WATCHING
+any live state → DEGRADED → WATCHING/PROCESSING
+fatal operational condition → ERROR
+any live state → STOPPING → STOPPED
+```
+
+These values must not be written into `image_tasks.status`. Runtime snapshots and task/incident evidence carry them.

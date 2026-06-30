@@ -11,6 +11,7 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from tonevyra_agent.core.config import get_settings
 from tonevyra_agent.correction.schemas import ADJUSTMENT_RANGES
 from tonevyra_agent.correction.target_based.schemas import ImageMeasurement, TargetState
 
@@ -197,12 +198,13 @@ def apply_measured_deficit_floors(
     luma = measurement.mean_luma
     window_blown = measurement.clipped_highlight_ratio > 0.015 or measurement.luma_p95 >= 244.0
     if target.target_luma_mid - luma > 8.0:
-        if luma < 60.0:
-            exp_floor, sh_floor = 1.85, 80.0
-        elif luma < 85.0:
-            exp_floor, sh_floor = 1.25, 65.0
-        else:
-            exp_floor, sh_floor = 0.7, 45.0
+        exp_floor = _dark_frame_exposure_floor(
+            measurement=measurement,
+            target=target,
+            is_underwater=is_underwater,
+            window_blown=window_blown,
+        )
+        sh_floor = _dark_frame_shadow_floor(measurement=measurement, target=target)
         _raise(floored, applied, "exposure", exp_floor)
         _raise(floored, applied, "shadows", sh_floor)
         if window_blown:
@@ -216,20 +218,56 @@ def apply_measured_deficit_floors(
             _lower(floored, applied, "highlights", -45.0 if luma < 60.0 else -30.0)
             _raise(floored, applied, "whites", 18.0)
 
-    # White-balance floor: warm enough to break a cool cast, but bounded low so
-    # the result is neutral-natural, not yellow.
+    # White-balance floor: a real, visible correction toward a cool-neutral
+    # underwater white balance. Strong enough to break an extreme blue cast, but
+    # kept well below a warm/yellow result (nominal as-shot ~6500K + delta).
     cast = measurement.blue_green_minus_red
-    if is_underwater or cast > 12.0:
-        # Keep underwater cool: a small warm nudge to clear murk, not a push to
-        # neutral. nominal as-shot (~6500K) + this delta stays in a cool range.
-        if cast > 25.0:
-            temp_floor, tint_floor = 700.0, 8.0
-        elif cast > 12.0:
-            temp_floor, tint_floor = 400.0, 5.0
-        else:
-            temp_floor, tint_floor = 0.0, 0.0
-        _raise(floored, applied, "temperature_delta", temp_floor)
-        _raise(floored, applied, "tint", tint_floor)
+    if is_underwater:
+        # Underwater RED is physically absorbed and cannot be recovered by HSL red
+        # saturation (almost no red pixels to saturate). The real lever is TINT
+        # toward magenta - magenta adds red WITHOUT the yellow that temperature
+        # adds. The planner does NOT use fixed numbers: it warms proportionally to
+        # the measured blue cast (kept cool) and DERIVES the magenta tint
+        # PROPORTIONAL to that warming. The calibration coefficients live in
+        # Settings (the planner's owned, tunable memory), not as literals here.
+        cfg = get_settings()
+        temp_delta = _bounded(
+            cast * cfg.underwater_temp_per_cast,
+            cfg.underwater_temp_delta_min,
+            cfg.underwater_temp_delta_max,
+        )
+        tint_value = _bounded(temp_delta * cfg.underwater_tint_per_temp_delta, 0.0, cfg.underwater_tint_max)
+        _raise(floored, applied, "temperature_delta", temp_delta)
+        _raise(floored, applied, "tint", tint_value)
+    elif cast > 12.0:
+        # Non-underwater cool cast: mild neutralization only.
+        _raise(floored, applied, "temperature_delta", 900.0)
+        _raise(floored, applied, "tint", 8.0)
+
+    if is_underwater:
+        # Core underwater color correction applied POST candidate-selection so that
+        # candidate blending (e.g. model_anchored) cannot dilute it toward zero (the
+        # "only exposure changed" symptom). Tame the dominant, over-saturated blue,
+        # recover the water-absorbed red, and add clarity/contrast for a real edit -
+        # while white balance stays cool.
+        blue_cov = measurement.hue_stats.get("blue")
+        blue_coverage = blue_cov.coverage if blue_cov else 0.0
+        _lower(floored, applied, "blue_saturation", -min(38.0, 14.0 + blue_coverage * 38.0))
+        _lower(floored, applied, "aqua_saturation", -24.0)
+        # Underwater absorbs the RED channel first, so recover red STRONGLY (chroma
+        # + luminance). Keep orange/yellow modest so the recovery reads as red, not
+        # a yellow/orange cast. Positive tint biases the warm recovery toward red
+        # rather than green/yellow.
+        cfg = get_settings()
+        _raise(floored, applied, "red_saturation", cfg.underwater_red_saturation)
+        _raise(floored, applied, "red_luminance", cfg.underwater_red_luminance)
+        _raise(floored, applied, "orange_saturation", 10.0)
+        # Cut yellow so the warm recovery reads as red, not a yellow cast.
+        _lower(floored, applied, "yellow_saturation", -15.0)
+        _raise(floored, applied, "vibrance", 24.0)
+        _raise(floored, applied, "clarity", 24.0)
+        _raise(floored, applied, "dehaze", 22.0)
+        _raise(floored, applied, "contrast", 12.0)
 
     return floored, applied
 
@@ -241,6 +279,42 @@ def _raise(target_dict: dict[str, float], applied: dict[str, float], key: str, f
     if floor > current:
         target_dict[key] = floor
         applied[key] = round(floor - current, 3)
+
+
+def _dark_frame_exposure_floor(
+    *,
+    measurement: ImageMeasurement,
+    target: TargetState,
+    is_underwater: bool,
+    window_blown: bool,
+) -> float:
+    """Estimate the minimum RAW exposure lift needed for a dark frame.
+
+    Preview simulation tends to overestimate Lightroom RAW brightening. This
+    floor therefore looks at both global luma and the median/midtone deficit.
+    A dark underwater frame needs extra lift because color recovery stays muted
+    until the subject midtones are bright enough.
+    """
+
+    mean_luma = max(float(measurement.mean_luma), 1.0)
+    mean_gap = max(0.0, float(target.target_luma_mid) - mean_luma)
+    median_gap = max(0.0, float(target.target_luma_low) - float(measurement.luma_p50))
+    raw_ratio_lift = math.log2(float(target.target_luma_mid) / mean_luma)
+    underwater_bonus = 0.15 if is_underwater else 0.0
+    floor = raw_ratio_lift + (mean_gap / 110.0) + (median_gap / 85.0) + underwater_bonus
+
+    # When a window/light is already clipped, allow enough global lift for the
+    # subject but keep a bounded ceiling; highlights/whites recovery handles the
+    # bright region separately.
+    ceiling = 1.6 if window_blown else 1.85
+    return round(_bounded(floor, 0.65, ceiling), 3)
+
+
+def _dark_frame_shadow_floor(*, measurement: ImageMeasurement, target: TargetState) -> float:
+    median_gap = max(0.0, float(target.target_luma_low) - float(measurement.luma_p50))
+    shadow_gap = max(0.0, float(target.target_luma_low) - float(measurement.luma_p05))
+    floor = 36.0 + median_gap * 0.35 + shadow_gap * 0.08
+    return round(_bounded(floor, 45.0, 80.0), 3)
 
 
 def _lower(target_dict: dict[str, float], applied: dict[str, float], key: str, ceiling: float) -> None:

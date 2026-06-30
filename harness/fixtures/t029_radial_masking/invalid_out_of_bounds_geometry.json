@@ -1,0 +1,12 @@
+{
+  "expected_validation": "FAIL",
+  "reason": "center_x and width are outside normalized bounds",
+  "geometry": {
+    "coordinate_space": "oriented_normalized_image",
+    "center_x": 1.2,
+    "center_y": 0.15,
+    "width": 1.4,
+    "height": 0.12,
+    "rotation_deg": 0
+  }
+}

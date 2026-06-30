@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - ?꾩껜 ?쒖뒪??援ъ“
+# Tonevyra AI - ?꾩껜 ?쒖뒪??援ъ“
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -198,3 +198,37 @@ Loop state is persisted through `image_tasks`, `task_events`, `stage_results`, a
 ## 6. Deferred Architecture
 
 Do not introduce FastAPI, React dashboard, Redis, Celery, MinIO, or worker pools before the CLI pipeline and recovery work correctly.
+
+---
+
+## T-029 Architecture Addendum
+
+T-029 introduces a bounded local-mask execution path without changing the existing Provider → Planner → Plugin responsibility boundary.
+
+```text
+Semantic Analysis
+→ Mask Strategy Planner
+→ Radial Template Selector / Capability Registry
+→ Lightroom Mask Request Builder
+→ Lightroom Plugin Mask Executor
+→ Export
+→ Local Target/Spill Quality Evaluation
+```
+
+The radial template library is a local, versioned resource. The Agent selects a template ID; the Plugin resolves the ID through its local manifest and verifies the checksum. The Plugin must not select targets or templates.
+
+## T-030 Windows Background Runtime Addendum
+
+```text
+Windows user logon
+→ Tray Shell
+   → per-user single-instance guard
+   → Worker supervisor + local IPC
+   → status/menu/icon only
+→ Background Agent Worker
+   → watcher/event coalescer/stability gate
+   → PostgreSQL idempotent task registration
+   → existing Agent pipeline
+```
+
+The Tray Shell and Worker are separate logical responsibilities. UI code cannot own Planner, Lightroom, quality, or DB transition logic. PostgreSQL remains the durable queue; no SQLite runtime queue is allowed.

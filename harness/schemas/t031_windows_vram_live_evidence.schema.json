@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t031_windows_vram_live_evidence.schema.json",
+  "type": "object",
+  "required": [
+    "ticket",
+    "os",
+    "gpu",
+    "worker",
+    "vram"
+  ],
+  "properties": {
+    "ticket": {
+      "const": "T-031"
+    },
+    "os": {
+      "const": "windows"
+    },
+    "gpu": {
+      "type": "string",
+      "minLength": 1
+    },
+    "worker": {
+      "type": "object",
+      "required": [
+        "max_concurrent",
+        "exited_after_idle"
+      ],
+      "properties": {
+        "max_concurrent": {
+          "const": 1
+        },
+        "exited_after_idle": {
+          "const": true
+        }
+      }
+    },
+    "vram": {
+      "type": "object",
+      "required": [
+        "loaded_mb",
+        "post_unload_mb",
+        "threshold_mb"
+      ],
+      "properties": {
+        "loaded_mb": {
+          "type": "number",
+          "minimum": 1
+        },
+        "post_unload_mb": {
+          "type": "number",
+          "minimum": 0
+        },
+        "threshold_mb": {
+          "type": "number",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

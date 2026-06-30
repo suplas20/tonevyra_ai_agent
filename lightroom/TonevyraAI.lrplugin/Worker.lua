@@ -302,6 +302,78 @@ local function exportFailed(request, code, message, recoverable)
   return result
 end
 
+local function baseMaskResult(request, status)
+  local operations = {}
+  local maskPlan = request and request.mask_plan or {}
+  local sourceOperations = maskPlan.operations or {}
+  if type(sourceOperations) == "table" then
+    for _, operation in ipairs(sourceOperations) do
+      table.insert(operations, {
+        operation_id = tostring(operation.operation_id or "unknown"),
+        status = "skipped",
+        strategy = tostring(operation.strategy or "review_required"),
+        mask_name = tostring(operation.mask_name or "Tonevyra::T029::unknown"),
+        mask_created_or_reused = "not_created",
+        applied_adjustments = {},
+        point_color_status = "skipped",
+        warnings = {},
+      })
+    end
+  end
+  if #operations == 0 then
+    table.insert(operations, {
+      operation_id = "unknown",
+      status = status == "failed" and "failed" or "skipped",
+      strategy = "review_required",
+      mask_name = "Tonevyra::T029::unknown",
+      mask_created_or_reused = "not_created",
+      applied_adjustments = {},
+      point_color_status = "skipped",
+      warnings = {},
+    })
+  end
+
+  return {
+    schema_version = "t029.mask_apply.result.v1",
+    request_id = tostring(request and request.request_id or "unknown"),
+    task_id = tostring(request and request.task_id or "unknown"),
+    job_id = tostring(request and request.job_id or "unknown"),
+    attempt_id = tostring(request and request.attempt_id or "unknown"),
+    status = status,
+    idempotency_key = tostring(request and request.idempotency_key or "unknown-idempotency-key"),
+    capability_snapshot = {
+      snapshot_id = tostring(request and request.capability_snapshot_id or "unknown"),
+      lightroom_version = "unknown",
+      plugin_version = PLUGIN_VERSION,
+      mask_plan_command_supported = true,
+      native_mask_command_supported = false,
+      native_ai_mask_types = {},
+      local_point_color_supported = false,
+      mask_result_introspection_level = "none",
+      rollback_supported = true,
+    },
+    operation_results = operations,
+    pre_apply_snapshot_ref = "runtime/bridge/lightroom_live_evidence/" .. tostring(request and request.request_id or "unknown") .. "_mask_before.json",
+    post_apply_snapshot_ref = "runtime/bridge/lightroom_live_evidence/" .. tostring(request and request.request_id or "unknown") .. "_mask_after.json",
+    rollback_performed = false,
+    error_code = nil,
+    message = "",
+    completed_at = now(),
+  }
+end
+
+local function maskFailed(request, code, message)
+  local result = baseMaskResult(request or {}, "failed")
+  result.error_code = "LIGHTROOM_REQUEST_FAILED"
+  result.message = tostring(code) .. ": " .. tostring(message)
+  for _, operation in ipairs(result.operation_results) do
+    operation.status = "failed"
+    operation.mask_created_or_reused = "not_created"
+    table.insert(operation.warnings, result.message)
+  end
+  return result
+end
+
 local function validate(request)
   if type(request) ~= "table" then
     return false, "INVALID_JSON", "Request JSON did not decode to an object."
@@ -379,6 +451,64 @@ local function validateExportRequest(request)
   end
   if request.export_settings.overwrite ~= false then
     return false, "OVERWRITE_FORBIDDEN", "Export overwrite must be false."
+  end
+  return true, nil, nil
+end
+
+local function validateMaskRequest(request)
+  if type(request) ~= "table" then
+    return false, "INVALID_JSON", "Mask request JSON did not decode to an object."
+  end
+  if request.schema_version ~= "t029.mask_apply.request.v1" then
+    return false, "INVALID_SCHEMA", "Unsupported mask request schema."
+  end
+  if request.command ~= "APPLY_LIGHTROOM_MASK_PLAN" then
+    return false, "INVALID_COMMAND", "Unsupported mask command."
+  end
+  if type(request.request_id) ~= "string" or request.request_id == "" then
+    return false, "MISSING_REQUEST_ID", "request_id is required."
+  end
+  if type(request.task_id) ~= "string" or request.task_id == "" then
+    return false, "MISSING_TASK_ID", "task_id is required."
+  end
+  if type(request.job_id) ~= "string" or request.job_id == "" then
+    return false, "MISSING_JOB_ID", "job_id is required."
+  end
+  if type(request.attempt_id) ~= "string" or request.attempt_id == "" then
+    return false, "MISSING_ATTEMPT_ID", "attempt_id is required."
+  end
+  if type(request.source_path) ~= "string" or request.source_path == "" then
+    return false, "MISSING_SOURCE_PATH", "source_path is required."
+  end
+  if type(request.idempotency_key) ~= "string" or string.len(request.idempotency_key) < 8 then
+    return false, "MISSING_IDEMPOTENCY_KEY", "idempotency_key is required."
+  end
+  if type(request.mask_plan) ~= "table" or request.mask_plan.schema_version ~= "t029.mask_plan.v1" then
+    return false, "INVALID_MASK_PLAN", "mask_plan schema is required."
+  end
+  if type(request.mask_plan.operations) ~= "table" or #request.mask_plan.operations == 0 then
+    return false, "MISSING_OPERATIONS", "mask_plan.operations is required."
+  end
+  for _, operation in ipairs(request.mask_plan.operations) do
+    if operation.strategy == "radial_template" or operation.template_ref ~= nil or operation.fit_evidence ~= nil then
+      return false, "RADIAL_TEMPLATE_FORBIDDEN", "T-029 radial/template fallback is excluded."
+    end
+    if operation.strategy ~= "native_ai" and operation.strategy ~= "skip_local" and operation.strategy ~= "review_required" then
+      return false, "INVALID_STRATEGY", "Unsupported mask strategy."
+    end
+    if type(operation.mask_name) ~= "string" or string.sub(operation.mask_name, 1, 16) ~= "Tonevyra::T029::" then
+      return false, "INVALID_MASK_NAME", "mask_name must start with Tonevyra::T029::."
+    end
+    if type(operation.native_assessment) ~= "table" then
+      return false, "MISSING_NATIVE_ASSESSMENT", "native_assessment is required."
+    end
+    if operation.strategy == "native_ai" and operation.native_assessment.target_detected ~= true then
+      return false, "NATIVE_TARGET_NOT_DETECTED", "native_ai strategy requires target_detected=true."
+    end
+    if (operation.strategy == "skip_local" or operation.strategy == "review_required")
+      and operation.native_assessment.target_detected ~= false then
+      return false, "INVALID_NATIVE_FALLBACK", "skip/review strategy requires target_detected=false."
+    end
   end
   return true, nil, nil
 end
@@ -809,6 +939,30 @@ local function exportRequest(request)
   return result
 end
 
+local function maskRequest(request)
+  request.trigger = request.trigger or "bridge_request"
+  local ok, code, message = validateMaskRequest(request)
+  if not ok then
+    return maskFailed(request, code, message)
+  end
+
+  if not LrFileUtils.exists(request.source_path) then
+    return maskFailed(request, "SOURCE_PATH_NOT_FOUND", "The source_path file from the Agent mask request does not exist.")
+  end
+
+  local result = baseMaskResult(request, "skipped")
+  result.message = "Native Lightroom mask execution is not enabled in this plugin build; no radial/template fallback was attempted."
+  for _, operation in ipairs(result.operation_results) do
+    operation.status = "skipped"
+    operation.mask_created_or_reused = "not_created"
+    operation.applied_adjustments = {}
+    operation.point_color_status = "skipped"
+    table.insert(operation.warnings, "native_mask_command_supported=false")
+    table.insert(operation.warnings, "radial_template_fallback_excluded")
+  end
+  return result
+end
+
 local function writeResult(result)
   local json = Json.encode(result)
   local ok, err = Bridge.writeResult(result.request_id, json)
@@ -821,6 +975,15 @@ end
 local function writeExportResult(result)
   local json = Json.encode(result)
   local ok, err = Bridge.writeExportResult(result.request_id, json)
+  if not ok then
+    last_error = err
+  end
+  Bridge.writeEvidence(result.request_id, json)
+end
+
+local function writeMaskResult(result)
+  local json = Json.encode(result)
+  local ok, err = Bridge.writeMaskResult(result.request_id, json)
   if not ok then
     last_error = err
   end
@@ -933,6 +1096,56 @@ local function processExportPath(path, trigger)
   activeJob = false
 end
 
+local function processClaimedMaskPath(claimed, trigger)
+  local text, readErr = Bridge.read(claimed)
+  if not text then
+    writeMaskResult(maskFailed({ request_id = "unknown" }, "REQUEST_READ_FAILED", readErr or "Unable to read mask request."))
+    Bridge.moveMaskError(claimed)
+    return
+  end
+
+  local ok, request = pcall(function()
+    return Json.decode(text)
+  end)
+  if not ok or type(request) ~= "table" then
+    writeMaskResult(maskFailed({ request_id = "unknown" }, "REQUEST_JSON_INVALID", "Mask request JSON could not be parsed."))
+    Bridge.moveMaskError(claimed)
+    return
+  end
+  request.trigger = trigger or "bridge_request"
+
+  local okMask, result = LrFunctionContext.pcallWithContext("tonevyra_process_mask_path", function(context)
+    return maskRequest(request)
+  end)
+  if not okMask or type(result) ~= "table" then
+    result = maskFailed(request, "LIGHTROOM_MASK_FAILED", tostring(result))
+  end
+  writeMaskResult(result)
+  if result.status == "failed" then
+    Bridge.moveMaskError(claimed)
+  else
+    Bridge.moveMaskProcessed(claimed)
+  end
+end
+
+local function processMaskPath(path, trigger)
+  if activeJob then
+    return
+  end
+  local claimed = Bridge.claimMask(path)
+  if not claimed then
+    return
+  end
+  activeJob = true
+  local ok, err = LrFunctionContext.pcallWithContext("tonevyra_process_mask_request", function(context)
+    processClaimedMaskPath(claimed, trigger or "auto_bridge")
+  end)
+  if not ok then
+    last_error = tostring(err)
+  end
+  activeJob = false
+end
+
 function Worker.start()
   if running then
     return
@@ -961,6 +1174,16 @@ function Worker.start()
       end
     else
       last_error = tostring(exportItems)
+    end
+    local okMask, maskItems = pcall(function()
+      return Bridge.pendingMaskRequests()
+    end)
+    if okMask and maskItems then
+      for _, path in ipairs(maskItems) do
+        processMaskPath(path, "auto_bridge")
+      end
+    else
+      last_error = tostring(maskItems)
     end
     safeWriteWorkerStatus(true)
     LrTasks.sleep(2)
@@ -1034,6 +1257,25 @@ function Worker.processOnePendingExport(trigger)
   return "Processed export request: " .. tostring(items[1])
 end
 
+function Worker.processOnePendingMask(trigger)
+  Bridge.ensureDirs()
+  local ok, items = pcall(function()
+    return Bridge.pendingMaskRequests()
+  end)
+  if not ok then
+    last_error = tostring(items)
+    safeWriteWorkerStatus(running)
+    return "Bridge mask request scan failed: " .. last_error
+  end
+  if not items or #items == 0 then
+    safeWriteWorkerStatus(running)
+    return "No pending mask request."
+  end
+  processMaskPath(items[1], trigger or "diagnostic_menu")
+  safeWriteWorkerStatus(running)
+  return "Processed mask request: " .. tostring(items[1])
+end
+
 function Worker.stop()
   running = false
   start_requested = false
@@ -1052,6 +1294,8 @@ function Worker.status()
     result_dir = Bridge.result_dir,
     export_request_dir = Bridge.export_request_dir,
     export_result_dir = Bridge.export_result_dir,
+    mask_request_dir = Bridge.mask_request_dir,
+    mask_result_dir = Bridge.mask_result_dir,
     last_error = last_error or "",
     worker_start_requested = tostring(start_requested),
   }

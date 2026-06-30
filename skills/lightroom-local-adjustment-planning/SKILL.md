@@ -71,3 +71,9 @@ Persist capability snapshot, semantic region version, local plan, conflict resol
 - conflict resolution is deterministic;
 - global-only fallback is explicit;
 - Plugin remains an executor, not a semantic planner.
+
+## T-029 Radial Fallback Link
+
+Superseded by 2026-06-29 scope update: T-029 radial fallback is excluded.
+
+When Subject, People, Object, Sky, or Background does not detect the intended region, mark local execution as unsupported for that target and choose explicit `skip_local` or `review_required`. Do not evaluate radial fallback, do not select a template, and do not apply a silent global substitute.

@@ -1,0 +1,8 @@
+{
+  "case_id": "graceful-shutdown",
+  "steps": ["STOP_INTAKE", "CHECKPOINT_ACTIVE_STAGE", "FLUSH_EVIDENCE", "CLOSE_WATCHER", "JOIN_WORKER", "REMOVE_TRAY_ICON"],
+  "shutdown_timeout_seconds": 30,
+  "expected_orphan_processes": 0,
+  "source_modified": false,
+  "expected_validation": "PASS"
+}

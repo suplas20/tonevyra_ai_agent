@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonevyra.local/schemas/t030_agent_runtime_snapshot.schema.json",
+  "title": "T-030 Agent Runtime Snapshot",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "agent_instance_id",
+    "state",
+    "started_at",
+    "last_heartbeat_at",
+    "watching_enabled",
+    "watch_path",
+    "queue_depth",
+    "processing_count",
+    "failed_count",
+    "db_ready",
+    "model_ready",
+    "lightroom_connected",
+    "worker_restart_count"
+  ],
+  "properties": {
+    "schema_version": {"const": "t030.agent_runtime_snapshot.v1"},
+    "agent_instance_id": {"type": "string", "minLength": 1},
+    "shell_instance_id": {"type": ["string", "null"]},
+    "state": {
+      "enum": ["STARTING", "WATCHING", "PROCESSING", "PAUSED", "DEGRADED", "ERROR", "STOPPING", "STOPPED"]
+    },
+    "started_at": {"type": "string", "format": "date-time"},
+    "last_heartbeat_at": {"type": "string", "format": "date-time"},
+    "watching_enabled": {"type": "boolean"},
+    "watch_path": {"type": "string", "minLength": 1},
+    "recursive": {"type": "boolean"},
+    "queue_depth": {"type": "integer", "minimum": 0},
+    "processing_count": {"type": "integer", "minimum": 0, "maximum": 1},
+    "failed_count": {"type": "integer", "minimum": 0},
+    "active_job_id": {"type": ["string", "null"]},
+    "lightroom_connected": {"type": "boolean"},
+    "model_ready": {"type": "boolean"},
+    "db_ready": {"type": "boolean"},
+    "degraded_reasons": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+    "worker_restart_count": {"type": "integer", "minimum": 0},
+    "version": {"type": "string"}
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "t030.windows_live_evidence.v1",
+  "ticket": "T030",
+  "platform": "Windows",
+  "windows_build": "<fill>",
+  "implementation_build": "<fill>",
+  "tray_icon_asset_approved": false,
+  "tray_visible": false,
+  "single_instance_passed": false,
+  "copy_in_progress_blocked": false,
+  "deduplication_passed": false,
+  "pause_resume_passed": false,
+  "worker_crash_recovery_passed": false,
+  "no_duplicate_external_effects": false,
+  "graceful_shutdown_passed": false,
+  "no_orphan_processes": false,
+  "source_integrity_passed": false,
+  "regressions_passed": false,
+  "screenshots": [],
+  "evidence_paths": [],
+  "completed": false
+}

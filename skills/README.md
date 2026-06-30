@@ -167,3 +167,50 @@ testing-harness
 vision-analysis
 ```
 
+
+## T-029 Lightroom Radial Mask Execution and Template Library
+
+T-029 adds two skills without deleting, merging, or renaming the 41-skill T-028 baseline.
+
+| Skill | Area | Use When |
+|---|---|---|
+| `lightroom-radial-mask-execution` | Plugin-side validated local-mask execution | Applying T-029 native/radial plans, snapshots, rollback, and idempotency. |
+| `radial-mask-template-library` | Versioned radial preset generation and selection | Building manifests, verifying checksums, and selecting deterministic geometry templates. |
+
+Canonical T-029 references:
+
+```text
+skills/lightroom-radial-mask-execution/SKILL.md
+skills/radial-mask-template-library/SKILL.md
+harness/CONTRACT_T029_LIGHTROOM_RADIAL_MASKING.md
+harness/scripts/verify_t029_lightroom_radial_masking.py
+harness/fixtures/t029_radial_masking/
+```
+
+## Cumulative Skill Inventory (T-029 preservation check)
+
+Baseline before T-029: **41** `SKILL.md` files  
+Added by T-029: **2**  
+Required cumulative total: **43**
+
+The authoritative machine-readable inventory is `skills/T029_SKILL_INVENTORY.json`.
+
+## T-030 Windows Background Agent and System Tray
+
+T-030 preserves the 43-skill T-029 baseline and adds:
+
+| Skill | Purpose |
+|---|---|
+| `windows-background-agent-lifecycle` | Per-user single instance, Worker supervision, autostart, shutdown, and recovery. |
+| `system-tray-operations` | Tonevyra tray icon, state/menu mapping, validated commands, and asset gate. |
+
+The existing `folder-watcher` skill is expanded for event coalescing, size/mtime/read-probe stability, PostgreSQL idempotency, pause/resume rescan, and output recursion safety.
+
+Required cumulative count: **45** `SKILL.md` files. The authoritative inventory is `skills/T030_SKILL_INVENTORY.json`.
+
+## T-031 additions
+
+- `macos-apple-silicon-runtime`
+- `inference-worker-memory-lifecycle`
+
+T-031 expected total: 47 skills.

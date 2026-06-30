@@ -18,6 +18,9 @@ import typer
 from sqlalchemy.exc import SQLAlchemyError
 
 from tonevyra_agent.agent.recovery import RecoveryManager
+from tonevyra_agent.agent.background_runtime import BackgroundAgentRuntime, write_tray_command
+from tonevyra_agent.agent.reliability import ReliabilityStore
+from tonevyra_agent.agent.runtime_snapshot import RuntimeSnapshotStore
 from tonevyra_agent.agent.runner import AgentRunner
 from tonevyra_agent.agent.watcher import FolderWatcher
 from tonevyra_agent.core.config import REQUIRED_DB_TABLES, REQUIRED_DB_VIEWS, Settings, get_settings
@@ -38,10 +41,20 @@ from tonevyra_agent.learning.reference_pair import analyze_expert_reference_pair
 from tonevyra_agent.learning.schemas import DevelopSettingsSnapshot, FeedbackCaptureRequest
 from tonevyra_agent.vision.benchmark import run_model_benchmark
 from tonevyra_agent.vision.model import create_vision_backend
+from tonevyra_agent.windows.shell_worker_ipc import TrayCommand, TrayCommandName
+from tonevyra_agent.windows.startup_registration import StartupRegistration
+from tonevyra_agent.windows.tray_icons import tray_icon_status
+from tonevyra_agent.windows.tray_shell import TrayShell
 
 app = typer.Typer(no_args_is_help=True, help="Tonevyra AI local photo correction agent.")
 feedback_app = typer.Typer(no_args_is_help=True, help="Capture explicit local feedback.")
+ops_app = typer.Typer(no_args_is_help=True, help="Inspect T-028 local operations evidence.")
+watch_app = typer.Typer(no_args_is_help=True, help="Control T-030 background watching.")
+startup_app = typer.Typer(no_args_is_help=True, help="Manage current-user Windows autostart.")
 app.add_typer(feedback_app, name="feedback")
+app.add_typer(ops_app, name="ops")
+app.add_typer(watch_app, name="watch")
+app.add_typer(startup_app, name="startup")
 
 
 @dataclass(frozen=True)
@@ -243,6 +256,45 @@ def stop() -> None:
 
 
 @app.command()
+def background(
+    once: bool = typer.Option(False, "--once", help="Run one background iteration and exit."),
+    poll_interval: float = typer.Option(2.0, "--poll-interval", min=0.5, max=30.0),
+) -> None:
+    """Run the T-030 per-user background watcher/worker runtime."""
+
+    result = BackgroundAgentRuntime(settings=get_settings()).run(
+        max_iterations=1 if once else None,
+        poll_interval_seconds=poll_interval,
+    )
+    typer.echo(f"state={result.snapshot.state.value}")
+    typer.echo(f"iterations={result.iterations}")
+    typer.echo(f"snapshot={RuntimeSnapshotStore(get_settings()).path}")
+
+
+@app.command()
+def tray(
+    probe_seconds: float | None = typer.Option(
+        None,
+        "--probe-seconds",
+        min=0.1,
+        max=30.0,
+        help="Show the tray icon briefly for live evidence, then exit.",
+    ),
+) -> None:
+    """Run the T-030 thin system tray shell boundary."""
+
+    icon_status = tray_icon_status()
+    if not icon_status.production_ready:
+        typer.echo(f"[BLOCKED] {icon_status.blocked_code}: approved tray icon assets are missing")
+    raise typer.Exit(
+        TrayShell(settings=get_settings()).run(
+            probe_seconds=probe_seconds,
+            start_background=probe_seconds is None,
+        )
+    )
+
+
+@app.command()
 def status(json_output: bool = typer.Option(False, "--json", help="Render machine-readable JSON.")) -> None:
     """Show task counts and the latest tasks."""
 
@@ -262,6 +314,88 @@ def status(json_output: bool = typer.Option(False, "--json", help="Render machin
         typer.echo("Recent tasks:")
         for item in recent:
             typer.echo(f"- {item['id']} {item['status']} {item['file_name']}")
+
+
+@watch_app.command("pause")
+def watch_pause() -> None:
+    """Pause T-030 background watcher intake."""
+
+    path = write_tray_command(TrayCommand(command=TrayCommandName.PAUSE_WATCHING, source="CLI"), get_settings())
+    typer.echo(f"[OK] pause command written: {path}")
+
+
+@watch_app.command("resume")
+def watch_resume() -> None:
+    """Resume T-030 background watcher intake."""
+
+    path = write_tray_command(TrayCommand(command=TrayCommandName.RESUME_WATCHING, source="CLI"), get_settings())
+    typer.echo(f"[OK] resume command written: {path}")
+
+
+@watch_app.command("rescan")
+def watch_rescan() -> None:
+    """Request a bounded T-030 rescan."""
+
+    path = write_tray_command(TrayCommand(command=TrayCommandName.RESCAN, source="CLI"), get_settings())
+    typer.echo(f"[OK] rescan command written: {path}")
+
+
+def _windowless_python_executable(executable: Path) -> Path:
+    if os.name != "nt":
+        return executable
+    pythonw = executable.with_name("pythonw.exe")
+    return pythonw if pythonw.exists() else executable
+
+
+def _tray_startup_command(executable: Path, *, frozen: bool | None = None) -> tuple[Path, list[str]]:
+    frozen_runtime = bool(getattr(sys, "frozen", False)) if frozen is None else frozen
+    if frozen_runtime:
+        return executable, ["tray"]
+    return _windowless_python_executable(executable), ["-m", "tonevyra_agent.cli", "tray"]
+
+
+@startup_app.command("enable")
+def startup_enable() -> None:
+    """Enable current-user Windows autostart for the tray shell."""
+
+    executable, args = _tray_startup_command(Path(sys.executable))
+    status = StartupRegistration().enable(executable, args)
+    if not status.supported:
+        typer.echo(f"[BLOCKED] AUTOSTART_REGISTRATION_FAILED: {status.error}", err=True)
+        raise typer.Exit(1)
+    typer.echo(f"[OK] autostart enabled: {status.command}")
+
+
+@startup_app.command("disable")
+def startup_disable() -> None:
+    """Disable current-user Windows autostart."""
+
+    status = StartupRegistration().disable()
+    if not status.supported:
+        typer.echo(f"[BLOCKED] AUTOSTART_REGISTRATION_FAILED: {status.error}", err=True)
+        raise typer.Exit(1)
+    typer.echo("[OK] autostart disabled")
+
+
+@startup_app.command("status")
+def startup_status(json_output: bool = typer.Option(False, "--json")) -> None:
+    """Show current-user Windows autostart registration status."""
+
+    status = StartupRegistration().status()
+    payload = {
+        "supported": status.supported,
+        "enabled": status.enabled,
+        "command": status.command,
+        "error": status.error,
+    }
+    if json_output:
+        typer.echo(_json_dump(payload))
+        return
+    typer.echo(f"supported={status.supported} enabled={status.enabled}")
+    if status.command:
+        typer.echo(f"command={status.command}")
+    if status.error:
+        typer.echo(f"error={status.error}")
 
 
 @app.command()
@@ -318,6 +452,7 @@ def scan(json_output: bool = typer.Option(False, "--json", help="Render machine-
         result = FolderWatcher(settings).scan_once(session)
     payload = {
         "created_task_ids": result.created_task_ids,
+        "requeued_task_ids": result.requeued_task_ids,
         "skipped_task_ids": result.skipped_task_ids,
         "ignored_count": len(result.ignored_paths),
         "duplicate_count": len(result.duplicate_paths),
@@ -327,7 +462,8 @@ def scan(json_output: bool = typer.Option(False, "--json", help="Render machine-
         typer.echo(_json_dump(payload))
         return
     typer.echo(
-        f"created={len(result.created_task_ids)} skipped={len(result.skipped_task_ids)} "
+        f"created={len(result.created_task_ids)} requeued={len(result.requeued_task_ids)} "
+        f"skipped={len(result.skipped_task_ids)} "
         f"ignored={len(result.ignored_paths)} duplicates={len(result.duplicate_paths)} unstable={len(result.unstable_paths)}"
     )
 
@@ -410,6 +546,74 @@ def loop_events(
             f"{event['created_at']} {payload.get('loop_name')} {event['event_type']} "
             f"{payload.get('from_status')}->{payload.get('to_status')} {payload.get('reason')}"
         )
+
+
+@ops_app.command("health")
+def ops_health(json_output: bool = typer.Option(False, "--json", help="Render machine-readable JSON.")) -> None:
+    """Show local T-028 operations health and evidence counters."""
+
+    snapshot = ReliabilityStore(get_settings()).health_snapshot()
+    payload = snapshot.model_dump(mode="json")
+    if json_output:
+        typer.echo(_json_dump(payload))
+        return
+    typer.echo(f"status={snapshot.status}")
+    typer.echo(f"stale_lease_count={snapshot.stale_lease_count}")
+    typer.echo(f"incident_count={snapshot.incident_count}")
+    typer.echo(f"checkpoint_count={snapshot.checkpoint_count}")
+    typer.echo(f"idempotency_record_count={snapshot.idempotency_record_count}")
+
+
+@ops_app.command("checkpoint")
+def ops_checkpoint(
+    job_id: str,
+    json_output: bool = typer.Option(False, "--json", help="Render machine-readable JSON."),
+) -> None:
+    """Inspect the latest durable checkpoint for a job."""
+
+    checkpoint = ReliabilityStore(get_settings()).latest_checkpoint(job_id)
+    if checkpoint is None:
+        typer.echo(f"No checkpoint found for job: {job_id}", err=True)
+        raise typer.Exit(1)
+    payload = checkpoint.model_dump(mode="json")
+    if json_output:
+        typer.echo(_json_dump(payload))
+        return
+    typer.echo(f"checkpoint_id={checkpoint.checkpoint_id}")
+    typer.echo(f"job_id={checkpoint.job_id}")
+    typer.echo(f"attempt_id={checkpoint.attempt_id}")
+    typer.echo(f"stage={checkpoint.stage} state={checkpoint.state}")
+    typer.echo(f"idempotency_key={checkpoint.idempotency_key}")
+
+
+@ops_app.command("release-stale-lease")
+def ops_release_stale_lease(
+    job_id: str,
+    owner: str = typer.Option("operator-cli", "--owner"),
+    dry_run: bool = typer.Option(True, "--dry-run/--execute"),
+    confirmed: bool = typer.Option(False, "--confirm", help="Required with --execute."),
+) -> None:
+    """Audit and optionally reclaim an expired local job lease."""
+
+    store = ReliabilityStore(get_settings())
+    audit = store.audit_operator_action(
+        action="release_stale_lease",
+        target=job_id,
+        operator_id=owner,
+        dry_run=dry_run,
+        confirmation_required=True,
+        confirmed=confirmed,
+    )
+    if dry_run:
+        typer.echo(f"[DRY-RUN] audit_id={audit.audit_id} target={job_id}")
+        return
+    result = store.acquire_lease(
+        job_id=job_id,
+        owner=owner,
+        ttl_seconds=30,
+        owner_process_alive=lambda _previous_owner: False,
+    )
+    typer.echo(f"[OK] audit_id={audit.audit_id} lease_decision={result.decision.value}")
 
 
 @feedback_app.command("sync")
@@ -618,6 +822,7 @@ def _render_run_once_result(result) -> None:
     if result.scan_result is not None:
         typer.echo(
             f"Scan created={len(result.scan_result.created_task_ids)} "
+            f"requeued={len(result.scan_result.requeued_task_ids)} "
             f"skipped={len(result.scan_result.skipped_task_ids)}"
         )
     if result.worker_result is None:

@@ -1661,3 +1661,115 @@ Risks or follow-up notes:
 Next recommended ticket:
 Waiting for user approval:
 ```
+
+---
+
+# T-029: Lightroom Native Mask Execution and Deterministic Radial Fallback
+
+## Goal
+
+Add an executable Lightroom local-mask path to the existing Apply Adapter. When native Subject/People/Object detection does not identify a small background target, select and apply a deterministic radial template and perform bounded local color recovery.
+
+## Read
+
+```text
+AGENTS.md
+CLAUDE.md
+.docs/t029/T-029_Lightroom_Native_Mask_and_Radial_Fallback_Work_Order.md
+.docs/t029/T-029_Implementation_Specification.md
+.docs/t029/T-029_Lightroom_Live_Test_Checklist.md
+skills/lightroom-radial-mask-execution/SKILL.md
+skills/radial-mask-template-library/SKILL.md
+harness/CONTRACT_T029_LIGHTROOM_RADIAL_MASKING.md
+```
+
+## Implement
+
+```text
+Phase 0 real Lightroom preset proof
+Mask Strategy Planner and deterministic selector
+radial template generator/manifest/checksum validation
+APPLY_LIGHTROOM_MASK_PLAN bridge command
+Plugin mask executor
+pre/post snapshots and rollback
+idempotent replay
+local target/spill quality evidence
+T-029 tests and regressions
+```
+
+## Do Not Implement
+
+```text
+UI/mouse automation
+brush or object-rectangle automation
+catalog DB edits
+arbitrary runtime XMP generation
+external segmentation mask injection
+new top-level task states
+model fine-tuning
+```
+
+## Validation
+
+```text
+python harness/scripts/verify_t029_lightroom_radial_masking.py --project-root .
+python harness/scripts/run_t029_radial_masking_runtime.py --project-root . --output runtime/t029_runtime_evidence.json --regressions-passed
+python harness/scripts/verify_t029_lightroom_radial_masking.py --project-root . --runtime-evidence runtime/t029_runtime_evidence.json --live-evidence <live-evidence.json> --strict
+```
+
+## Stop Rule
+
+Stop after T-029. If Phase 0 cannot prove automatic radial preset application with retained geometry, write a blocked report and do not invent a UI or catalog-level workaround.
+
+# T-030: Windows Background Watcher and System Tray Agent
+
+## Goal
+
+Run Tonevyra continuously in a Windows user session, display a Tonevyra system-tray icon, watch the configured folder, prove file stability, register a single durable PostgreSQL task, and start the existing correction pipeline automatically.
+
+## Read
+
+```text
+AGENTS.md
+CLAUDE.md
+.docs/t030/T-030_Windows_Background_Watcher_and_Tray_Agent_Work_Order.md
+.docs/t030/T-030_Implementation_Specification.md
+.docs/t030/T-030_Windows_Live_Test_Checklist.md
+.docs/t030/T-030_Tray_Icon_Asset_Guide.md
+skills/folder-watcher/SKILL.md
+skills/windows-background-agent-lifecycle/SKILL.md
+skills/system-tray-operations/SKILL.md
+harness/CONTRACT_T030_WINDOWS_BACKGROUND_TRAY.md
+```
+
+## Implement
+
+```text
+thin Tray Shell
+Background Agent Worker lifecycle
+per-user single instance
+watch event coalescing
+file stability gate
+PostgreSQL register-or-get-existing
+pause/resume/rescan
+bounded Worker supervision
+current-user autostart abstraction
+graceful shutdown and recovery evidence
+T-030 unit/integration/Windows live tests
+```
+
+## Do Not Implement
+
+```text
+Windows Service
+SQLite queue
+source mutation
+unbounded restart
+Tray-owned business logic
+new React/FastAPI system
+installer or code protection
+```
+
+## Stop Rule
+
+Stop after T-030. If actual Windows live tests or approved icon assets are unavailable, report the matching BLOCKED state and do not claim completion.

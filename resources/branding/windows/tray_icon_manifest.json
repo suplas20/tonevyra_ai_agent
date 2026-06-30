@@ -1,0 +1,36 @@
+{
+  "approved_source": true,
+  "icons": {
+    "error": {
+      "path": "resources/branding/windows/tonevyra_tray_error.ico",
+      "sha256": "c99fb1dff0943df2de552e0b3b00ce047f51066a8c05d8a21b7ccb6d906b0239"
+    },
+    "processing": {
+      "path": "resources/branding/windows/tonevyra_tray_processing.ico",
+      "sha256": "78dd7ba2e0d7605f106494166d2c042f8f6fa4d856d22415400ec0199f6bbbb4"
+    },
+    "warning": {
+      "path": "resources/branding/windows/tonevyra_tray_warning.ico",
+      "sha256": "05ceb5c24bd1915fe48cf678931e376566230aad38ca7fc5331e517a4b339a7b"
+    },
+    "watching": {
+      "path": "resources/branding/windows/tonevyra_tray.ico",
+      "sha256": "12f59b1d74f7b5053d7d4d39fc3af25de17a0808909a7df1d6ea4df19efe475f"
+    }
+  },
+  "notes": "Generated from the user-approved Tonevyra aperture symbol with transparent background.",
+  "schema_version": "t030.tray_icon_manifest.v1",
+  "sizes": [
+    16,
+    20,
+    24,
+    32,
+    40,
+    48,
+    64,
+    128,
+    256
+  ],
+  "source_asset": "resources/branding/source/tonevyra_symbol.svg",
+  "source_sha256": "f3195475884bbfa1c907cd068fef158c97110a1fd1a7267de86f91d0447f2b1d"
+}

@@ -42,3 +42,7 @@ After restart, inspect checkpoint, pending command, external evidence, and idemp
 - partial commits are classified/reconciled;
 - retries/timeouts are bounded;
 - usage commit remains exactly-once in effect.
+
+## T-030 watcher idempotency rule
+
+Created/Modified/Renamed/Moved-In/rescan events for one stable file must converge to one durable task and one external pipeline effect. Event coalescing is only the first layer; PostgreSQL transactional register-or-get-existing and existing idempotency keys remain authoritative across restart.

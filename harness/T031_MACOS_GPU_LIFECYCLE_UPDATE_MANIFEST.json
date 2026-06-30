@@ -1,0 +1,18 @@
+{
+  "ticket": "T-031",
+  "baseline": "T-030",
+  "added_docs": [
+    ".docs/t031"
+  ],
+  "added_contract": "harness/CONTRACT_T031_MACOS_RUNTIME_GPU_LIFECYCLE.md",
+  "added_skills": [
+    "macos-apple-silicon-runtime",
+    "inference-worker-memory-lifecycle"
+  ],
+  "expected_skill_count": 47,
+  "strict_live_gates": [
+    "macos_arm64_mps_fsevents_lightroom",
+    "windows_process_vram_idle_unload"
+  ],
+  "forbidden_claim": "Reference runtime is not live completion."
+}

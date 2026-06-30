@@ -109,3 +109,7 @@ Persist raw provider output separately from normalized semantic regions, includi
 - confidence gate blocks weak regions;
 - source and provider evidence is traceable;
 - T-021/T-022 provider boundaries remain intact.
+
+## T-029 Geometry Evidence
+
+A semantic region may include an oriented normalized bounding box or ellipse proposal for T-029 fallback planning. The region still must not contain a template ID, preset path, Plugin command, or final Lightroom values. Record native target-detection failure separately from general API availability.

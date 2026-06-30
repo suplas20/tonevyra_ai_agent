@@ -1,0 +1,8 @@
+{
+  "case_id": "invalid-output-recursion",
+  "watch_path": "D:\\Tonevyra",
+  "output_path": "D:\\Tonevyra\\Completed",
+  "explicit_output_exclusion": false,
+  "expected_validation": "FAIL",
+  "expected_error": "WATCH_OUTPUT_RECURSION_RISK"
+}

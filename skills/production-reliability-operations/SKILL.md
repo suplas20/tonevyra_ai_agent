@@ -48,3 +48,11 @@ Inject model/Lightroom termination, DB disconnect, disk pressure, stale locks, d
 - no unbounded retry/wait exists;
 - fault injection preserves integrity;
 - release candidate also passes benchmark regression.
+
+## T-030 Worker supervision rule
+
+Worker heartbeat timeout, restart attempts, restart window, and shutdown timeout must be bounded. Tray survival does not authorize duplicate pipeline execution. Recovery uses durable checkpoints and idempotency evidence; crash-loop limits transition the Agent to explicit ERROR.
+
+## T-031 Worker lifecycle operations
+
+Supervise the inference child with heartbeat, bounded restart, idle timeout, crash-loop detection, and orphan cleanup. Distinguish watcher health from inference-worker residency.

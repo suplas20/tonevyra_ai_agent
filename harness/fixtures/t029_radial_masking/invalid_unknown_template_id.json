@@ -1,0 +1,9 @@
+{
+  "expected_validation": "FAIL",
+  "template_ref": {
+    "library_version": "t029.radial.v1",
+    "template_id": "radial.unknown.template",
+    "sha256": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "reason": "template ID is not in manifest"
+}

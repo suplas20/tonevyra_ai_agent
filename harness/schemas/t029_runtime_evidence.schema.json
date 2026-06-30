@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonevyra.local/schemas/t029_runtime_evidence.schema.json",
+  "title": "Tonevyra T-029 Native-Mask Runtime Evidence",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "ticket",
+    "completed",
+    "planning_harness_passed",
+    "regressions_passed",
+    "selected_strategy",
+    "native_target_detected",
+    "native_detection_failed_safely",
+    "clamps_valid",
+    "idempotent_replay",
+    "user_masks_preserved",
+    "source_sha256"
+  ],
+  "properties": {
+    "schema_version": {"const": "t029.runtime.evidence.v1"},
+    "ticket": {"const": "T029"},
+    "completed": {"type": "boolean"},
+    "planning_harness_passed": {"type": "boolean"},
+    "regressions_passed": {"type": "boolean"},
+    "selected_strategy": {"enum": ["native_ai", "skip_local", "review_required"]},
+    "native_target_detected": {"type": "boolean"},
+    "native_detection_failed_safely": {"type": "boolean"},
+    "clamps_valid": {"type": "boolean"},
+    "idempotent_replay": {"type": "boolean"},
+    "user_masks_preserved": {"type": "boolean"},
+    "source_sha256": {"type": "string", "pattern": "^[a-fA-F0-9]{64}$"}
+  }
+}

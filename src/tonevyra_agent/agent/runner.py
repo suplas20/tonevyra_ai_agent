@@ -43,7 +43,7 @@ class AgentRunner:
     ) -> None:
         self.settings = settings or get_settings()
         self.watcher = watcher or FolderWatcher(self.settings)
-        self.worker = worker or AgentWorker(settings=self.settings)
+        self.worker = worker
 
     def run_once(self, *, scan_input: bool = True, input_dir: Path | None = None) -> AgentRunOnceResult:
         scan_result = None
@@ -51,7 +51,12 @@ class AgentRunner:
             with session_scope(self.settings) as session:
                 scan_result = self.watcher.scan_once(session, input_dir=input_dir)
 
-        worker_result = self.worker.process_next_queued()
+        with session_scope(self.settings) as session:
+            has_queued_task = bool(ImageTaskRepository().list_by_status(session, TaskStatus.QUEUED))
+        if not has_queued_task:
+            return AgentRunOnceResult(scan_result=scan_result, worker_result=None)
+
+        worker_result = self._worker().process_next_queued()
         return AgentRunOnceResult(scan_result=scan_result, worker_result=worker_result)
 
     def process_file(self, file_path: Path) -> WorkerPipelineResult:
@@ -152,7 +157,7 @@ class AgentRunner:
                     )
             task_id = task.id
 
-        return self.worker.process_task(task_id)
+        return self._worker().process_task(task_id)
 
     def retry_task(self, task_id: UUID, *, process_now: bool = False) -> WorkerPipelineResult | None:
         """Requeue a terminal non-PASS task after an explicit operator retry."""
@@ -189,8 +194,13 @@ class AgentRunner:
             )
 
         if process_now:
-            return self.worker.process_task(task_id)
+            return self._worker().process_task(task_id)
         return None
+
+    def _worker(self) -> AgentWorker:
+        if self.worker is None:
+            self.worker = AgentWorker(settings=self.settings)
+        return self.worker
 
 
 def run_once(*, settings: Settings | None = None, scan_input: bool = True, input_dir: Path | None = None) -> AgentRunOnceResult:

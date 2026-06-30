@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - Lightroom Plugin Bridge
+# Tonevyra AI - Lightroom Plugin Bridge
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -221,3 +221,25 @@ write response JSON
 create fake exported image or copy fixture
 record lightroom_response artifact
 ```
+
+---
+
+## T-029 Mask Bridge Addendum
+
+The bridge adds `APPLY_LIGHTROOM_MASK_PLAN` while preserving T-019/T-020 behavior. A mask request contains normalized target evidence, an approved strategy, a local template reference, bounded local adjustments, safety requirements, and an idempotency key.
+
+The Plugin must:
+
+```text
+validate request
+resolve template by local manifest ID
+verify checksum/version
+capture pre-apply settings
+apply the approved radial/native operation
+capture post-apply settings
+write an atomic result
+reuse/no-op on idempotent replay
+rollback or fail safely
+```
+
+Arbitrary preset paths, UI automation, catalog database writes, semantic decisions, and quality decisions remain prohibited.

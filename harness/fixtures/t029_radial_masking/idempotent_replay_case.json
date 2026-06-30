@@ -1,0 +1,15 @@
+{
+  "schema_version": "t029.idempotency_case.v1",
+  "idempotency_key": "t029-job-001-attempt-001-rear-person-red",
+  "first_result": {
+    "status": "applied",
+    "mask_created_or_reused": "created",
+    "mask_count_delta": 1
+  },
+  "replay_result": {
+    "status": "reused",
+    "mask_created_or_reused": "reused",
+    "mask_count_delta": 0
+  },
+  "expected_duplicate_masks": 0
+}

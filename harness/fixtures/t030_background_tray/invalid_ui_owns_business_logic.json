@@ -1,0 +1,6 @@
+{
+  "case_id": "invalid-ui-business-logic",
+  "ui_business_logic": true,
+  "tray_directly_writes_adjustment_plan": true,
+  "expected_validation": "FAIL"
+}

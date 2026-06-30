@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonevyra.local/schemas/t030_runtime_evidence.schema.json",
+  "title": "T-030 Runtime Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "ticket",
+    "evidence_source",
+    "completed",
+    "regressions_passed",
+    "checks",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": {"const": "t030.runtime.evidence.v1"},
+    "ticket": {"const": "T030"},
+    "evidence_source": {"enum": ["reference_harness", "implementation"]},
+    "completed": {"type": "boolean"},
+    "regressions_passed": {"type": "boolean"},
+    "checks": {
+      "type": "object",
+      "additionalProperties": {"type": "boolean"},
+      "required": [
+        "file_stability",
+        "event_coalescing",
+        "deduplication",
+        "pause_resume",
+        "single_instance",
+        "worker_recovery",
+        "graceful_shutdown",
+        "source_integrity"
+      ]
+    },
+    "evidence": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["kind", "path"],
+        "properties": {
+          "kind": {"type": "string"},
+          "path": {"type": "string"},
+          "sha256": {"type": "string"}
+        }
+      }
+    }
+  }
+}

@@ -233,3 +233,7 @@ load and inference metrics
 - T-021 analysis schema validation passes.
 - Runtime retry and quality retry are not conflated.
 - Real local model evidence can be verified in strict harness mode.
+
+## T-031 backend and unload rule
+
+Support explicit CUDA and MPS backends behind a common interface. CPU fallback must be opt-in and observable. Model unload is complete only after the inference process exits.

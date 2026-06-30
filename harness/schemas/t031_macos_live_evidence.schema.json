@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t031_macos_live_evidence.schema.json",
+  "type": "object",
+  "required": [
+    "ticket",
+    "os",
+    "architecture",
+    "menu_bar",
+    "fsevents",
+    "backend",
+    "lightroom",
+    "soak"
+  ],
+  "properties": {
+    "ticket": {
+      "const": "T-031"
+    },
+    "os": {
+      "const": "macos"
+    },
+    "architecture": {
+      "const": "arm64"
+    },
+    "menu_bar": {
+      "type": "boolean"
+    },
+    "fsevents": {
+      "type": "boolean"
+    },
+    "backend": {
+      "enum": [
+        "mps",
+        "mlx"
+      ]
+    },
+    "lightroom": {
+      "type": "boolean"
+    },
+    "soak": {
+      "type": "object",
+      "required": [
+        "images",
+        "monotonic_growth"
+      ],
+      "properties": {
+        "images": {
+          "type": "integer",
+          "minimum": 10
+        },
+        "monotonic_growth": {
+          "const": false
+        }
+      }
+    }
+  },
+  "additionalProperties": true
+}

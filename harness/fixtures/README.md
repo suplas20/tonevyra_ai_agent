@@ -33,3 +33,19 @@ lightroom_export_adapter/invalid_missing_export_path_request.json
 ```
 
 These fixtures validate export request/result fields, output-file success semantics, failure evidence, and source/export path separation.
+
+## T-029 radial masking fixtures
+
+`harness/fixtures/t029_radial_masking/` covers the native-target-detection failure to deterministic radial-template fallback path, geometry validation, bounded adjustments, manifest integrity, idempotent replay, and rollback/user-mask preservation.
+
+The source photo is stored at:
+
+```text
+harness/fixtures/images/t029_background_person_red_recovery.jpg
+```
+
+This image is a local test fixture and must not be uploaded or sent to an external model/service by the harness.
+
+## T-030 Background/Tray Fixtures
+
+`harness/fixtures/t030_background_tray/` covers partial-file stability, filesystem event coalescing, pause/resume, single instance, Worker crash recovery, tray state mapping, graceful shutdown, recursive output rejection, source safety, and Windows live-evidence template.

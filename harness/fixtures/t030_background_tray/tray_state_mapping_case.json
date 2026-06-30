@@ -1,0 +1,14 @@
+{
+  "case_id": "tray-state-mapping",
+  "mapping": {
+    "WATCHING": "tonevyra_tray.ico",
+    "PROCESSING": "tonevyra_tray_processing.ico",
+    "PAUSED": "tonevyra_tray_warning.ico",
+    "DEGRADED": "tonevyra_tray_warning.ico",
+    "ERROR": "tonevyra_tray_error.ico"
+  },
+  "thin_ui_only": true,
+  "approved_symbol_required_for_production": true,
+  "screenshot_crop_allowed": false,
+  "expected_validation": "PASS"
+}

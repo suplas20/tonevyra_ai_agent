@@ -1,0 +1,52 @@
+{
+  "schema_version": "t029.mask_apply.request.v1",
+  "request_id": "mask-request-001",
+  "task_id": "task-001",
+  "job_id": "job-001",
+  "attempt_id": "attempt-001",
+  "source_path": "F:\\tonevyra_ai_agent\\harness\\fixtures\\images\\t029_background_person_red_recovery.jpg",
+  "command": "APPLY_LIGHTROOM_MASK_PLAN",
+  "idempotency_key": "t029-job-001-attempt-001-native-subject",
+  "capability_snapshot_id": "cap-001",
+  "mask_plan": {
+    "schema_version": "t029.mask_plan.v1",
+    "plan_id": "mask-plan-001",
+    "planner_version": "mask-planner-t029-v2-native-only",
+    "operations": [
+      {
+        "operation_id": "foreground-subject-native",
+        "target_region_id": "primary-subject-01",
+        "strategy": "native_ai",
+        "native_assessment": {
+          "attempted_types": [
+            "subject"
+          ],
+          "target_detected": true,
+          "reason_code": "NATIVE_TARGET_DETECTED"
+        },
+        "predicted_geometry": {
+          "coordinate_space": "oriented_normalized_image",
+          "center_x": 0.52,
+          "center_y": 0.48,
+          "width": 0.42,
+          "height": 0.68,
+          "rotation_deg": 0.0
+        },
+        "mask_name": "Tonevyra::T029::job-001::attempt-001::foreground-subject-native",
+        "local_adjustments": {
+          "Exposure2012": 0.08,
+          "Shadows2012": 8,
+          "Texture": 4,
+          "Clarity2012": 3
+        },
+        "point_color": null,
+        "safety": {
+          "preserve_user_masks": true,
+          "non_destructive_required": true,
+          "max_background_spill": 0.08
+        }
+      }
+    ]
+  },
+  "created_at": "2026-06-29T00:00:00Z"
+}

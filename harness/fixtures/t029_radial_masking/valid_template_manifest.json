@@ -1,0 +1,75 @@
+{
+  "schema_version": "t029.radial_template_manifest.v1",
+  "library_version": "t029.radial.v1",
+  "seed_signature": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "generator_version": "radial-generator-v1",
+  "supported_lightroom_min": "PHASE0_VERIFIED_VERSION",
+  "supported_lightroom_max": null,
+  "fit_policy": {
+    "policy_version": "t029.radial_fit.v1",
+    "minimum_coverage_ratio": 0.8,
+    "maximum_overflow_ratio": 2.5,
+    "maximum_center_distance": 0.16,
+    "maximum_aspect_log_error": 0.7,
+    "minimum_fit_score": 0.65
+  },
+  "templates": [
+    {
+      "template_id": "radial.r01.c01.small.vertical.f80",
+      "library_version": "t029.radial.v1",
+      "relative_path": "v1/radial_r01_c01_small_vertical_f80.xmp",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111",
+      "geometry": {
+        "coordinate_space": "oriented_normalized_image",
+        "center_x": 0.25,
+        "center_y": 0.166667,
+        "width": 0.16,
+        "height": 0.22,
+        "rotation_deg": 0.0
+      },
+      "feather": 0.8,
+      "size_class": "small",
+      "aspect_class": "vertical",
+      "supported_lightroom_min": "PHASE0_VERIFIED_VERSION",
+      "supported_lightroom_max": null
+    },
+    {
+      "template_id": "radial.r01.c02.small.vertical.f80",
+      "library_version": "t029.radial.v1",
+      "relative_path": "v1/radial_r01_c02_small_vertical_f80.xmp",
+      "sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+      "geometry": {
+        "coordinate_space": "oriented_normalized_image",
+        "center_x": 0.5,
+        "center_y": 0.166667,
+        "width": 0.16,
+        "height": 0.22,
+        "rotation_deg": 0.0
+      },
+      "feather": 0.8,
+      "size_class": "small",
+      "aspect_class": "vertical",
+      "supported_lightroom_min": "PHASE0_VERIFIED_VERSION",
+      "supported_lightroom_max": null
+    },
+    {
+      "template_id": "radial.r02.c01.medium.round.f80",
+      "library_version": "t029.radial.v1",
+      "relative_path": "v1/radial_r02_c01_medium_round_f80.xmp",
+      "sha256": "3333333333333333333333333333333333333333333333333333333333333333",
+      "geometry": {
+        "coordinate_space": "oriented_normalized_image",
+        "center_x": 0.25,
+        "center_y": 0.333333,
+        "width": 0.3,
+        "height": 0.3,
+        "rotation_deg": 0.0
+      },
+      "feather": 0.8,
+      "size_class": "medium",
+      "aspect_class": "round",
+      "supported_lightroom_min": "PHASE0_VERIFIED_VERSION",
+      "supported_lightroom_max": null
+    }
+  ]
+}

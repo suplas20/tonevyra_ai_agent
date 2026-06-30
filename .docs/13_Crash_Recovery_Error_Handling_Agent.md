@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - Crash Recovery & Error Handling
+# Tonevyra AI - Crash Recovery & Error Handling
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -210,3 +210,20 @@ load unfinished task
 ```
 
 If evidence is inconsistent, move to `FAILED` or `REVIEW_REQUIRED` with structured error.
+
+## T-030 Worker Supervision and Session Shutdown Addendum
+
+The Tray Shell monitors a bounded Worker heartbeat. A missing heartbeat records an incident and may trigger a limited restart. Restart limits prevent crash loops. Recovery resumes from T-028 checkpoints and must not duplicate Lightroom apply/export effects.
+
+Graceful exit sequence:
+
+```text
+stop intake
+→ checkpoint/cancel active stage safely
+→ flush DB/artifact/runtime evidence
+→ close watcher and IPC
+→ join Worker with timeout
+→ remove tray icon
+```
+
+Forced process termination is not the normal shutdown path. After abnormal termination, the next run reconciles incomplete jobs through the existing recovery loop.

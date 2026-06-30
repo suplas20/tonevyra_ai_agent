@@ -116,3 +116,7 @@ python harness/scripts/verify_lightroom_live_test_evidence.py --evidence <apply_
 ```
 
 and existing project harness still passes.
+
+## T-029 Mask Worker Extension
+
+For T-029, extend the existing Plugin worker/dispatcher rather than creating a second Plugin. Add native mask capability probing, pre/post Develop snapshots, safe rollback, and idempotent replay. UI automation, catalog modification, arbitrary request preset paths, radial-template fallback, generated XMP fallback, and semantic decisions in Lua remain prohibited.

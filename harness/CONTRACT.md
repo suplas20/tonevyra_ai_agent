@@ -243,3 +243,26 @@ RETRY_REQUIRED → ADJUSTMENT_READY
 
 `EXPORTED` requires the full T-020 export-result and output-file evidence. The Plugin remains a technical adapter and cannot make quality or retry decisions. Detailed rules live in `harness/CONTRACT_T021_DUAL_MODE_CLOSED_LOOP.md`.
 
+
+## T-029 Lightroom Native Mask and Radial Fallback Contract Addendum
+
+T-029 adds a local mask command to the existing Lightroom processing boundary without changing the Plugin into a Planner.
+
+```text
+T-023 semantic/local plan
+→ T-029 deterministic strategy and template selection
+→ APPLY_LIGHTROOM_MASK_PLAN
+→ Plugin local manifest/checksum validation
+→ radial/native mask execution
+→ pre/post snapshot and result
+→ T-020 export
+→ Agent quality evaluation
+```
+
+The Plugin must preserve user masks, enforce `Tonevyra::T029::` ownership, reject arbitrary preset paths, and avoid duplicate masks on idempotent replay. Static and strict requirements are defined in `harness/CONTRACT_T029_LIGHTROOM_RADIAL_MASKING.md`.
+
+## T-030 Windows Background/Tray Contract
+
+T-030 verifies a per-user Windows Tray Shell and Background Worker with stable-file gating, event coalescing, PostgreSQL idempotency, bounded supervision, source safety, graceful shutdown, and real Windows live evidence. Windows Service, SQLite queue, UI-owned pipeline logic, partial-file processing, output recursion, unbounded restart, and source mutation are prohibited.
+
+Canonical contract: `harness/CONTRACT_T030_WINDOWS_BACKGROUND_TRAY.md`.

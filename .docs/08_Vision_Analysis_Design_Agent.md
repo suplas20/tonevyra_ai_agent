@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - Vision Analysis Design
+# Tonevyra AI - Vision Analysis Design
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -222,3 +222,22 @@ online model training
 silent fine-tuning while processing photos
 external training service
 ```
+
+---
+
+## T-029 Target Geometry Addendum
+
+For local fallback planning, Vision/Semantic Analysis may emit an oriented normalized target geometry and detection-risk evidence.
+
+```text
+region_id
+semantic_type
+confidence
+coordinate_space = oriented_normalized_image
+center_x / center_y / width / height / rotation_deg
+native_detection_risk
+color_loss diagnosis
+recommended intent
+```
+
+It must not emit template IDs, preset paths, Plugin commands, final Lightroom values, or UI coordinates. Geometry must describe the visual target after EXIF orientation is applied.

@@ -1,0 +1,16 @@
+{
+  "schema_version": "t029.rollback_case.v1",
+  "before": {
+    "user_mask_ids": ["user-mask-01", "user-mask-02"],
+    "tonevyra_mask_ids": []
+  },
+  "failure": {
+    "stage": "local_adjustment_apply",
+    "error_code": "RADIAL_TEMPLATE_APPLY_FAILED"
+  },
+  "after_rollback": {
+    "user_mask_ids": ["user-mask-01", "user-mask-02"],
+    "tonevyra_mask_ids": [],
+    "rollback_performed": true
+  }
+}

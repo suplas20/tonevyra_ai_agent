@@ -1,0 +1,49 @@
+{
+  "schema_version": "t029.mask_apply.result.v1",
+  "request_id": "mask-request-001",
+  "task_id": "task-001",
+  "job_id": "job-001",
+  "attempt_id": "attempt-001",
+  "status": "applied",
+  "idempotency_key": "t029-job-001-attempt-001-native-subject",
+  "capability_snapshot": {
+    "snapshot_id": "cap-001",
+    "lightroom_version": "NATIVE_MASK_FIXTURE_VERSION",
+    "plugin_version": "0.29.0",
+    "mask_plan_command_supported": true,
+    "native_mask_command_supported": true,
+    "native_ai_mask_types": [
+      "subject",
+      "people",
+      "object",
+      "sky",
+      "background"
+    ],
+    "local_point_color_supported": false,
+    "mask_result_introspection_level": "develop_settings_snapshot",
+    "rollback_supported": true
+  },
+  "operation_results": [
+    {
+      "operation_id": "foreground-subject-native",
+      "status": "applied",
+      "strategy": "native_ai",
+      "mask_name": "Tonevyra::T029::job-001::attempt-001::foreground-subject-native",
+      "mask_created_or_reused": "created",
+      "applied_adjustments": {
+        "Exposure2012": 0.08,
+        "Shadows2012": 8,
+        "Texture": 4,
+        "Clarity2012": 3
+      },
+      "point_color_status": "skipped",
+      "warnings": []
+    }
+  ],
+  "pre_apply_snapshot_ref": "runtime/artifacts/job-001/attempt-001/develop_settings_before_mask.json",
+  "post_apply_snapshot_ref": "runtime/artifacts/job-001/attempt-001/develop_settings_after_mask.json",
+  "rollback_performed": false,
+  "error_code": null,
+  "message": "Native mask plan applied successfully.",
+  "completed_at": "2026-06-29T00:00:05Z"
+}

@@ -1,0 +1,10 @@
+{
+  "case_id": "single-instance",
+  "first_tray_mutex_acquired": true,
+  "first_worker_mutex_acquired": true,
+  "second_tray_mutex_acquired": false,
+  "second_worker_started": false,
+  "existing_tray_activated": true,
+  "expected_processing_workers": 1,
+  "expected_validation": "PASS"
+}

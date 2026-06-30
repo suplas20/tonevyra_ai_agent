@@ -1,0 +1,8 @@
+{
+  "expected_validation": "FAIL",
+  "local_adjustments": {
+    "Exposure2012": 3.0,
+    "Saturation": 90,
+    "Tint": 50
+  }
+}

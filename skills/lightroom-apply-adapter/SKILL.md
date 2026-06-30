@@ -134,3 +134,9 @@ Implement plugin-side automatic bridge request processing as the formal T-019 pa
 A manual/debug menu action such as `Tonevyra Diagnostics Process Pending Apply Request` may remain only as a diagnostic tool for troubleshooting an existing bridge request. It is not the normal product workflow, must not require selected-photo targeting, and must not replace the automatic bridge request path.
 
 Automatic Lightroom launch, user folder selection UI, and full Agent lifecycle management remain outside T-019.
+
+## T-029 Local Mask Extension
+
+The Apply Adapter may dispatch `APPLY_LIGHTROOM_MASK_PLAN` after T-029, but the original role separation remains unchanged. Mask requests are Agent/Planner-created, values are bounded, user masks are preserved, and the same idempotency key cannot create a second mask.
+
+Scope update, 2026-06-29: radial-gradient / radial-template fallback is excluded. The Apply Adapter must not dispatch `radial_template`, `template_ref`, arbitrary preset paths, or generated XMP fallback. If native target detection fails, persist `skip_local` or `review_required` evidence instead.

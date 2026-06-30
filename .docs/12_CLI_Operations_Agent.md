@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - CLI Operations
+# Tonevyra AI - CLI Operations
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -176,3 +176,21 @@ tonevyra-agent benchmark-models --sample-set harness
 ```
 
 These commands must not implement loop business logic directly. They call agent/recovery/lightroom/learning/benchmark/db modules.
+
+## T-030 Background/Tray CLI Addendum
+
+Add or extend commands without removing existing CLI behavior:
+
+```text
+tonevyra-agent background
+tonevyra-agent tray
+tonevyra-agent status
+tonevyra-agent watch pause
+tonevyra-agent watch resume
+tonevyra-agent watch rescan
+tonevyra-agent startup enable
+tonevyra-agent startup disable
+tonevyra-agent startup status
+```
+
+CLI and Tray use the same validated Worker command interface. CLI must not bypass idempotency, recovery, or audit evidence.

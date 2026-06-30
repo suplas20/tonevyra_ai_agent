@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - Quality Gate Design
+# Tonevyra AI - Quality Gate Design
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -163,3 +163,21 @@ inspect exported image
 MVP default is one-pass quality decision. Automatic re-correction is deferred. If added later, retry limits must be explicit and loop evidence must be recorded.
 
 Quality decisions become feedback learning signals when the user confirms or overrides them.
+
+---
+
+## T-029 Local Mask Quality Addendum
+
+Post-export evaluation for a local mask must assess both target improvement and collateral damage.
+
+```text
+target_color_recovery_gain
+background_color_spill
+neutral_or_skin_shift
+highlight_clipping_delta
+mask_alignment
+mask_boundary_visibility
+local_adjustment_naturalness
+```
+
+Plugin `status=applied` is technical evidence only. The Agent remains responsible for `APPROVED`, retry, review, or failure decisions.

@@ -42,6 +42,13 @@ def _gray_image() -> np.ndarray:
     return base
 
 
+def _dark_underwater_image() -> np.ndarray:
+    rgb = _underwater_image().astype(np.float32)
+    rgb[:, :, :3] *= 0.65
+    rgb[40:120, 150:260] = [235, 235, 225]  # retain HDR-style blown window
+    return np.clip(rgb, 0, 255).astype(np.uint8)
+
+
 def _underwater_analysis() -> VisionAnalysisResult:
     return VisionAnalysisResult(
         model_backend="qwen",
@@ -163,3 +170,17 @@ def test_warm_recovery_direction_for_underwater() -> None:
     # Cool cast should be warmed (positive temperature delta) and red recovered.
     assert adj["temperature_delta"] > 0.0
     assert adj["red_saturation"] >= 0.0
+
+
+def test_underwater_dark_frame_uses_midtone_aware_exposure_floor() -> None:
+    plan, log = plan_from_rgb(analysis=_underwater_analysis(), rgb=_dark_underwater_image())
+
+    assert 1.45 <= plan.adjustments_json["exposure"] <= 1.6
+    assert log.secondary_correction["measured_deficit_floors"]["exposure"] > 0
+
+
+def test_underwater_bright_frame_does_not_force_dark_exposure_floor() -> None:
+    plan, log = plan_from_rgb(analysis=_underwater_analysis(), rgb=_underwater_image())
+
+    assert plan.adjustments_json["exposure"] < 1.0
+    assert "exposure" not in log.secondary_correction["measured_deficit_floors"]

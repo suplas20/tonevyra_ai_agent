@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t031_runtime_evidence.schema.json",
+  "title": "T031 Runtime Evidence",
+  "type": "object",
+  "required": [
+    "ticket",
+    "platform",
+    "worker_lifecycle",
+    "strict_completion"
+  ],
+  "properties": {
+    "ticket": {
+      "const": "T-031"
+    },
+    "platform": {
+      "enum": [
+        "windows",
+        "macos",
+        "reference"
+      ]
+    },
+    "worker_lifecycle": {
+      "type": "object",
+      "required": [
+        "lazy_start",
+        "max_workers",
+        "idle_unload",
+        "process_exit_verified"
+      ],
+      "properties": {
+        "lazy_start": {
+          "type": "boolean"
+        },
+        "max_workers": {
+          "type": "integer",
+          "maximum": 1
+        },
+        "idle_unload": {
+          "type": "boolean"
+        },
+        "process_exit_verified": {
+          "type": "boolean"
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "properties": {
+        "before_mb": {
+          "type": "number"
+        },
+        "loaded_mb": {
+          "type": "number"
+        },
+        "post_unload_mb": {
+          "type": "number"
+        }
+      }
+    },
+    "strict_completion": {
+      "type": "boolean"
+    },
+    "blocked_reasons": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": true
+}

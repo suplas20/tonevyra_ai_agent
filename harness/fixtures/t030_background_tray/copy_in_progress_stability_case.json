@@ -1,0 +1,15 @@
+{
+  "case_id": "copy-in-progress",
+  "samples": [
+    {"t": 0, "size_bytes": 1000000, "mtime_ns": 100},
+    {"t": 2, "size_bytes": 5000000, "mtime_ns": 102},
+    {"t": 4, "size_bytes": 9000000, "mtime_ns": 104},
+    {"t": 6, "size_bytes": 9000000, "mtime_ns": 104},
+    {"t": 8, "size_bytes": 9000000, "mtime_ns": 104},
+    {"t": 10, "size_bytes": 9000000, "mtime_ns": 104}
+  ],
+  "required_stable_samples": 3,
+  "expected_stable_at_seconds": 10,
+  "analysis_may_start_before_stable": false,
+  "expected_validation": "PASS"
+}

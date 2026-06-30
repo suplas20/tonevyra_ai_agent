@@ -1,0 +1,6 @@
+{
+  "case_id": "invalid-second-instance",
+  "second_instance_processes_jobs": true,
+  "expected_processing_workers": 2,
+  "expected_validation": "FAIL"
+}

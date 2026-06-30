@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - Correction Planner Design
+# Tonevyra AI - Correction Planner Design
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -186,3 +186,21 @@ AI over-dehazed -> user reduced Dehaze
 ```
 
 MVP stores deltas in `feedback_records` and `MANUAL_EDIT_DELTA` artifacts. It must not silently rewrite planner rules. Calibration requires explicit local approval, versioning, and rollback.
+
+---
+
+## T-029 Mask Strategy Planner Addendum
+
+The Planner gains a deterministic mask-strategy stage:
+
+```text
+semantic target
+→ confidence/geometry validation
+→ runtime capability snapshot
+→ native target-detection evidence
+→ radial template fit search when native fails
+→ bounded local values
+→ mask execution plan
+```
+
+Template selection records center distance, coverage, overflow, aspect error, size error, fit score, policy version, and rejection reason. A failed local mask must not be replaced by an unrecorded global correction.

@@ -266,3 +266,108 @@ When runtime evidence exists:
 python .\harness\scripts\verify_t021_dual_mode_closed_loop.py --project-root F:\tonevyra_ai_agent --job-evidence <job-manifest.json> --strict
 ```
 
+
+---
+
+## Required reading for T-029 Lightroom native masking work
+
+Scope update, 2026-06-29: radial-gradient / radial-template fallback is excluded from T-029. Treat older radial fallback wording in T-029 docs as superseded until the docs are fully renamed. T-029 allows native mask execution only for targets actually detected by supported Lightroom native mask types; native detection failure must produce `skip_local` or `review_required`.
+
+Before modifying semantic target geometry, local mask planning, Lightroom mask requests/results, Plugin native-mask application, mask rollback, or local color quality evidence, read:
+
+```text
+AGENTS.md
+.docs/t029/T-029_Lightroom_Native_Mask_and_Radial_Fallback_Work_Order.md
+.docs/t029/T-029_Implementation_Specification.md
+.docs/t029/T-029_Lightroom_Live_Test_Checklist.md
+.docs/t029/T-029_Seed_Radial_Preset_Preparation_Guide.md
+.docs/t023/T-023_Semantic_Subject_Analysis_Local_Adjustment_Work_Order.md
+.docs/t028/T-028_Production_Reliability_Agent_Operations_Work_Order.md
+skills/semantic-subject-analysis/SKILL.md
+skills/lightroom-local-adjustment-planning/SKILL.md
+skills/lightroom-radial-mask-execution/SKILL.md
+skills/radial-mask-template-library/SKILL.md
+skills/lightroom-apply-adapter/SKILL.md
+skills/lightroom-plugin-implementation/SKILL.md
+skills/recovery-error-handling/SKILL.md
+skills/testing-harness/SKILL.md
+harness/CONTRACT_T029_LIGHTROOM_RADIAL_MASKING.md
+```
+
+T-029 implementation rules:
+
+```text
+- Preserve all 41 T-028 baseline skills and add the two T-029 skills; total 43.
+- Reuse the current Apply Adapter, bridge dispatcher, Planner, attempt model, and recovery system.
+- Do not build or use a radial template library for T-029.
+- Stop with explicit `review_required` or `skip_local` evidence when the intended target is not detected by native masks.
+- Provider output remains semantic evidence only.
+- Planner selects native-only strategy and bounded values.
+- Plugin executes validated native-mask plans only.
+- Geometry is oriented normalized 0..1.
+- Existing user masks must be preserved.
+- Same idempotency key must not duplicate a mask.
+- Do not use radial fallback, UI automation, catalog modification, arbitrary runtime XMP generation, or silent global fallback.
+- Do not add a new top-level task state for T-029.
+- Real completion requires static, deterministic runtime, strict live Lightroom, and T-019..T-028 regression evidence.
+```
+
+Canonical commands:
+
+```powershell
+python .\harness\scripts\verify_t029_lightroom_radial_masking.py --project-root .
+python .\harness\scripts\run_t029_radial_masking_runtime.py --project-root . --output runtime\t029_runtime_evidence.json --regressions-passed
+python .\harness\scripts\verify_t029_lightroom_radial_masking.py --project-root . --runtime-evidence runtime\t029_runtime_evidence.json
+python .\harness\scripts\verify_t029_lightroom_radial_masking.py --project-root . --runtime-evidence runtime\t029_runtime_evidence.json --live-evidence <live-evidence.json> --strict
+```
+
+## Required reading for T-030 Windows background/tray work
+
+Before implementing or modifying Windows background execution, folder watcher runtime, tray UI, single instance, autostart, Worker supervision, or Windows shutdown behavior, read:
+
+```text
+AGENTS.md
+.docs/t030/T-030_Windows_Background_Watcher_and_Tray_Agent_Work_Order.md
+.docs/t030/T-030_Implementation_Specification.md
+.docs/t030/T-030_Windows_Live_Test_Checklist.md
+.docs/t030/T-030_Tray_Icon_Asset_Guide.md
+skills/folder-watcher/SKILL.md
+skills/resumable-idempotent-jobs/SKILL.md
+skills/production-reliability-operations/SKILL.md
+skills/windows-background-agent-lifecycle/SKILL.md
+skills/system-tray-operations/SKILL.md
+skills/testing-harness/SKILL.md
+harness/CONTRACT_T030_WINDOWS_BACKGROUND_TRAY.md
+```
+
+T-030 implementation rules:
+
+```text
+- Build a per-user Windows application, not a Windows Service.
+- Keep Tray Shell thin; Worker owns all pipeline business logic.
+- Use PostgreSQL as the durable queue; do not add SQLite.
+- Coalesce file events and prove stability before queueing.
+- Keep main model and Lightroom concurrency at 1.
+- Enforce per-user single instance for Tray and Worker.
+- Use bounded heartbeat/restart and T-028 recovery.
+- Preserve source files and prevent output recursion.
+- Use approved Tonevyra symbol source for production tray icons.
+- Reference harness output is not real Windows completion evidence.
+```
+
+Stop after T-030 and wait for approval before packaging or code-protection work.
+
+## Required reading for T-031
+
+Before macOS, platform adapter, inference process, GPU memory, MPS, FSEvents, menu bar, or idle-unload work, read:
+
+```text
+AGENTS.md
+.docs/t031/T-031_macOS_Apple_Silicon_Runtime_and_Idle_VRAM_Work_Order.md
+.docs/t031/T-031_Implementation_Specification.md
+skills/macos-apple-silicon-runtime/SKILL.md
+skills/inference-worker-memory-lifecycle/SKILL.md
+skills/testing-harness/SKILL.md
+```
+
+Do not claim T-031 complete from reference runtime only. Real macOS and Windows VRAM evidence are separate hard gates.

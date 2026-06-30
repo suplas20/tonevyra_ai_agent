@@ -1,0 +1,89 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonevyra.local/schemas/t029_mask_apply_result.schema.json",
+  "title": "Tonevyra T-029 Lightroom Mask Apply Result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "task_id",
+    "job_id",
+    "attempt_id",
+    "status",
+    "idempotency_key",
+    "capability_snapshot",
+    "operation_results",
+    "pre_apply_snapshot_ref",
+    "post_apply_snapshot_ref",
+    "rollback_performed",
+    "completed_at"
+  ],
+  "properties": {
+    "schema_version": {"const": "t029.mask_apply.result.v1"},
+    "request_id": {"type": "string", "minLength": 1},
+    "task_id": {"type": "string", "minLength": 1},
+    "job_id": {"type": "string", "minLength": 1},
+    "attempt_id": {"type": "string", "minLength": 1},
+    "status": {"enum": ["applied", "partial", "skipped", "failed"]},
+    "idempotency_key": {"type": "string", "minLength": 8},
+    "capability_snapshot": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "snapshot_id",
+        "lightroom_version",
+        "plugin_version",
+        "mask_plan_command_supported",
+        "local_point_color_supported",
+        "rollback_supported",
+        "native_mask_command_supported"
+      ],
+      "properties": {
+        "snapshot_id": {"type": "string", "minLength": 1},
+        "lightroom_version": {"type": "string", "minLength": 1},
+        "plugin_version": {"type": "string", "minLength": 1},
+        "mask_plan_command_supported": {"type": "boolean"},
+        "native_mask_command_supported": {"type": "boolean"},
+        "native_ai_mask_types": {"type": "array", "items": {"type": "string"}, "uniqueItems": true},
+        "local_point_color_supported": {"type": "boolean"},
+        "mask_result_introspection_level": {"type": "string"},
+        "rollback_supported": {"type": "boolean"}
+      }
+    },
+    "operation_results": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "operation_id",
+          "status",
+          "strategy",
+          "mask_name",
+          "mask_created_or_reused",
+          "applied_adjustments",
+          "point_color_status",
+          "warnings"
+        ],
+        "properties": {
+          "operation_id": {"type": "string", "minLength": 1},
+          "status": {"enum": ["applied", "reused", "skipped", "failed"]},
+          "strategy": {"enum": ["native_ai", "skip_local", "review_required"]},
+          "mask_name": {"type": "string", "pattern": "^Tonevyra::T029::"},
+          "mask_created_or_reused": {"enum": ["created", "reused", "not_created"]},
+          "applied_adjustments": {"type": "object"},
+          "point_color_status": {"enum": ["applied", "unsupported", "skipped", "failed"]},
+          "warnings": {"type": "array", "items": {"type": "string"}}
+        }
+      }
+    },
+    "pre_apply_snapshot_ref": {"type": "string", "minLength": 1},
+    "post_apply_snapshot_ref": {"type": "string", "minLength": 1},
+    "rollback_performed": {"type": "boolean"},
+    "error_code": {"type": ["string", "null"]},
+    "message": {"type": ["string", "null"]},
+    "completed_at": {"type": "string", "format": "date-time"}
+  }
+}

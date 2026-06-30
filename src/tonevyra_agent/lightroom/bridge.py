@@ -23,12 +23,15 @@ from tonevyra_agent.db.repositories import ImageTaskRepository, StageResultRepos
 from tonevyra_agent.lightroom.schemas import (
     LIGHTROOM_APPLY_ALLOWED_SETTINGS,
     LIGHTROOM_COMMAND_PING,
+    LIGHTROOM_MASK_ALLOWED_ADJUSTMENTS,
     LIGHTROOM_RESPONSE_FAILED,
     LIGHTROOM_RESPONSE_SUCCESS,
     LightroomApplyRequestPayload,
     LightroomApplyResultPayload,
     LightroomExportRequestPayload,
     LightroomExportResultPayload,
+    LightroomMaskApplyRequestPayload,
+    LightroomMaskApplyResultPayload,
     LightroomRequestPayload,
     LightroomResponsePayload,
 )
@@ -52,6 +55,13 @@ class LightroomResponseResult:
     response_artifact: ArtifactRef
     export_artifact: ArtifactRef | None
     success: bool
+
+
+@dataclass(frozen=True)
+class LightroomMaskRequestResult:
+    payload: LightroomMaskApplyRequestPayload
+    request_path: Path
+    request_artifact: ArtifactRef
 
 
 @dataclass(frozen=True)
@@ -824,6 +834,149 @@ class LightroomBridge:
         )
         return LightroomRequestResult(payload=payload, request_path=request_path, request_artifact=request_artifact)
 
+    def write_mask_request_from_correction_plan(
+        self,
+        session: Session,
+        *,
+        task: ImageTask,
+        correction_plan_artifact: ArtifactRef,
+    ) -> LightroomMaskRequestResult | None:
+        """Write a T-029 native mask request when the plan contains executable local adjustments."""
+
+        if not self.settings.lightroom_native_mask_execution_enabled:
+            return None
+
+        from_status = task.status
+        try:
+            correction_payload = self.storage.load_json(correction_plan_artifact)
+            correction_plan = CorrectionPlan.model_validate(correction_payload)
+            payload = _mask_payload_from_local_adjustments(
+                task_id=str(task.id),
+                source_path=str(_absolute_project_path(task.source_path)),
+                local_adjustments=correction_plan.local_adjustments_json,
+            )
+            if payload is None:
+                return None
+        except Exception as exc:
+            self.task_repository.mark_failed(
+                session,
+                task,
+                error_code=ErrorCode.LIGHTROOM_REQUEST_FAILED,
+                error_message="Failed to create Lightroom native mask request payload.",
+                failed_stage=Stage.LIGHTROOM,
+            )
+            raise TonevyraError(
+                code=ErrorCode.LIGHTROOM_REQUEST_FAILED,
+                message="Failed to create Lightroom native mask request payload.",
+                failed_stage=Stage.LIGHTROOM.value,
+            ) from exc
+
+        request_path = self.mask_request_path(payload.request_id)
+        _clear_stale_mask_files(self.settings, payload.request_id)
+        _write_json_atomic(request_path, payload.model_dump(mode="json"))
+        request_artifact = self.storage.save_json(
+            session,
+            task_id=task.id,
+            artifact_type=ArtifactType.LIGHTROOM_REQUEST,
+            name="lightroom_mask_request.json",
+            data=payload.model_dump(mode="json"),
+            version=2,
+        )
+
+        self.task_repository.update_status(
+            session,
+            task,
+            status=TaskStatus.LIGHTROOM_PROCESSING,
+            current_stage=Stage.LIGHTROOM,
+        )
+        self.event_repository.create(
+            session,
+            task_id=task.id,
+            event_type=TaskEventType.LIGHTROOM_REQUESTED,
+            stage=Stage.LIGHTROOM,
+            message="Folder-driven Lightroom native mask request JSON was written.",
+            payload_json={
+                "loop_name": PROCESSING_LOOP_NAME,
+                "loop_iteration": 1,
+                "event_type": TaskEventType.LIGHTROOM_REQUESTED.value,
+                "from_status": from_status,
+                "to_status": TaskStatus.LIGHTROOM_PROCESSING.value,
+                "reason": "lightroom_mask_request artifact and bridge request saved",
+                "request_id": payload.request_id,
+                "command": payload.command,
+                "operation_count": len(payload.mask_plan.operations),
+                "request_path": _project_relative_or_absolute(request_path),
+                "evidence_artifacts": [_artifact_summary(request_artifact)],
+            },
+        )
+        return LightroomMaskRequestResult(payload=payload, request_path=request_path, request_artifact=request_artifact)
+
+    def ingest_mask_result(
+        self,
+        session: Session,
+        *,
+        task: ImageTask,
+        response_path: str | Path | None = None,
+        request_id: str | None = None,
+    ) -> LightroomResponseResult:
+        """Read a T-029 native mask result and record evidence without failing global fallback."""
+
+        from_status = task.status
+        path = Path(response_path) if response_path is not None else self.mask_result_path(str(request_id or _mask_request_id(task.id)))
+        path = _absolute_project_path(path)
+        if not path.exists():
+            raise TonevyraError(
+                code=ErrorCode.LIGHTROOM_RESPONSE_TIMEOUT,
+                message=f"Lightroom mask result file was not found: {path}",
+                failed_stage=Stage.LIGHTROOM.value,
+            )
+
+        try:
+            response = LightroomMaskApplyResultPayload.model_validate(_read_json(path))
+        except ValidationError as exc:
+            raise TonevyraError(
+                code=ErrorCode.LIGHTROOM_EXPORT_FAILED,
+                message="Lightroom mask result payload is invalid.",
+                failed_stage=Stage.LIGHTROOM.value,
+            ) from exc
+
+        response_artifact = self.storage.save_json(
+            session,
+            task_id=task.id,
+            artifact_type=ArtifactType.LIGHTROOM_RESPONSE,
+            name="lightroom_mask_result.json",
+            data=response.model_dump(mode="json"),
+            version=2,
+        )
+        self.event_repository.create(
+            session,
+            task_id=task.id,
+            event_type=TaskEventType.LIGHTROOM_RESPONSE_RECEIVED,
+            stage=Stage.LIGHTROOM,
+            message="Folder-driven Lightroom native mask result JSON was read.",
+            payload_json={
+                "loop_name": PROCESSING_LOOP_NAME,
+                "loop_iteration": 1,
+                "event_type": TaskEventType.LIGHTROOM_RESPONSE_RECEIVED.value,
+                "from_status": from_status,
+                "to_status": task.status,
+                "reason": "lightroom_mask_result artifact saved; global Develop fallback remains active if masks were skipped",
+                "request_id": response.request_id,
+                "response_status": response.status,
+                "native_mask_command_supported": response.capability_snapshot.native_mask_command_supported,
+                "native_ai_mask_types": response.capability_snapshot.native_ai_mask_types,
+                "operation_results": [item.model_dump(mode="json") for item in response.operation_results],
+                "evidence_artifacts": [_artifact_summary(response_artifact)],
+            },
+        )
+        return LightroomResponseResult(
+            payload=response,
+            response_path=path,
+            response_artifact=response_artifact,
+            export_artifact=None,
+            success=response.status in {"applied", "partial"},
+        )
+
     def ingest_export_result(
         self,
         session: Session,
@@ -1087,6 +1240,55 @@ class LightroomBridge:
             failed_stage=Stage.LIGHTROOM.value,
         )
 
+    def write_mask_apply_request_payload(self, payload: LightroomMaskApplyRequestPayload) -> Path:
+        """Write a validated T-029 native-mask request without mutating task state.
+
+        T-029 mask execution is an additive Lightroom bridge command. The caller
+        owns planner/recovery state; this helper only validates the native-only
+        payload and writes it to the mask request queue atomically.
+        """
+
+        request_path = self.mask_request_path(payload.request_id)
+        _clear_stale_mask_files(self.settings, payload.request_id)
+        _write_json_atomic(request_path, payload.model_dump(mode="json"))
+        return request_path
+
+    def read_mask_apply_result_payload(
+        self,
+        *,
+        request_id: str | None = None,
+        response_path: str | Path | None = None,
+    ) -> LightroomMaskApplyResultPayload:
+        """Read and validate a T-029 native-mask result payload."""
+
+        if response_path is None and request_id is None:
+            raise ValueError("request_id or response_path is required")
+        path = Path(response_path) if response_path is not None else self.mask_result_path(str(request_id))
+        path = _absolute_project_path(path)
+        return LightroomMaskApplyResultPayload.model_validate(_read_json(path))
+
+    def wait_for_mask_response(
+        self,
+        *,
+        request_id: str,
+        timeout_seconds: int | None = None,
+        poll_interval_seconds: float = 2.0,
+    ) -> Path:
+        """Wait for a T-029 native-mask result file using a bounded timeout."""
+
+        timeout = timeout_seconds or self.settings.lightroom_mask_response_timeout_seconds
+        deadline = time.monotonic() + timeout
+        response_path = self.mask_result_path(request_id)
+        while time.monotonic() <= deadline:
+            if response_path.exists():
+                return response_path
+            time.sleep(poll_interval_seconds)
+        raise TonevyraError(
+            code=ErrorCode.LIGHTROOM_RESPONSE_TIMEOUT,
+            message=f"Timed out waiting for Lightroom mask result: {response_path}",
+            failed_stage=Stage.LIGHTROOM.value,
+        )
+
     def request_path(self, request_id: str) -> Path:
         return (self.settings.project_path(self.settings.bridge_dir) / "requests" / f"{request_id}.json").resolve()
 
@@ -1104,6 +1306,12 @@ class LightroomBridge:
 
     def export_result_path(self, request_id: str) -> Path:
         return (self.settings.project_path(self.settings.bridge_dir) / "lightroom_export_results" / f"{request_id}.json").resolve()
+
+    def mask_request_path(self, request_id: str) -> Path:
+        return (self.settings.project_path(self.settings.bridge_dir) / "lightroom_mask_requests" / f"{request_id}.json").resolve()
+
+    def mask_result_path(self, request_id: str) -> Path:
+        return (self.settings.project_path(self.settings.bridge_dir) / "lightroom_mask_results" / f"{request_id}.json").resolve()
 
 
 def write_lightroom_request(
@@ -1165,8 +1373,27 @@ def _clear_stale_export_files(settings: Settings, request_id: str) -> None:
             pass
 
 
+def _clear_stale_mask_files(settings: Settings, request_id: str) -> None:
+    bridge_dir = settings.project_path(settings.bridge_dir)
+    for subdir in (
+        "lightroom_mask_processing",
+        "lightroom_mask_processed",
+        "lightroom_mask_results",
+        "lightroom_mask_errors",
+    ):
+        path = (bridge_dir / subdir / f"{request_id}.json").resolve()
+        try:
+            path.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
 def _export_request_id(task_id: object) -> str:
     return f"export-{task_id}"
+
+
+def _mask_request_id(task_id: object) -> str:
+    return f"mask-{task_id}"
 
 
 def _default_lightroom_export_path(settings: Settings, task: ImageTask) -> Path:
@@ -1201,6 +1428,154 @@ def _validate_apply_result_for_export(response: LightroomApplyResultPayload) -> 
         or response.lightroom_result.get("source_photo_found") is True
     ):
         raise ValueError("Lightroom export requires source photo imported or found in catalog.")
+
+
+def _mask_payload_from_local_adjustments(
+    *,
+    task_id: str,
+    source_path: str,
+    local_adjustments: dict[str, Any],
+) -> LightroomMaskApplyRequestPayload | None:
+    """Convert planner-owned T-023 local adjustments into a native-only T-029 request."""
+
+    if not isinstance(local_adjustments, dict):
+        return None
+    local_plan = local_adjustments.get("local_adjustment_plan")
+    if not isinstance(local_plan, dict):
+        return None
+    plan_items = local_plan.get("plans")
+    if not isinstance(plan_items, list) or not plan_items:
+        return None
+
+    job_id = str(local_plan.get("job_id") or f"task-{task_id}")
+    attempt_id = str(local_plan.get("attempt_id") or f"{job_id}-attempt-0")
+    capability_snapshot_id = str(local_plan.get("capability_snapshot_id") or "lr-cap-unknown")
+    operations: list[dict[str, Any]] = []
+
+    for item in plan_items:
+        if not isinstance(item, dict):
+            continue
+        native_type = _native_mask_type(item.get("supported_mask_type"))
+        if native_type is None:
+            continue
+        mask_adjustments = _local_intents_to_lightroom_mask_adjustments(
+            item.get("bounded_adjustment_intents") if isinstance(item.get("bounded_adjustment_intents"), dict) else {}
+        )
+        if not mask_adjustments:
+            continue
+        operation_id = _safe_mask_token(str(item.get("mask_plan_id") or f"mask-operation-{len(operations) + 1}"))
+        region_id = str(item.get("region_id") or f"region-{len(operations) + 1}")
+        operations.append(
+            {
+                "operation_id": operation_id,
+                "target_region_id": region_id,
+                "strategy": "native_ai",
+                "native_assessment": {
+                    "attempted_types": [native_type],
+                    "target_detected": True,
+                    "reason_code": "PLANNER_SELECTED_NATIVE_MASK_TARGET",
+                },
+                "predicted_geometry": _predicted_mask_geometry(native_type),
+                "mask_name": f"Tonevyra::T029::{_safe_mask_token(job_id)}::{_safe_mask_token(attempt_id)}::{operation_id}",
+                "local_adjustments": mask_adjustments,
+                "point_color": None,
+                "safety": {
+                    "preserve_user_masks": True,
+                    "non_destructive_required": True,
+                    "max_background_spill": 0.12 if native_type == "background" else 0.08,
+                },
+            }
+        )
+
+    if not operations:
+        return None
+
+    request_id = _mask_request_id(task_id)
+    return LightroomMaskApplyRequestPayload(
+        request_id=request_id,
+        task_id=task_id,
+        job_id=job_id,
+        attempt_id=attempt_id,
+        source_path=source_path,
+        idempotency_key=f"{request_id}-{_safe_mask_token(attempt_id)}",
+        capability_snapshot_id=capability_snapshot_id,
+        mask_plan={
+            "schema_version": "t029.mask_plan.v1",
+            "plan_id": f"mask-plan-{task_id}",
+            "planner_version": "mask-planner-t029-native-bridge-v1",
+            "operations": operations,
+        },
+        created_at=datetime.utcnow().isoformat(timespec="seconds") + "Z",
+    )
+
+
+def _native_mask_type(mask_type: object) -> str | None:
+    text = str(mask_type or "").lower()
+    if text in {"subject", "people", "object", "sky", "background"}:
+        return text
+    if text == "face_skin":
+        return "people"
+    return None
+
+
+def _local_intents_to_lightroom_mask_adjustments(intents: dict[str, Any]) -> dict[str, float]:
+    mapping: dict[str, tuple[str, float]] = {
+        "exposure_delta": ("Exposure2012", 1.0),
+        "shadows_delta": ("Shadows2012", 80.0),
+        "temperature_delta": ("Temperature", 1.0 / 40.0),
+        "tint_delta": ("Tint", 1.0),
+        "saturation_delta": ("Saturation", 100.0),
+        "vibrance_delta": ("Vibrance", 100.0),
+        "texture_delta": ("Texture", 100.0),
+        "clarity_delta": ("Clarity2012", 100.0),
+        "dehaze_delta": ("Dehaze", 100.0),
+    }
+    result: dict[str, float] = {}
+    for source_key, raw_value in intents.items():
+        target = mapping.get(str(source_key))
+        if target is None:
+            continue
+        lightroom_key, scale = target
+        if lightroom_key not in LIGHTROOM_MASK_ALLOWED_ADJUSTMENTS:
+            continue
+        low, high = LIGHTROOM_MASK_ALLOWED_ADJUSTMENTS[lightroom_key]
+        value = float(raw_value) * scale
+        result[lightroom_key] = round(min(max(value, low), high), 3)
+    return {key: value for key, value in result.items() if value != 0.0}
+
+
+def _predicted_mask_geometry(native_type: str) -> dict[str, float | str]:
+    if native_type == "background":
+        return {
+            "coordinate_space": "oriented_normalized_image",
+            "center_x": 0.5,
+            "center_y": 0.5,
+            "width": 1.0,
+            "height": 1.0,
+            "rotation_deg": 0.0,
+        }
+    if native_type == "sky":
+        return {
+            "coordinate_space": "oriented_normalized_image",
+            "center_x": 0.5,
+            "center_y": 0.25,
+            "width": 1.0,
+            "height": 0.5,
+            "rotation_deg": 0.0,
+        }
+    return {
+        "coordinate_space": "oriented_normalized_image",
+        "center_x": 0.5,
+        "center_y": 0.55,
+        "width": 0.7,
+        "height": 0.78,
+        "rotation_deg": 0.0,
+    }
+
+
+def _safe_mask_token(value: str) -> str:
+    cleaned = "".join(char if char.isalnum() or char in {"-", "_"} else "-" for char in value)
+    return cleaned.strip("-") or "unknown"
 
 
 def _develop_settings_from_plan(plan: CorrectionPlan, settings: Settings | None = None) -> dict[str, float]:

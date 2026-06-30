@@ -1,0 +1,38 @@
+{
+  "schema_version": "t029.case.v1",
+  "case_id": "underwater-background-person-red-recovery",
+  "source_fixture": "harness/fixtures/images/t029_background_person_red_recovery.jpg",
+  "target_region": {
+    "region_id": "secondary-person-01-red-garment",
+    "semantic_type": "secondary_person_garment",
+    "confidence": 0.88,
+    "color_issue": "muted_red_underwater_loss",
+    "geometry": {
+      "coordinate_space": "oriented_normalized_image",
+      "center_x": 0.27,
+      "center_y": 0.155,
+      "width": 0.15,
+      "height": 0.12,
+      "rotation_deg": 0.0
+    }
+  },
+  "native_assessment": {
+    "attempted_types": ["subject", "people", "object"],
+    "target_detected": false,
+    "reason_code": "NATIVE_TARGET_NOT_DETECTED"
+  },
+  "expected_strategy": "review_required",
+  "expected_template_id": null,
+  "expected_reason_code": "NATIVE_TARGET_NOT_DETECTED",
+  "local_adjustment_intent": {
+    "Exposure2012": 0.12,
+    "Shadows2012": 10,
+    "Temperature": 8,
+    "Tint": 6,
+    "Saturation": 18
+  },
+  "quality_limits": {
+    "max_background_spill": 0.12,
+    "min_target_color_recovery_gain": 0.08
+  }
+}

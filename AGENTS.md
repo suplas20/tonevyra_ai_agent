@@ -1,11 +1,11 @@
 # Tonevyra AI Agent — AI Coding Agent Rules
 
-Version: v2.0-tonevyra-db-schema
+Version: v2.2-tonevyra-t031-cross-platform-memory-lifecycle
 Target agents: Claude Code, Codex, AI coding agents
 Project type: Local AI photo correction agent
 Primary language: Python 3.11
 Primary DB: PostgreSQL
-Primary interface in MVP: CLI first
+Primary interfaces in MVP: CLI + thin Windows system tray / macOS menu bar shells
 
 This file is the highest-level implementation rule set for Tonevyra AI Agent. `skills/*/SKILL.md` files define area-specific procedures. If this file conflicts with any other project note, this file wins.
 
@@ -85,10 +85,10 @@ Code identifiers, commands, file paths, logs, database object names, environment
 6. Runtime model loading must be local-only: `local_files_only=True`, offline env vars, no runtime download, no remote API, no external URL image loading, and no `trust_remote_code=True`.
 7. The model worker must be designed so outbound network can be blocked at the OS firewall level.
 8. Recovery must use PostgreSQL state + artifact records + artifact file existence + checksums + Lightroom response/export file existence. Logs are not a recovery source.
-9. CLI is the only MVP operator interface. React dashboard and FastAPI-first work are deferred.
+9. CLI remains the diagnostic/operator interface. T-030 authorizes a thin Windows system tray shell and T-031 adds a thin macOS menu bar shell. Status surfaces expose only allowlisted commands and must not own business logic. React dashboard and FastAPI-first work remain deferred.
 10. Mock Vision and Fake Lightroom must pass before connecting a real Qwen backend or the real Lightroom Lua plugin.
 11. Every feature must include or update at least one unit test, harness test, smoke test, recovery test, or security check.
-12. Worker concurrency is 1 in MVP because the GPU/unified memory budget is shared with Lightroom Classic.
+12. Main model and Lightroom worker concurrency is 1 in MVP because GPU/unified memory is shared with Lightroom Classic. The inference model must be lazy-loaded in a separate Worker and unloaded by terminating that Worker after bounded idle grace unless the user explicitly enables keep-warm mode. Bounded parallel file-stability probes are allowed only when they cannot start duplicate processing.
 13. Every autonomous behavior must be implemented as an explicit bounded product loop with persisted evidence.
 14. Do not create open-ended loops, unbounded retries, hidden background training, external training calls, or model fine-tuning during normal photo processing.
 15. If a user request conflicts with these rules, do not implement it. Report the conflict.
@@ -101,6 +101,12 @@ Code identifiers, commands, file paths, logs, database object names, environment
 ### Must build
 
 ```text
+- Windows per-user background Agent
+- Windows system tray shell
+- macOS Apple Silicon per-user background Agent
+- macOS menu bar shell
+- Lazy inference Worker with bounded idle GPU-memory release
+- Optional current-user autostart
 - Folder watcher
 - File stabilization
 - PostgreSQL persistence
@@ -1316,3 +1322,252 @@ harness/scripts/verify_t021_dual_mode_closed_loop.py
 
 The T-020 baseline contains 25 skills. T-021 must preserve all 25 and add the two T-021 skills for a cumulative total of 27.
 
+
+---
+
+## 33. T-029 Lightroom Native Mask and Radial Fallback Policy
+
+### 33.0 Scope update: radial fallback excluded
+
+As of 2026-06-29, radial-gradient / radial-template fallback is excluded from T-029.
+
+This update overrides any older T-029 text in this repository that says `radial_template` is a valid automatic fallback. T-029 now allows native Lightroom mask execution only when the intended target is actually detected by supported native mask types. If Subject, People, Object, Sky, or Background does not identify the intended target, the Planner must choose `skip_local` or `review_required`; it must not create a radial substitute, global substitute, brush fallback, generated XMP fallback, or UI automation path.
+
+Allowed T-029 strategies:
+
+```text
+native_ai
+skip_local
+review_required
+```
+
+Forbidden T-029 strategies and fields:
+
+```text
+radial_template
+template_ref
+template_path
+preset_path
+generated_radial_xmp
+mouse_coordinates
+```
+
+T-029 extends the existing T-019 Apply Adapter and T-023 local-adjustment planning boundary. It does not authorize the model or Lightroom Plugin to choose arbitrary masks or correction values.
+
+Canonical flow:
+
+```text
+semantic target evidence
+→ Mask Strategy Planner
+→ capability + native-detection reliability check
+→ native_ai or deterministic radial_template
+→ bounded mask apply request
+→ Lightroom Plugin technical execution
+→ export
+→ target/spill quality evaluation
+```
+
+### 33.1 Responsibility boundary
+
+1. Analysis Providers may output normalized target geometry, confidence, color-loss evidence, and correction intent only.
+2. The Mask Strategy Planner is the only component that selects `native_ai`, `radial_template`, `skip_local`, or `review_required`.
+3. The Planner is the only component that selects a radial template ID and creates bounded local Lightroom values.
+4. The Plugin validates and executes the approved plan. It must not perform semantic reasoning or quality decisions.
+5. Native mask API availability is not proof that the intended target was detected.
+6. When Subject, People, and Object fail to detect a small secondary target, the Planner may use radial fallback only when geometry-fit and spill-safety thresholds pass.
+
+Forbidden Provider fields:
+
+```text
+plugin_command
+preset_path
+template_path
+lightroom_mask_payload
+final_develop_settings
+execute_mask
+mouse_coordinates
+```
+
+### 33.2 Radial template policy
+
+MVP uses a local, versioned, checksum-verified library generated from a human-validated seed radial preset. Runtime arbitrary XMP generation is not authorized.
+
+```text
+template ID + library version + expected checksum
+→ Plugin local manifest lookup
+→ path containment and checksum validation
+→ approved Lightroom preset/develop application path
+```
+
+The request must not provide an arbitrary preset file path. Template files must not be downloaded at runtime.
+
+### 33.3 Geometry and safety
+
+- Geometry uses EXIF-oriented normalized image coordinates in `0.0..1.0`.
+- Template selection must be deterministic for the same target, manifest, policy, and Planner version.
+- Persist center distance, coverage, overflow, aspect error, size error, fit score, and acceptance/rejection reason.
+- Clamp all local adjustments.
+- Preserve user-created masks.
+- Plugin-owned masks use `Tonevyra::T029::` names.
+- Store pre/post Develop snapshots and perform safe rollback on partial failure.
+- Same idempotency key must not create a duplicate mask.
+- Do not silently simulate a failed local mask by applying the correction globally.
+
+### 33.4 Prohibited implementation paths
+
+```text
+AutoHotkey or pyautogui
+screen-coordinate clicking or dragging
+Lightroom catalog database modification
+runtime overwrite of user sidecar XMP
+unverified private Lightroom APIs
+brush/object rectangle UI automation
+external bitmap-mask injection presented as native Lightroom support
+```
+
+### 33.5 Completion evidence
+
+T-029 is not complete until a real Lightroom Classic Phase 0 test proves one pre-authored radial preset can be applied automatically with retained geometry, idempotent replay, user-mask preservation, and safe failure behavior.
+
+Required references:
+
+```text
+.docs/t029/T-029_Lightroom_Native_Mask_and_Radial_Fallback_Work_Order.md
+.docs/t029/T-029_Implementation_Specification.md
+.docs/t029/T-029_Codex_Prompt.md
+.docs/t029/T-029_Lightroom_Live_Test_Checklist.md
+.docs/t029/T-029_Seed_Radial_Preset_Preparation_Guide.md
+skills/lightroom-radial-mask-execution/SKILL.md
+skills/radial-mask-template-library/SKILL.md
+harness/CONTRACT_T029_LIGHTROOM_RADIAL_MASKING.md
+harness/scripts/verify_t029_lightroom_radial_masking.py
+harness/scripts/run_t029_radial_masking_runtime.py
+```
+
+The T-028 baseline contains 41 `SKILL.md` files. T-029 preserves all 41 and adds two skills for a cumulative total of 43.
+
+## 34. T-030 Windows Background Watcher and System Tray Policy
+
+### 34.1 Runtime boundary
+
+T-030 runs Tonevyra as a Windows per-user background application. It is not a Windows Service.
+
+```text
+Tray Shell
+→ status rendering + allowlisted commands + Worker supervision
+
+Background Agent Worker
+→ watcher + stabilization + PostgreSQL task registration
+→ existing processing/recovery/Lightroom pipeline
+```
+
+The Tray Shell must never create adjustment plans, execute Lightroom corrections, calculate quality, or write pipeline DB state directly.
+
+### 34.2 Agent runtime states
+
+T-030 adds separate Agent runtime states. They are not `image_tasks.status` values.
+
+```text
+STARTING
+WATCHING
+PROCESSING
+PAUSED
+DEGRADED
+ERROR
+STOPPING
+STOPPED
+```
+
+Do not add new image task statuses for tray or dependency-wait behavior.
+
+### 34.3 Watcher and queue rules
+
+```text
+filesystem events
+→ debounce/coalescing
+→ bounded file-stability gate
+→ exclusion and recursion safety
+→ transactional PostgreSQL register-or-get-existing
+→ existing processing loop
+```
+
+Mandatory:
+
+- Created, Modified, Renamed, Moved-In, and bounded rescan are supported.
+- A file still changing size or mtime must not enter analysis.
+- PostgreSQL remains the durable queue. SQLite queue/fallback is prohibited.
+- Duplicate events, restart, rescan, and second launch must not create duplicate external effects.
+- Input/output/runtime/cache path recursion is rejected or explicitly excluded.
+- T-030 must not overwrite, move, rename, or delete source photos.
+
+### 34.4 Windows lifecycle
+
+- Use a per-user named mutex or equivalent Windows kernel primitive for Tray and Worker single instance.
+- A second launch may activate the existing Tray, but must not start another Worker.
+- Worker heartbeat/restart is bounded and must detect crash loops.
+- Tray remains alive when Worker crashes and exposes recovery/error state.
+- Graceful shutdown stops intake, checkpoints safely, flushes evidence, joins Worker, and removes the Tray icon.
+- Current-user autostart may be enabled/disabled without administrator rights.
+
+### 34.5 Tray and brand asset
+
+The tray icon uses the approved Tonevyra aperture symbol without the wordmark. Production assets must come from an approved SVG or transparent high-resolution source, not a screenshot crop.
+
+If an approved source asset is absent:
+
+```text
+BLOCKED_TRAY_ICON_ASSET_MISSING
+```
+
+A temporary icon may support development tests but cannot satisfy production completion.
+
+### 34.6 Prohibited paths
+
+```text
+Windows Service for the interactive tray runtime
+SQLite operational queue or fallback
+unbounded Worker restart
+Tray-owned Planner/quality/DB business logic
+processing immediately on Created without stability proof
+source overwrite/delete/move
+recursive ingestion of Tonevyra outputs
+AutoHotkey / pyautogui / screen-coordinate automation
+external 0.0.0.0 command listener
+```
+
+### 34.7 Completion evidence
+
+T-030 requires static harness, implementation runtime evidence, and real Windows live evidence. Reference harness evidence alone is not a completion proof.
+
+Required references:
+
+```text
+.docs/t030/T-030_Windows_Background_Watcher_and_Tray_Agent_Work_Order.md
+.docs/t030/T-030_Implementation_Specification.md
+.docs/t030/T-030_Codex_Prompt.md
+.docs/t030/T-030_Windows_Live_Test_Checklist.md
+.docs/t030/T-030_Tray_Icon_Asset_Guide.md
+skills/windows-background-agent-lifecycle/SKILL.md
+skills/system-tray-operations/SKILL.md
+skills/folder-watcher/SKILL.md
+harness/CONTRACT_T030_WINDOWS_BACKGROUND_TRAY.md
+harness/scripts/verify_t030_windows_background_tray.py
+harness/scripts/run_t030_background_tray_reference.py
+```
+
+The T-029 baseline contains 43 `SKILL.md` files. T-030 preserves all 43 and adds two skills for a cumulative total of 45.
+
+## T-031 Cross-platform and GPU Memory Policy
+
+```text
+- Shared business logic must remain platform-neutral.
+- Windows and macOS behavior must be isolated behind adapters.
+- Apple Silicon arm64 is the first macOS target.
+- Shell/Watcher processes must not import or load the model runtime.
+- Exactly one inference Worker is allowed.
+- The Worker starts lazily and exits after bounded idle grace.
+- `torch.cuda.empty_cache()` alone is not unload evidence.
+- CPU fallback on macOS must be explicit and disabled by default.
+- macOS completion requires real arm64/MPS/FSEvents/Lightroom evidence.
+- Windows VRAM completion requires process-level before/loaded/post-unload evidence.
+```

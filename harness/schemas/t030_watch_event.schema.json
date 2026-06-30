@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonevyra.local/schemas/t030_watch_event.schema.json",
+  "title": "T-030 Watch Event Evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "event_id",
+    "event_type",
+    "observed_path",
+    "normalized_path",
+    "first_seen_at",
+    "last_seen_at",
+    "coalesced_event_count",
+    "stability",
+    "decision"
+  ],
+  "properties": {
+    "schema_version": {"const": "t030.watch_event.v1"},
+    "event_id": {"type": "string", "minLength": 1},
+    "event_type": {"enum": ["CREATED", "MODIFIED", "RENAMED", "MOVED_IN", "RESCAN_DISCOVERED"]},
+    "observed_path": {"type": "string", "minLength": 1},
+    "normalized_path": {"type": "string", "minLength": 1},
+    "first_seen_at": {"type": "string", "format": "date-time"},
+    "last_seen_at": {"type": "string", "format": "date-time"},
+    "coalesced_event_count": {"type": "integer", "minimum": 1},
+    "stability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sample_count", "stable_samples", "size_bytes", "mtime_ns", "read_probe_passed"],
+      "properties": {
+        "sample_count": {"type": "integer", "minimum": 1},
+        "stable_samples": {"type": "integer", "minimum": 0},
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "mtime_ns": {"type": "integer", "minimum": 0},
+        "read_probe_passed": {"type": "boolean"}
+      }
+    },
+    "identity": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "size_bytes": {"type": "integer", "minimum": 0},
+        "mtime_ns": {"type": "integer", "minimum": 0},
+        "source_hash": {"type": ["string", "null"]}
+      }
+    },
+    "decision": {
+      "enum": ["WAIT_STABLE", "QUEUE", "IGNORE_TEMPORARY", "IGNORE_EXCLUDED", "IGNORE_DUPLICATE", "SKIP_UNSUPPORTED", "FAIL_STABILIZATION"]
+    }
+  }
+}

@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - Testing & QA Strategy
+# Tonevyra AI - Testing & QA Strategy
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -212,3 +212,32 @@ settings snapshot read for future feedback sync
 ## 7. Quality Evaluation
 
 Track false PASS and false REVIEW. Human review is needed before tuning thresholds.
+
+---
+
+## T-029 Testing Addendum
+
+T-029 requires four test layers:
+
+```text
+static contract/schema/fixture validation
+deterministic geometry/template-selection runtime harness
+fake Plugin failure/idempotency/rollback tests
+real Lightroom Phase 0 and target-image live validation
+```
+
+The supplied underwater image is the canonical regression case for native target-detection failure and upper-left radial fallback. Strict completion also requires all T-019 through T-028 regression gates.
+
+## T-030 Windows Background/Tray QA Addendum
+
+Required test classes:
+
+```text
+unit: coalescer, stability, exclusion, identity, state reducer
+integration: PostgreSQL idempotent registration, pause/resume/rescan
+Windows: named mutex, named pipe, tray lifecycle, autostart, shutdown
+recovery: Worker crash, heartbeat timeout, restart limit, no duplicate effects
+soak: long idle watch and 100+ sequential files
+```
+
+Headless reference tests do not replace Windows live evidence. Production completion requires approved icon assets, visible tray proof, copy-in-progress proof, single-instance proof, crash recovery, and zero orphan processes.

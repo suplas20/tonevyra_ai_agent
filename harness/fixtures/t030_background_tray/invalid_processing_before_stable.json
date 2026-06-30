@@ -1,0 +1,7 @@
+{
+  "case_id": "invalid-processing-before-stable",
+  "process_before_stable": true,
+  "stable_at_seconds": 10,
+  "analysis_started_at_seconds": 4,
+  "expected_validation": "FAIL"
+}

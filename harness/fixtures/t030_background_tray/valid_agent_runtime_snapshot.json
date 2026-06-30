@@ -1,0 +1,21 @@
+{
+  "schema_version": "t030.agent_runtime_snapshot.v1",
+  "agent_instance_id": "agent-t030-001",
+  "shell_instance_id": "shell-t030-001",
+  "state": "WATCHING",
+  "started_at": "2026-06-29T10:00:00Z",
+  "last_heartbeat_at": "2026-06-29T10:00:05Z",
+  "watching_enabled": true,
+  "watch_path": "D:\\Tonevyra\\Input",
+  "recursive": false,
+  "queue_depth": 0,
+  "processing_count": 0,
+  "failed_count": 0,
+  "active_job_id": null,
+  "lightroom_connected": true,
+  "model_ready": true,
+  "db_ready": true,
+  "degraded_reasons": [],
+  "worker_restart_count": 0,
+  "version": "0.30.0"
+}

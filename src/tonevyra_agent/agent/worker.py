@@ -57,7 +57,7 @@ class AgentWorker:
         self.storage = storage or ArtifactStorage(self.settings)
         self.task_repository = task_repository or ImageTaskRepository()
         self.event_repository = event_repository or TaskEventRepository()
-        self.vision_analyzer = VisionAnalyzer(settings=self.settings, storage=self.storage)
+        self._vision_analyzer: VisionAnalyzer | None = None
         self.correction_planner = CorrectionPlanner(settings=self.settings, storage=self.storage)
         self.lightroom_bridge = LightroomBridge(settings=self.settings, storage=self.storage)
         self.quality_gate = QualityGate(settings=self.settings, storage=self.storage)
@@ -74,6 +74,17 @@ class AgentWorker:
 
     def process_task(self, task_id: UUID) -> WorkerPipelineResult:
         try:
+            return self._process_task_inner(task_id)
+        finally:
+            self.release_resources()
+
+    def release_resources(self) -> None:
+        if self._vision_analyzer is not None:
+            self._vision_analyzer.close()
+            self._vision_analyzer = None
+
+    def _process_task_inner(self, task_id: UUID) -> WorkerPipelineResult:
+        try:
             metadata_artifact, preview_artifact = self._run_metadata_preview(task_id)
             vision_artifacts = self._run_vision(task_id, metadata_artifact=metadata_artifact, preview_artifact=preview_artifact)
             correction_plan = self._run_correction_plan(
@@ -87,6 +98,23 @@ class AgentWorker:
                 apply_result = self._ingest_lightroom_response(task_id, response_path=apply_result_path)
                 if not apply_result.success:
                     return self._current_result(task_id, processed=True)
+                mask_request = self._write_lightroom_mask_request(
+                    task_id,
+                    correction_plan_artifact=correction_plan,
+                )
+                if mask_request is not None:
+                    try:
+                        mask_result_path = self._wait_for_lightroom_mask_response(
+                            task_id,
+                            request_id=mask_request.payload.request_id,
+                        )
+                        self._ingest_lightroom_mask_response(task_id, response_path=mask_result_path)
+                    except TonevyraError as exc:
+                        self._record_lightroom_mask_fallback(
+                            task_id,
+                            request_id=mask_request.payload.request_id,
+                            reason=exc.message,
+                        )
                 export_request = self._write_lightroom_export_request(task_id, apply_result=apply_result.payload)
                 export_result_path = self._wait_for_lightroom_export_response(
                     task_id,
@@ -182,7 +210,7 @@ class AgentWorker:
         with session_scope(self.settings) as session:
             task = self._require_task(session, task_id)
             try:
-                return self.vision_analyzer.analyze(
+                return self._get_vision_analyzer().analyze(
                     session,
                     task=task,
                     preview_artifact=preview_artifact,
@@ -268,6 +296,53 @@ class AgentWorker:
             except TonevyraError:
                 session.commit()
                 raise
+
+    def _write_lightroom_mask_request(self, task_id: UUID, *, correction_plan_artifact: ArtifactRef):
+        with session_scope(self.settings) as session:
+            task = self._require_task(session, task_id)
+            try:
+                return self.lightroom_bridge.write_mask_request_from_correction_plan(
+                    session,
+                    task=task,
+                    correction_plan_artifact=correction_plan_artifact,
+                )
+            except TonevyraError:
+                session.commit()
+                raise
+
+    def _wait_for_lightroom_mask_response(self, task_id: UUID, *, request_id: str) -> Path:
+        return self.lightroom_bridge.wait_for_mask_response(request_id=request_id, poll_interval_seconds=0.25)
+
+    def _ingest_lightroom_mask_response(self, task_id: UUID, *, response_path: Path):
+        with session_scope(self.settings) as session:
+            task = self._require_task(session, task_id)
+            try:
+                return self.lightroom_bridge.ingest_mask_result(session, task=task, response_path=response_path)
+            except TonevyraError:
+                session.commit()
+                raise
+
+    def _record_lightroom_mask_fallback(self, task_id: UUID, *, request_id: str, reason: str) -> None:
+        with session_scope(self.settings) as session:
+            task = self._require_task(session, task_id)
+            self.event_repository.create(
+                session,
+                task_id=task.id,
+                event_type=TaskEventType.LIGHTROOM_RESPONSE_RECEIVED,
+                stage=Stage.LIGHTROOM,
+                message="Lightroom native mask execution was unavailable; continuing with global exposure fallback.",
+                payload_json={
+                    "loop_name": PROCESSING_LOOP_NAME,
+                    "loop_iteration": 1,
+                    "event_type": TaskEventType.LIGHTROOM_RESPONSE_RECEIVED.value,
+                    "from_status": task.status,
+                    "to_status": task.status,
+                    "reason": reason,
+                    "request_id": request_id,
+                    "fallback_policy": "continue_with_global_high_exposure",
+                    "evidence_artifacts": [],
+                },
+            )
 
     def _write_lightroom_export_request(self, task_id: UUID, *, apply_result):
         with session_scope(self.settings) as session:
@@ -473,6 +548,11 @@ class AgentWorker:
                 return Stage(task.current_stage)
             except ValueError:
                 return Stage.RECOVERY
+
+    def _get_vision_analyzer(self) -> VisionAnalyzer:
+        if self._vision_analyzer is None:
+            self._vision_analyzer = VisionAnalyzer(settings=self.settings, storage=self.storage)
+        return self._vision_analyzer
 
 def process_next_queued_task(*, settings: Settings | None = None) -> WorkerPipelineResult | None:
     return AgentWorker(settings=settings).process_next_queued()

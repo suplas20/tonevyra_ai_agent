@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tonevyra.local/schemas/t030_tray_command.schema.json",
+  "title": "T-030 Tray Command",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "command_id", "command", "requested_at", "source"],
+  "properties": {
+    "schema_version": {"const": "t030.tray_command.v1"},
+    "command_id": {"type": "string", "minLength": 1},
+    "command": {
+      "enum": ["GET_STATUS", "PAUSE_WATCHING", "RESUME_WATCHING", "RESCAN", "OPEN_INPUT_FOLDER", "OPEN_OUTPUT_FOLDER", "RETRY_FAILED_JOB", "SHUTDOWN"]
+    },
+    "requested_at": {"type": "string", "format": "date-time"},
+    "source": {"enum": ["TRAY", "CLI", "INSTALLER"]},
+    "expected_agent_instance_id": {"type": ["string", "null"]},
+    "job_id": {"type": ["string", "null"]}
+  }
+}

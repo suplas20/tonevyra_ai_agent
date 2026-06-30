@@ -426,3 +426,42 @@ Qwen fine-tuning 자동화
 > 사진 1장을 Mock Vision과 Fake Lightroom으로 끝까지 처리해 최종 상태와 모든 증거 데이터를 남기는 것.
 
 이 목표가 달성되면 실제 Lightroom과 실제 Qwen을 연결한다.
+
+---
+
+## 15. T-029 Implementation Readiness Addendum
+
+T-029 is implementation-ready at the contract and harness level, but code implementation has a hard external prerequisite: one human-validated radial preset from the supported Lightroom Classic version must be available for Phase 0 proof and template generation.
+
+Required readiness checks:
+
+```text
+[ ] current Plugin path and bridge dispatcher identified
+[ ] T-019/T-020 live path passes
+[ ] T-023 semantic/local planning models identified
+[ ] T-028 idempotency/snapshot/recovery path identified
+[ ] supported Lightroom version fixed
+[ ] seed radial preset exported and checksum recorded
+[ ] Phase 0 automatic preset apply can be tested
+[ ] supplied T-029 source image available
+```
+
+Do not start bulk template generation until Phase 0 passes.
+
+## 16. T-030 Implementation Readiness Addendum
+
+Required readiness checks:
+
+```text
+[ ] existing watcher/stabilizer modules identified
+[ ] PostgreSQL task registration/idempotency path identified
+[ ] T-028 checkpoint/incident/recovery path identified
+[ ] existing CLI entrypoint identified
+[ ] Windows user-session development/test machine available
+[ ] per-user named mutex/named pipe adapter can be tested
+[ ] input/output/internal path policy identified
+[ ] approved Tonevyra symbol source located or BLOCKED_TRAY_ICON_ASSET_MISSING recorded
+[ ] T-019~T-029 regressions pass
+```
+
+Do not claim readiness from a tray mock alone. Actual Windows live testing is a completion prerequisite.

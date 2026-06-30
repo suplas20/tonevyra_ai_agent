@@ -1,13 +1,14 @@
 """Configuration for Tonevyra AI Agent."""
 
 from functools import lru_cache
+import os
 from pathlib import Path
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[3]
+PROJECT_ROOT = Path(os.environ.get("TONEVYRA_PROJECT_ROOT", Path(__file__).resolve().parents[3])).resolve()
 
 REQUIRED_DB_TABLES: tuple[str, ...] = (
     "image_tasks",
@@ -65,7 +66,25 @@ class Settings(BaseSettings):
     # idempotent; the plugin's relative-delta path reads the photo's current
     # temperature and would otherwise accumulate the delta on every run.
     nominal_as_shot_temperature: float = 6500.0
+    # Underwater color calibration OWNED BY THE PLANNER (not hardcoded magic
+    # numbers). Underwater red is absorbed and is recovered with a magenta TINT
+    # that is PROPORTIONAL to the white-balance warming, not with HSL red. Warming
+    # scales with the measured blue cast but stays cool. Calibrated to a Lightroom
+    # reference: temperature_delta 1500 (=> ~8000K) <-> tint +64.
+    underwater_temp_per_cast: float = 32.0
+    underwater_temp_delta_min: float = 800.0
+    underwater_temp_delta_max: float = 1800.0
+    underwater_tint_per_temp_delta: float = 64.0 / 1500.0
+    underwater_tint_max: float = 90.0
+    underwater_red_saturation: float = 55.0
+    underwater_red_luminance: float = 42.0
     lightroom_backend: str = "fake"
+    # When enabled, the real Lightroom pipeline sends planner-owned local
+    # adjustment plans through the T-029 native mask bridge after global Develop
+    # settings are applied and before final export. If the plugin reports skip or
+    # times out, the worker continues with the already-strong global fallback.
+    lightroom_native_mask_execution_enabled: bool = False
+    lightroom_mask_response_timeout_seconds: int = 60
     model_offline: bool = True
     worker_concurrency: int = 1
     quality_pass_threshold: int = 85
@@ -94,6 +113,17 @@ class Settings(BaseSettings):
     file_stable_checks: int = 3
     file_stable_interval_seconds: float = 1.0
     file_stable_timeout_seconds: float = 120.0
+    watch_enabled: bool = True
+    watch_recursive: bool = False
+    watch_stability_interval_seconds: float = 2.0
+    watch_required_stable_samples: int = 3
+    watch_stability_timeout_seconds: float = 300.0
+    tray_enabled: bool = True
+    autostart_enabled: bool = False
+    worker_restart_limit: int = 3
+    worker_heartbeat_timeout_seconds: float = 20.0
+    worker_restart_window_seconds: float = 300.0
+    graceful_shutdown_timeout_seconds: float = 20.0
     preview_long_edge: int = 1024
     lightroom_response_timeout_seconds: int = 300
 
@@ -133,6 +163,11 @@ class Settings(BaseSettings):
             bridge_dir / "lightroom_export_processed",
             bridge_dir / "lightroom_export_results",
             bridge_dir / "lightroom_export_errors",
+            bridge_dir / "lightroom_mask_requests",
+            bridge_dir / "lightroom_mask_processing",
+            bridge_dir / "lightroom_mask_processed",
+            bridge_dir / "lightroom_mask_results",
+            bridge_dir / "lightroom_mask_errors",
             self.project_path(self.log_dir),
             self.project_path(self.models_dir),
         )

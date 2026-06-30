@@ -1,4 +1,4 @@
-﻿# Tonevyra AI - Folder Watcher & File Pipeline
+# Tonevyra AI - Folder Watcher & File Pipeline
 
 > Agent-readable implementation document. Follow `AGENTS.md` first, then `CLAUDE.md`, then this document.
 
@@ -188,3 +188,26 @@ PREVIEW_JPEG
 ```
 
 Do not pass original RAW directly to the model.
+
+## T-030 Continuous Windows Watcher Addendum
+
+T-030 upgrades the watcher from a CLI-started MVP loop to a continuously supervised Windows background runtime.
+
+```text
+Created/Modified/Renamed/Moved-In/Rescan
+→ path-normalized debounce
+→ size + mtime + read-probe stability
+→ exclusion/recursion safety
+→ PostgreSQL register-or-get-existing
+→ existing processing loop
+```
+
+Default stability policy:
+
+```text
+interval=2 seconds
+required stable samples=3
+timeout=300 seconds
+```
+
+Pause stops new intake and resume performs a bounded rescan. Event storms, restart, and rescan must have exactly-once external effect. Output, cache, runtime, failed, sidecar, and temporary paths are excluded. T-030 does not modify source files.
