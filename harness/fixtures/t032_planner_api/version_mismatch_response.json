@@ -1,0 +1,31 @@
+{
+  "schema_version": "t032.planner.response.v2",
+  "status": "success",
+  "request_id": "4a6c3f98-0be7-4dbe-bc72-24c065f40874",
+  "server_request_id": "srv-reference-001",
+  "planner_version": "1.0.0",
+  "policy_version": "2026-07-07.1",
+  "input_digest": "sha256:8f2fe13d0cfc247169fb853c1415e0f94634791126ec08f430f7b628d21302d0",
+  "replayed": false,
+  "plan": {
+    "global_adjustments": {
+      "exposure": 1.25,
+      "contrast": 8,
+      "highlights": -20,
+      "shadows": 35,
+      "whites": 10,
+      "blacks": -8,
+      "temperature": 7100,
+      "tint": 15,
+      "texture": 5,
+      "clarity": 4,
+      "dehaze": 8,
+      "vibrance": 12,
+      "saturation": 0
+    },
+    "local_adjustments": [],
+    "requires_review": false,
+    "reason_summary": "bounded underwater exposure and color recovery"
+  },
+  "plan_digest": "sha256:5433b1bdfdc6b156055df4aec932f252ea7a93f7ce79da1f5a460c177470fce6"
+}

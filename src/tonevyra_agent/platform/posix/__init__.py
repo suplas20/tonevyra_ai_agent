@@ -1,0 +1,2 @@
+"""Generic POSIX platform adapter."""
+

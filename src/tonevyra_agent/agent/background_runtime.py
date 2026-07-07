@@ -3,22 +3,21 @@
 from __future__ import annotations
 
 import json
-import os
-import subprocess
-import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
-from tonevyra_agent.agent.runner import AgentRunner
 from tonevyra_agent.agent.runtime_snapshot import AgentRuntimeSnapshot, RuntimeSnapshotStore
 from tonevyra_agent.agent.runtime_state import AgentRuntimeState, reduce_runtime_state
+from tonevyra_agent.agent.watcher import FolderWatcher
 from tonevyra_agent.core.config import Settings, get_settings
 from tonevyra_agent.core.enums import TaskStatus
 from tonevyra_agent.db.database import session_scope
 from tonevyra_agent.db.repositories import ImageTaskRepository
+from tonevyra_agent.inference.lifecycle import ProcessInferenceWorkerController
+from tonevyra_agent.lightroom.process import lightroom_classic_status, record_lightroom_required_message
 from tonevyra_agent.windows.shell_worker_ipc import TrayCommand, TrayCommandName, TrayCommandProcessor
 from tonevyra_agent.windows.single_instance import SingleInstanceGuard, per_user_mutex_name
 from tonevyra_agent.windows.worker_supervisor import SupervisionPolicy, WorkerSupervisor
@@ -51,6 +50,8 @@ class BackgroundAgentRuntime:
         self.shutdown_requested = False
         self.initialized = False
         self.worker_restart_count = 0
+        self.watcher = FolderWatcher(self.settings)
+        self.inference_worker = ProcessInferenceWorkerController(self.settings)
 
     def run(self, *, max_iterations: int | None = None, poll_interval_seconds: float = 2.0) -> BackgroundRuntimeResult:
         with SingleInstanceGuard(per_user_mutex_name("Agent"), self.settings) as guard:
@@ -74,11 +75,27 @@ class BackgroundAgentRuntime:
             while not self.shutdown_requested:
                 self._poll_commands()
                 processing_count = 0
+                degraded_reasons = None
                 if not self.watch_paused and self.settings.watch_enabled:
-                    with _fake_lightroom_worker(self.settings):
-                        result = AgentRunner(settings=self.settings).run_once(scan_input=True)
-                    processing_count = 1 if result.worker_result and result.worker_result.processed else 0
-                snapshot = self._snapshot(processing_count=processing_count)
+                    self._scan_input()
+                    lightroom_status = lightroom_classic_status(self.settings)
+                    if lightroom_status.required and not lightroom_status.running:
+                        degraded_reasons = [lightroom_status.reason or "LIGHTROOM_CLASSIC_NOT_RUNNING"]
+                        record_lightroom_required_message(
+                            self.settings,
+                            status=lightroom_status,
+                            notify=self.settings.lightroom_missing_notification_enabled,
+                        )
+                    elif self._queued_count() > 0:
+                        self.inference_worker.ensure_started()
+                worker_snapshot = self.inference_worker.tick()
+                processing_count = 1 if worker_snapshot.pid is not None else 0
+                snapshot = self._snapshot(
+                    processing_count=processing_count,
+                    degraded_reasons=degraded_reasons,
+                    lightroom_connected=not bool(degraded_reasons),
+                    model_ready=not bool(degraded_reasons),
+                )
                 self.supervisor.observe_heartbeat(snapshot)
                 evidence_paths.append(self.snapshot_store.write(snapshot))
                 iterations += 1
@@ -87,6 +104,7 @@ class BackgroundAgentRuntime:
                 time.sleep(poll_interval_seconds)
 
             stopped = self._snapshot(state=AgentRuntimeState.STOPPED, watching_enabled=False)
+            self.inference_worker.force_stop(timeout_seconds=self.settings.graceful_shutdown_timeout_seconds)
             evidence_paths.append(self.snapshot_store.write(stopped))
             return BackgroundRuntimeResult(snapshot=stopped, iterations=iterations, evidence_paths=evidence_paths)
 
@@ -103,7 +121,9 @@ class BackgroundAgentRuntime:
 
     def rescan(self) -> None:
         if not self.watch_paused:
-            AgentRunner(settings=self.settings).run_once(scan_input=True)
+            self._scan_input()
+            if self._queued_count() > 0:
+                self.inference_worker.ensure_started()
         self.snapshot_store.write(self._snapshot())
 
     def shutdown(self) -> None:
@@ -189,6 +209,13 @@ class BackgroundAgentRuntime:
         except Exception:  # noqa: BLE001 - snapshot degrades instead of crashing tray/runtime
             return {}
 
+    def _queued_count(self) -> int:
+        return self._task_counts().get(TaskStatus.QUEUED.value, 0)
+
+    def _scan_input(self) -> None:
+        with session_scope(self.settings) as session:
+            self.watcher.scan_once(session)
+
     def _pause_file(self) -> Path:
         return self.settings.project_path(self.settings.runtime_dir) / "watch.paused"
 
@@ -199,34 +226,3 @@ def write_tray_command(command: TrayCommand, settings: Settings | None = None) -
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(command.model_dump_json(indent=2), encoding="utf-8")
     return path
-
-
-class _fake_lightroom_worker:
-    def __init__(self, settings: Settings) -> None:
-        self.settings = settings
-        self.process: subprocess.Popen | None = None
-
-    def __enter__(self):
-        if self.settings.lightroom_backend != "fake":
-            return self
-        command = [
-            sys.executable,
-            str(Path(__file__).resolve().parents[3] / "harness" / "fake_lightroom" / "fake_lightroom_worker.py"),
-            "--bridge-dir",
-            str(self.settings.project_path(self.settings.bridge_dir)),
-            "--poll-interval",
-            "0.1",
-        ]
-        env = os.environ.copy()
-        env["TONEVYRA_BRIDGE_DIR"] = str(self.settings.project_path(self.settings.bridge_dir))
-        self.process = subprocess.Popen(command, cwd=Path(__file__).resolve().parents[3], env=env)
-        return self
-
-    def __exit__(self, _exc_type, _exc, _tb) -> None:
-        if self.process is None:
-            return
-        self.process.terminate()
-        try:
-            self.process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            self.process.kill()

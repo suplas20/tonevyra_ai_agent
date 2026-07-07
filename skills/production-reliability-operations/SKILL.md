@@ -56,3 +56,7 @@ Worker heartbeat timeout, restart attempts, restart window, and shutdown timeout
 ## T-031 Worker lifecycle operations
 
 Supervise the inference child with heartbeat, bounded restart, idle timeout, crash-loop detection, and orphan cleanup. Distinguish watcher health from inference-worker residency.
+
+## T-032 Planner Service Operations
+
+Monitor API liveness/readiness, request latency, status/error classes, replay/conflict counts, rate limits, idempotency backend health, certificate expiry, and Planner/policy/schema versions. Do not log API keys or full private payloads. Client and server restart/replay tests are mandatory.

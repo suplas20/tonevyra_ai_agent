@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t032_live_server_evidence.schema.json",
+  "title": "T032 Live Server Evidence",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "ticket",
+    "base_url",
+    "https_verified",
+    "unauthorized_rejected",
+    "authorized_plan_valid",
+    "idempotent_replay",
+    "idempotency_conflict_rejected",
+    "secret_redaction_verified",
+    "implementation_build"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t032.live_server_evidence.v1"
+    },
+    "ticket": {
+      "const": "T032"
+    },
+    "base_url": {
+      "type": "string",
+      "pattern": "^https://"
+    },
+    "https_verified": {
+      "const": true
+    },
+    "unauthorized_rejected": {
+      "const": true
+    },
+    "authorized_plan_valid": {
+      "const": true
+    },
+    "idempotent_replay": {
+      "const": true
+    },
+    "idempotency_conflict_rejected": {
+      "const": true
+    },
+    "secret_redaction_verified": {
+      "const": true
+    },
+    "implementation_build": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}

@@ -47,3 +47,7 @@ the actual Lightroom export scored by the Quality Gate; the decision log records
 
 ## Failure
 Planning failure uses `CORRECTION_PLAN_FAILED`.
+
+## T-032 Deployment Boundary
+
+Production Planner rule execution moves to `tonevyra_planner_service`. The local Agent keeps the CorrectionPlan contract and independent range validation, but its production distribution must not contain Planner rules or a selectable local fallback. Existing local Planner implementations may remain only in server code, migration tooling, or explicitly test-only fixtures.

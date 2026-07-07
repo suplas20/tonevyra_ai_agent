@@ -44,7 +44,7 @@ The local harness intentionally keeps `lightroom_simultaneous_operation_stabilit
 | Real Lightroom export validation | Environment-dependent harness gap | Static plugin and bridge protocol checks exist; actual Lightroom Classic execution requires installed app and catalog context. |
 | Real Qwen model benchmark | Environment-dependent harness gap | Actual model files are not present in `models/`; current harness uses fake runtime to verify contracts. |
 | License-review evidence artifact | Future acceptance gate | Policy is documented, but no dedicated license review artifact type or DB field exists. Adding one would require enum/DB/migration/test coordination. |
-| Legacy source tree | Naming cleanup risk | `src/mw_photo_agent` remains on disk but is excluded from packaging. Deleting it should be a separate migration cleanup task. |
+| Legacy source tree | Resolved cleanup | `src/mw_photo_agent` was removed after package discovery confirmed the active code path uses Tonevyra packages. |
 | Git diff availability | Repository setup issue resolved | `F:\tonevyra_ai_agent` is the current Git repo and diff/status checks should run there. |
 
 ## Additional Tests Recommended

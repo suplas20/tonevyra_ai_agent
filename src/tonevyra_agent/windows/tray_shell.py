@@ -40,8 +40,11 @@ class TrayShell:
                 RuntimeSnapshotStore(config).read()
                 return 2
             launcher = BackgroundWorkerLauncher(config)
+            started_background = False
             if start_background:
-                launcher.start()
+                if not launcher.is_background_running():
+                    launcher.start()
+                    started_background = True
             icon_path = icon_status.icons["tonevyra_tray.ico"]
             tray = NativeTrayIcon(icon_path, tooltip="Tonevyra AI")
             try:
@@ -50,7 +53,7 @@ class TrayShell:
                 else:
                     result = tray.run_until_interrupted()
             finally:
-                if start_background:
+                if started_background:
                     launcher.stop()
             if result.added and result.removed and result.error_code is None:
                 return 0

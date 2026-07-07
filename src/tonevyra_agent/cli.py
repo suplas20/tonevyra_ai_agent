@@ -17,11 +17,9 @@ from uuid import UUID
 import typer
 from sqlalchemy.exc import SQLAlchemyError
 
-from tonevyra_agent.agent.recovery import RecoveryManager
 from tonevyra_agent.agent.background_runtime import BackgroundAgentRuntime, write_tray_command
 from tonevyra_agent.agent.reliability import ReliabilityStore
 from tonevyra_agent.agent.runtime_snapshot import RuntimeSnapshotStore
-from tonevyra_agent.agent.runner import AgentRunner
 from tonevyra_agent.agent.watcher import FolderWatcher
 from tonevyra_agent.core.config import REQUIRED_DB_TABLES, REQUIRED_DB_VIEWS, Settings, get_settings
 from tonevyra_agent.core.enums import FeedbackUserAction, TaskStatus
@@ -36,11 +34,6 @@ from tonevyra_agent.db.repositories import (
     TaskEventRepository,
     run_db_smoke_test,
 )
-from tonevyra_agent.learning.feedback import FeedbackCaptureService
-from tonevyra_agent.learning.reference_pair import analyze_expert_reference_pair
-from tonevyra_agent.learning.schemas import DevelopSettingsSnapshot, FeedbackCaptureRequest
-from tonevyra_agent.vision.benchmark import run_model_benchmark
-from tonevyra_agent.vision.model import create_vision_backend
 from tonevyra_agent.windows.shell_worker_ipc import TrayCommand, TrayCommandName
 from tonevyra_agent.windows.startup_registration import StartupRegistration
 from tonevyra_agent.windows.tray_icons import tray_icon_status
@@ -227,12 +220,35 @@ def init() -> None:
 
 
 @app.command()
-def start(scan: bool = typer.Option(True, "--scan/--no-scan", help="Scan input before processing one queued task.")) -> None:
-    """Run startup recovery and one MVP processing cycle."""
+def start(
+    scan: bool = typer.Option(True, "--scan/--no-scan", help="Scan input before processing one queued task in --once mode."),
+    once: bool = typer.Option(False, "--once", help="Run one legacy CLI processing cycle and exit."),
+    background_only: bool = typer.Option(
+        False,
+        "--background-only",
+        help="Run the background worker without the tray icon. Diagnostic use only.",
+    ),
+    poll_interval: float = typer.Option(2.0, "--poll-interval", min=0.5, max=30.0),
+) -> None:
+    """Start Tonevyra with the Windows tray icon and background Agent."""
 
     settings = get_settings()
+    if background_only:
+        result = BackgroundAgentRuntime(settings=settings).run(poll_interval_seconds=poll_interval)
+        typer.echo(f"state={result.snapshot.state.value}")
+        typer.echo(f"iterations={result.iterations}")
+        typer.echo(f"snapshot={RuntimeSnapshotStore(settings).path}")
+        return
+
+    if not once:
+        raise typer.Exit(TrayShell(settings=settings).run(start_background=True))
+
+    from tonevyra_agent.agent.recovery import RecoveryManager
+
     recovery = RecoveryManager(settings=settings).recover_all()
     with _fake_lightroom_worker(settings):
+        from tonevyra_agent.agent.runner import AgentRunner
+
         result = AgentRunner(settings=settings).run_once(scan_input=scan)
 
     typer.echo(
@@ -478,6 +494,8 @@ def retry(
     settings = get_settings()
     try:
         with _fake_lightroom_worker(settings) if process_now else _null_context():
+            from tonevyra_agent.agent.runner import AgentRunner
+
             result = AgentRunner(settings=settings).retry_task(task_id, process_now=process_now)
     except ValueError as exc:
         typer.echo(f"[FAIL] retry: {exc}", err=True)
@@ -496,6 +514,8 @@ def process(file_path: Path) -> None:
     settings = get_settings()
     try:
         with _fake_lightroom_worker(settings):
+            from tonevyra_agent.agent.runner import AgentRunner
+
             result = AgentRunner(settings=settings).process_file(file_path)
     except ValueError as exc:
         typer.echo(f"[FAIL] process: {exc}", err=True)
@@ -514,6 +534,8 @@ def test_lightroom() -> None:
 @app.command("test-vision")
 def test_vision() -> None:
     """Run the vision backend validation harnesses."""
+
+    from tonevyra_agent.vision.model import create_vision_backend
 
     create_vision_backend(get_settings())
     _run_harness_script("run_vision_mock_test.py")
@@ -636,6 +658,8 @@ def feedback_approve(
 ) -> None:
     """Store explicit approval feedback for a finished task."""
 
+    from tonevyra_agent.learning.schemas import DevelopSettingsSnapshot, FeedbackCaptureRequest
+
     _capture_feedback(
         task_id,
         FeedbackCaptureRequest(
@@ -656,6 +680,8 @@ def feedback_reject(
     rating: int = typer.Option(1, "--rating", min=1, max=5),
 ) -> None:
     """Store explicit rejection feedback for a finished task."""
+
+    from tonevyra_agent.learning.schemas import DevelopSettingsSnapshot, FeedbackCaptureRequest
 
     _capture_feedback(
         task_id,
@@ -679,6 +705,10 @@ def feedback_expert_pair(
     use_for_learning: bool = typer.Option(True, "--use-for-learning/--no-use-for-learning"),
 ) -> None:
     """Analyze an expert before/after pair and store local calibration evidence."""
+
+    from tonevyra_agent.learning.feedback import FeedbackCaptureService
+    from tonevyra_agent.learning.reference_pair import analyze_expert_reference_pair
+    from tonevyra_agent.learning.schemas import DevelopSettingsSnapshot, FeedbackCaptureRequest
 
     task_repo = ImageTaskRepository()
     settings = get_settings()
@@ -746,6 +776,8 @@ def benchmark_models(
 ) -> None:
     """Run the bounded local model benchmark loop."""
 
+    from tonevyra_agent.vision.benchmark import run_model_benchmark
+
     result = run_model_benchmark(
         settings=get_settings(),
         sample_set=sample_set,
@@ -762,7 +794,9 @@ def get_app_settings() -> Settings:
     return get_settings()
 
 
-def _capture_feedback(task_id: UUID, request: FeedbackCaptureRequest) -> None:
+def _capture_feedback(task_id: UUID, request: Any) -> None:
+    from tonevyra_agent.learning.feedback import FeedbackCaptureService
+
     task_repo = ImageTaskRepository()
     settings = get_settings()
     with session_scope(settings) as session:
@@ -826,6 +860,9 @@ def _render_run_once_result(result) -> None:
             f"skipped={len(result.scan_result.skipped_task_ids)}"
         )
     if result.worker_result is None:
+        if getattr(result, "blocked_reason", None):
+            typer.echo(f"[BLOCKED] {result.blocked_reason}: {result.blocked_message}")
+            return
         typer.echo("No queued task was processed.")
         return
     _render_worker_result(result.worker_result)

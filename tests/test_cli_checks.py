@@ -2,8 +2,30 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from typer.testing import CliRunner
+
+from tonevyra_agent import cli
 from tonevyra_agent.cli import _vision_backend_check
 from tonevyra_agent.core.config import Settings
+
+
+def test_start_command_launches_tray_and_background_by_default(monkeypatch) -> None:
+    calls = {}
+
+    class FakeTrayShell:
+        def __init__(self, *, settings):
+            self.settings = settings
+
+        def run(self, *, start_background: bool = True) -> int:
+            calls["start_background"] = start_background
+            return 0
+
+    monkeypatch.setattr(cli, "TrayShell", FakeTrayShell)
+
+    result = CliRunner().invoke(cli.app, ["start"])
+
+    assert result.exit_code == 0
+    assert calls == {"start_background": True}
 
 
 def test_vision_backend_check_accepts_existing_qwen_model_path(tmp_path: Path) -> None:

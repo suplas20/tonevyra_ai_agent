@@ -46,3 +46,7 @@ After restart, inspect checkpoint, pending command, external evidence, and idemp
 ## T-030 watcher idempotency rule
 
 Created/Modified/Renamed/Moved-In/rescan events for one stable file must converge to one durable task and one external pipeline effect. Event coalescing is only the first layer; PostgreSQL transactional register-or-get-existing and existing idempotency keys remain authoritative across restart.
+
+## T-032 Cross-network Idempotency
+
+The Planner request is an idempotency boundary. Persist request body, input digest, request ID, and idempotency key before sending. Same key/same digest returns the committed result; same key/different digest is an integrity conflict. Server replay must not create a second Lightroom effect.

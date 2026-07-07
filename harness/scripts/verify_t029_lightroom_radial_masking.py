@@ -230,8 +230,9 @@ def validate_static(root: Path) -> list[str]:
             failures.append("T-029 inventory baseline skill count mismatch")
         if inventory.get("expected_total_skill_count") != EXPECTED_SKILL_COUNT:
             failures.append("T-029 inventory total skill count mismatch")
-        if set(inventory.get("all_skills", [])) != skill_dirs:
-            failures.append("T-029 inventory does not match actual SKILL.md directories")
+        inventory_skills = set(inventory.get("all_skills", []))
+        if len(inventory_skills) != EXPECTED_SKILL_COUNT or not inventory_skills.issubset(skill_dirs):
+            failures.append("T-029 inventory snapshot is not preserved in current SKILL.md directories")
     except Exception as exc:
         failures.append(f"invalid T-029 skill inventory: {exc}")
 

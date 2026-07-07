@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -232,3 +232,7 @@ Windows user logon
 ```
 
 The Tray Shell and Worker are separate logical responsibilities. UI code cannot own Planner, Lightroom, quality, or DB transition logic. PostgreSQL remains the durable queue; no SQLite runtime queue is allowed.
+
+## T-032 Architecture Addendum
+
+Insert `PlannerApiClient` between local vision analysis and the correction plan artifact. Run Planner rules only in `tonevyra_planner_service`. The local pipeline keeps independent response validation and all Lightroom/quality stages. The dedicated FastAPI service is an exception to the deferred FastAPI-first local Agent architecture.

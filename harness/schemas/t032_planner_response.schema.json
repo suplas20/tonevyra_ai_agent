@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t032_planner_response.schema.json",
+  "title": "T032 Planner Response",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "status",
+    "request_id",
+    "server_request_id",
+    "planner_version",
+    "policy_version",
+    "input_digest",
+    "replayed",
+    "plan",
+    "plan_digest"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t032.planner.response.v1"
+    },
+    "status": {
+      "const": "success"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "server_request_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "planner_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "policy_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "input_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "replayed": {
+      "type": "boolean"
+    },
+    "plan": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "plan_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

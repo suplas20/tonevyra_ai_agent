@@ -86,8 +86,15 @@
     "skills/radial-mask-template-library/SKILL.md": "d60acddd9fc2df44fd9139e83a02e8192ebe3845311c35e3d02b162c75963093",
     "skills/T029_SKILL_INVENTORY.json": "c074e587ea70f23fe70d91d3e8a63100a6daa898c98d3b2ffa21116f6bd15af1",
     "harness/CONTRACT_T029_LIGHTROOM_RADIAL_MASKING.md": "5234c5ccf6ce5e9a47a3c0d7afa405e58028f633fcf6726880a53671974f6165",
-    "harness/scripts/verify_t029_lightroom_radial_masking.py": "e57be1b8bf684344d6f39e941cae021e7b633824c2f5b5ad43ea1b7fda05c36a",
+    "harness/scripts/verify_t029_lightroom_radial_masking.py": "1844933d99b6808d5550cdecd88b75a5863c834019cee74185156987b7df83d1",
     "harness/scripts/run_t029_radial_masking_runtime.py": "beaff0e34f9a1a32c7a4622156033d0e1684be2339d54ce04b19ee4c7b56642e"
   },
-  "manifest_self_hash_excluded": true
+  "manifest_self_hash_excluded": true,
+  "compatibility_updates": [
+    {
+      "ticket": "T-032",
+      "reason": "Allow later cumulative skills while preserving the 43-skill T-029 inventory snapshot.",
+      "file": "harness/scripts/verify_t029_lightroom_radial_masking.py"
+    }
+  ]
 }

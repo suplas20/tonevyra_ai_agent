@@ -19,12 +19,15 @@ from tonevyra_agent.core.config import Settings, get_settings
 from tonevyra_agent.core.enums import Stage, TaskEventType, TaskStatus
 from tonevyra_agent.db.database import session_scope
 from tonevyra_agent.db.repositories import ImageTaskRepository, TaskEventRepository
+from tonevyra_agent.lightroom.process import lightroom_classic_status
 
 
 @dataclass(frozen=True)
 class AgentRunOnceResult:
     scan_result: WatchScanResult | None
     worker_result: WorkerPipelineResult | None
+    blocked_reason: str | None = None
+    blocked_message: str | None = None
 
     @property
     def processed(self) -> bool:
@@ -55,6 +58,15 @@ class AgentRunner:
             has_queued_task = bool(ImageTaskRepository().list_by_status(session, TaskStatus.QUEUED))
         if not has_queued_task:
             return AgentRunOnceResult(scan_result=scan_result, worker_result=None)
+
+        lightroom_status = lightroom_classic_status(self.settings)
+        if lightroom_status.required and not lightroom_status.running:
+            return AgentRunOnceResult(
+                scan_result=scan_result,
+                worker_result=None,
+                blocked_reason=lightroom_status.reason,
+                blocked_message=lightroom_status.message,
+            )
 
         worker_result = self._worker().process_next_queued()
         return AgentRunOnceResult(scan_result=scan_result, worker_result=worker_result)
@@ -157,6 +169,10 @@ class AgentRunner:
                     )
             task_id = task.id
 
+        lightroom_status = lightroom_classic_status(self.settings)
+        if lightroom_status.required and not lightroom_status.running:
+            raise ValueError(lightroom_status.message or "Lightroom Classic is not running.")
+
         return self._worker().process_task(task_id)
 
     def retry_task(self, task_id: UUID, *, process_now: bool = False) -> WorkerPipelineResult | None:
@@ -194,6 +210,9 @@ class AgentRunner:
             )
 
         if process_now:
+            lightroom_status = lightroom_classic_status(self.settings)
+            if lightroom_status.required and not lightroom_status.running:
+                raise ValueError(lightroom_status.message or "Lightroom Classic is not running.")
             return self._worker().process_task(task_id)
         return None
 

@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t032_planner_request.schema.json",
+  "title": "T032 Planner Request",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "request_id",
+    "client",
+    "image_context",
+    "analysis",
+    "preferences",
+    "input_digest"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t032.planner.request.v1"
+    },
+    "request_id": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "client": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_version",
+        "platform",
+        "device_id_hash"
+      ],
+      "properties": {
+        "agent_version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platform": {
+          "enum": [
+            "windows",
+            "macos"
+          ]
+        },
+        "device_id_hash": {
+          "type": "string",
+          "pattern": "^sha256:"
+        }
+      }
+    },
+    "image_context": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "width",
+        "height",
+        "orientation"
+      ],
+      "properties": {
+        "width": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "orientation": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 8
+        },
+        "iso": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1
+        },
+        "shutter_seconds": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "aperture": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        },
+        "focal_length_mm": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "analysis": {
+      "type": "object",
+      "minProperties": 1
+    },
+    "preferences": {
+      "type": "object"
+    },
+    "input_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  }
+}

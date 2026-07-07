@@ -1,2 +1,0 @@
-[console_scripts]
-tonevyra-agent = tonevyra_agent.cli:app

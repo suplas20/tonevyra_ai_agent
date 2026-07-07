@@ -71,3 +71,7 @@ error_code, error_message, failed_stage, retry_count, updated_at.
 하네스가 최소 ANALYZING, LIGHTROOM_REQUESTED, EXPORT_DONE, QUALITY_CHECK 중단을 커버;
 corrupted 아티팩트와 missing export 감지; retry count가 루프를 제한;
 로그 없이 복구 가능; 이중 기동 차단.
+
+## T-032 API Recovery
+
+Classify transport timeout/408/429/5xx as bounded transient failures. Treat auth, schema, privacy, digest, version, and idempotency conflict as non-blind-retry failures. Resume from the persisted Planner request and stable idempotency key; never regenerate a different payload under the same key.

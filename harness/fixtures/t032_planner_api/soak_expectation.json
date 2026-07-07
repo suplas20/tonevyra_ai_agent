@@ -1,0 +1,9 @@
+{
+  "request_count": 3000,
+  "client_concurrency": 1,
+  "expected_success_count": 3000,
+  "expected_missing_count": 0,
+  "expected_duplicate_response_ids": 0,
+  "expected_duplicate_external_effects": 0,
+  "expected_server_crashes": 0
+}

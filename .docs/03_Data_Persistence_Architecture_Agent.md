@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -196,3 +196,7 @@ task_artifacts
 ```
 
 The first learning use case is Correction Planner calibration and user style profile derivation. Direct model fine-tuning is not MVP runtime behavior.
+
+## T-032 Persistence Addendum
+
+Persist `planner_request.json`, `planner_response.json`, `planner_api_attempts.json`, and `correction_plan.json` atomically with checksums. Do not persist API keys or Authorization headers. Request ID, input digest, idempotency key hash/reference, attempt count, result/error class, and Planner/policy versions must be recoverable.

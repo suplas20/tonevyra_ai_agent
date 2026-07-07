@@ -151,7 +151,7 @@ Model backend rules:
 - Use local_files_only=True.
 - Do not use trust_remote_code=True.
 - Do not download model files during photo processing.
-- Do not call remote APIs.
+- The model backend/Inference Worker must not call remote APIs. T-032 Planner networking belongs only to the separate Planner API client.
 - Do not load images from external URLs.
 - Keep model worker network-blockable at OS firewall level.
 ```
@@ -169,7 +169,7 @@ When modifying code:
 4. Keep the MVP CLI-first.
 5. Keep worker concurrency at 1 unless AGENTS.md is explicitly updated.
 6. Add or update tests/harness checks for the changed behavior.
-7. Do not introduce dashboard, FastAPI-first, Redis, Celery, MinIO, message broker, or worker pool code in MVP.
+7. Do not introduce dashboard, a FastAPI-first rewrite of the local Agent, Redis, Celery, MinIO, message broker, or worker pool code in MVP. The dedicated T-032 Planner Service is the only FastAPI exception.
 8. Do not invent new status strings, stage strings, error codes, artifact types, or quality decisions without updating AGENTS.md, code enums, DB constraints, migrations, and tests together.
 ```
 
@@ -371,3 +371,51 @@ skills/testing-harness/SKILL.md
 ```
 
 Do not claim T-031 complete from reference runtime only. Real macOS and Windows VRAM evidence are separate hard gates.
+
+## Required reading for T-032
+
+Before modifying Planner extraction, Planner API contracts, remote client behavior, API authentication, request privacy, idempotency, server deployment, or Planner connectivity status, read:
+
+```text
+AGENTS.md
+.docs/t032/T-032_Planner_Engine_API_Separation_Work_Order.md
+.docs/t032/T-032_Implementation_Specification.md
+.docs/t032/T-032_API_Contract.md
+.docs/t032/T-032_Server_Deployment_Guide.md
+.docs/t032/T-032_Live_Test_Checklist.md
+skills/planner-api-contract/SKILL.md
+skills/planner-api-client/SKILL.md
+skills/planner-api-service/SKILL.md
+skills/planner-api-security/SKILL.md
+skills/correction-planner/SKILL.md
+skills/resumable-idempotent-jobs/SKILL.md
+skills/production-reliability-operations/SKILL.md
+skills/testing-harness/SKILL.md
+harness/CONTRACT_T032_PLANNER_API_SEPARATION.md
+```
+
+T-032 implementation rules:
+
+```text
+- Preserve all 47 T-031 skills and add four T-032 skills; total 51.
+- Keep photos, previews, Qwen, paths, Lightroom, exports, and quality local.
+- Send only allowlisted normalized analysis and minimal image context.
+- Remove production Planner rules and local fallback from the client build.
+- Persist request/digest/idempotency evidence before send.
+- Validate auth/schema/privacy/digest/idempotency before server Planner execution.
+- Validate response binding/version/digest/ranges before Lightroom.
+- Keep canonical image task statuses; retries use attempts/events.
+- Bound retries, timeouts, rate-limit waits, and server restart behavior.
+- Use durable production idempotency.
+- Real completion requires implementation, HTTPS live, client build scan, and 3000-request soak evidence.
+```
+
+Canonical commands:
+
+```powershell
+python .\harness\scripts\verify_t032_planner_api_separation.py --project-root .
+python .\harness\scripts\run_t032_planner_api_reference.py --project-root .
+python .\harness\scripts\verify_t032_planner_api_separation.py --project-root . --runtime-evidence <implementation-runtime.json> --live-evidence <live-server.json> --client-build-scan <client-build-scan.json> --soak-evidence <soak.json> --strict
+```
+
+Do not claim strict completion from reference harness output.

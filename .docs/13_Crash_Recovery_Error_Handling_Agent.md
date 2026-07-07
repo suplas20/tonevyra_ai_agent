@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -227,3 +227,7 @@ stop intake
 ```
 
 Forced process termination is not the normal shutdown path. After abnormal termination, the next run reconciles incomplete jobs through the existing recovery loop.
+
+## T-032 Recovery Addendum
+
+Recover from the persisted Planner request and stable idempotency key. Do not regenerate a changed request under the same key. Network/408/429/5xx may retry within policy; auth/schema/privacy/digest/version/conflict failures require explicit remediation or a new valid attempt.

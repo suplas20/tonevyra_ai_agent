@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -299,3 +299,7 @@ static/reference/implementation/Windows-live harness gates
 ```
 
 T-030 is complete only after actual Windows live evidence proves the tray, stable-file gating, deduplication, pause/resume, Worker crash recovery, source integrity, and zero orphan processes.
+
+## T-032 Milestone Addendum
+
+T-032 is complete only after Planner extraction, API client/service implementation, secure deployment, client build rule exclusion, live HTTPS/idempotency/restart evidence, 3000 sequential soak, and T-019~T-031 regressions. Otherwise report the exact BLOCKED gate.

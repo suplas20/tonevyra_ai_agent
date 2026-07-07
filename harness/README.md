@@ -212,3 +212,12 @@ python harness/scripts/run_t031_windows_vram_live_probe.py
 ```
 
 The live probes only collect environment evidence. Manual macOS menu-bar/FSEvents/MPS/Lightroom and Windows idle-unload sequences remain required.
+
+## T-032 Planner API separation
+
+```text
+python harness/scripts/verify_t032_planner_api_separation.py --project-root .
+python harness/scripts/run_t032_planner_api_reference.py --project-root .
+```
+
+Reference evidence proves only the contract/fixtures. Strict completion additionally requires implementation runtime, live HTTPS server, production client build scan, and 3000 sequential soak evidence.

@@ -1,0 +1,22 @@
+{
+  "ticket": "T-032",
+  "baseline": "T-031",
+  "added_docs": [
+    ".docs/t032"
+  ],
+  "added_contract": "harness/CONTRACT_T032_PLANNER_API_SEPARATION.md",
+  "added_skills": [
+    "planner-api-contract",
+    "planner-api-client",
+    "planner-api-service",
+    "planner-api-security"
+  ],
+  "expected_skill_count": 51,
+  "strict_evidence": [
+    "implementation_runtime",
+    "live_https_server",
+    "client_build_scan",
+    "sequential_3000_soak"
+  ],
+  "forbidden_claim": "Reference harness evidence is not T-032 strict completion."
+}

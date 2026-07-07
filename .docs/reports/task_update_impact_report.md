@@ -70,4 +70,4 @@ The benchmark still does not promote Qwen3 automatically. It continues to requir
 - No DB schema change was made.
 - No new status, stage, error code, artifact type, or quality decision was added.
 - No real model download or remote API was introduced.
-- No legacy `src/mw_photo_agent` files were deleted; they remain as legacy references, while package discovery now includes only `tonevyra_agent*`.
+- Legacy `src/mw_photo_agent` files have since been removed; package discovery now includes only the active Tonevyra packages.

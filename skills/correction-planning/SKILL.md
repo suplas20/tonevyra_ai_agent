@@ -78,3 +78,7 @@ DB 요약: `correction_plans` 행 (requires_review, clamped, adjustments_jsonb �
 
 mock vision 결과로 동작; 모든 값 클램프; 저신뢰 → 보수화;
 plan이 Lightroom request로 직렬화 가능; requires_review가 게이트에 도달.
+
+## T-032 API Boundary
+
+Treat the Planner API as an untrusted network boundary. Persist/digest the sanitized input, verify the bound response, and preserve existing adjustment clamps locally. Never accept command/path/plugin fields from the server.

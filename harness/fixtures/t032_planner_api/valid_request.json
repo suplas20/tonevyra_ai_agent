@@ -1,0 +1,35 @@
+{
+  "schema_version": "t032.planner.request.v1",
+  "request_id": "4a6c3f98-0be7-4dbe-bc72-24c065f40874",
+  "client": {
+    "agent_version": "0.32.0",
+    "platform": "windows",
+    "device_id_hash": "sha256:2222222222222222222222222222222222222222222222222222222222222222"
+  },
+  "image_context": {
+    "width": 6000,
+    "height": 4000,
+    "orientation": 1,
+    "iso": 800,
+    "shutter_seconds": 0.008,
+    "aperture": 5.6,
+    "focal_length_mm": 24.0
+  },
+  "analysis": {
+    "analysis_schema_version": "vision.analysis.v1",
+    "scene_type": "underwater",
+    "environment": "ocean",
+    "exposure_state": "severely_underexposed",
+    "dominant_color_cast": "blue_green",
+    "subject_type": "person",
+    "subject_exposure": "dark",
+    "highlight_clipping": 0.01,
+    "shadow_clipping": 0.24,
+    "confidence": 0.91
+  },
+  "preferences": {
+    "correction_strength": "standard",
+    "style_profile_id": "natural-v1"
+  },
+  "input_digest": "sha256:8f2fe13d0cfc247169fb853c1415e0f94634791126ec08f430f7b628d21302d0"
+}

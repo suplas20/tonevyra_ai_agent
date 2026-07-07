@@ -185,7 +185,7 @@ Do not implement the following unless the current approved ticket explicitly ask
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 SaaS accounts or permissions
 Redis
 Celery
@@ -1773,3 +1773,7 @@ installer or code protection
 ## Stop Rule
 
 Stop after T-030. If actual Windows live tests or approved icon assets are unavailable, report the matching BLOCKED state and do not claim completion.
+
+## T-032 Work Order Addendum
+
+Implement only the Planner API separation defined in `.docs/t032/`. Do not move Qwen or photos to the server and do not redesign the entire Agent around FastAPI. Preserve the existing pipeline and statuses, replace only the Planner execution boundary, and stop after T-032 evidence/reporting.

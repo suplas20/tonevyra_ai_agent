@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -235,3 +235,7 @@ Safety requirements:
 - no recursive processing of Tonevyra outputs
 - no Windows Service or admin requirement
 ```
+
+## T-032 Product Boundary Addendum
+
+Tonevyra remains local-first for photos, model inference, Lightroom, exports, and quality. The production Correction Planner is provided by an authenticated Planner API. The product must communicate that Planner connectivity is required for new plans while protecting photos from upload.

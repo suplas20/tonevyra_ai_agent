@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t032_client_build_scan.schema.json",
+  "title": "T032 Client Build Scan",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "ticket",
+    "build_sha256",
+    "planner_rules_absent",
+    "local_fallback_absent",
+    "mock_test_only"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t032.client_build_scan.v1"
+    },
+    "ticket": {
+      "const": "T032"
+    },
+    "build_sha256": {
+      "type": "string",
+      "minLength": 1
+    },
+    "planner_rules_absent": {
+      "const": true
+    },
+    "local_fallback_absent": {
+      "const": true
+    },
+    "mock_test_only": {
+      "const": true
+    }
+  }
+}

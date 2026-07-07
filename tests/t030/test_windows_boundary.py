@@ -1,14 +1,19 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 from tonevyra_agent.agent.runtime_snapshot import AgentRuntimeSnapshot
 from tonevyra_agent.agent.runtime_state import AgentRuntimeState
 from tonevyra_agent.cli import _tray_startup_command
+from tonevyra_agent.core.config import Settings
+from tonevyra_agent.windows import tray_shell
 from tonevyra_agent.windows.background_launcher import build_background_command
 from tonevyra_agent.windows.shell_worker_ipc import TrayCommand, TrayCommandName, TrayCommandProcessor
 from tonevyra_agent.windows.single_instance import SingleInstanceGuard
+from tonevyra_agent.windows.tray_shell import TrayShell
 from tonevyra_agent.windows.tray_state import tray_presentation
 from tonevyra_agent.windows.worker_supervisor import SupervisionPolicy, WorkerSupervisor
 
@@ -95,3 +100,105 @@ def test_tray_startup_command_uses_frozen_executable_directly() -> None:
 
     assert executable == "TonevyraAI.exe"
     assert args == ["tray"]
+
+
+def test_tray_shell_skips_worker_launch_when_background_is_already_running(monkeypatch, tmp_path: Path) -> None:
+    calls = {"started": 0, "stopped": 0}
+
+    class FakeGuard:
+        acquired = True
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, _exc_type, _exc, _tb):
+            return None
+
+    class FakeLauncher:
+        def __init__(self, _settings):
+            pass
+
+        def is_background_running(self) -> bool:
+            return True
+
+        def start(self):
+            calls["started"] += 1
+
+        def stop(self) -> None:
+            calls["stopped"] += 1
+
+    class FakeTray:
+        def __init__(self, _icon_path, *, tooltip: str):
+            self.tooltip = tooltip
+
+        def show_for(self, _seconds):
+            return SimpleNamespace(added=True, removed=True, error_code=None)
+
+    monkeypatch.setattr(tray_shell, "SingleInstanceGuard", lambda *_args, **_kwargs: FakeGuard())
+    monkeypatch.setattr(tray_shell, "BackgroundWorkerLauncher", FakeLauncher)
+    monkeypatch.setattr(tray_shell, "NativeTrayIcon", FakeTray)
+    monkeypatch.setattr(
+        tray_shell,
+        "tray_icon_status",
+        lambda: SimpleNamespace(
+            production_ready=True,
+            icons={"tonevyra_tray.ico": tmp_path / "tonevyra_tray.ico"},
+            blocked_code=None,
+        ),
+    )
+
+    result = TrayShell(settings=Settings(runtime_dir=tmp_path)).run(probe_seconds=0.01, start_background=True)
+
+    assert result == 0
+    assert calls == {"started": 0, "stopped": 0}
+
+
+def test_tray_shell_starts_and_stops_worker_when_no_background_is_running(monkeypatch, tmp_path: Path) -> None:
+    calls = {"started": 0, "stopped": 0}
+
+    class FakeGuard:
+        acquired = True
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, _exc_type, _exc, _tb):
+            return None
+
+    class FakeLauncher:
+        def __init__(self, _settings):
+            pass
+
+        def is_background_running(self) -> bool:
+            return False
+
+        def start(self):
+            calls["started"] += 1
+
+        def stop(self) -> None:
+            calls["stopped"] += 1
+
+    class FakeTray:
+        def __init__(self, _icon_path, *, tooltip: str):
+            self.tooltip = tooltip
+
+        def show_for(self, _seconds):
+            return SimpleNamespace(added=True, removed=True, error_code=None)
+
+    monkeypatch.setattr(tray_shell, "SingleInstanceGuard", lambda *_args, **_kwargs: FakeGuard())
+    monkeypatch.setattr(tray_shell, "BackgroundWorkerLauncher", FakeLauncher)
+    monkeypatch.setattr(tray_shell, "NativeTrayIcon", FakeTray)
+    monkeypatch.setattr(
+        tray_shell,
+        "tray_icon_status",
+        lambda: SimpleNamespace(
+            production_ready=True,
+            icons={"tonevyra_tray.ico": tmp_path / "tonevyra_tray.ico"},
+            blocked_code=None,
+        ),
+    )
+
+    result = TrayShell(settings=Settings(runtime_dir=tmp_path)).run(probe_seconds=0.01, start_background=True)
+
+    assert result == 0
+    assert calls == {"started": 1, "stopped": 1}

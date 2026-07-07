@@ -1,2 +1,0 @@
-mw_photo_agent
-tonevyra_agent

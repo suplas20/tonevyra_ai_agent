@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -241,3 +241,7 @@ soak: long idle watch and 100+ sequential files
 ```
 
 Headless reference tests do not replace Windows live evidence. Production completion requires approved icon assets, visible tray proof, copy-in-progress proof, single-instance proof, crash recovery, and zero orphan processes.
+
+## T-032 QA Addendum
+
+Add static privacy/schema/build-separation checks, deterministic digest and idempotency fixtures, transient/non-retryable classification tests, restart replay, HTTPS/auth checks, forbidden response tests, production client build scan, and a 3000 sequential request soak. Reference harness evidence is not strict completion.

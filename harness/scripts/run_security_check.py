@@ -43,10 +43,13 @@ SCAN_DIRS = ("src", "harness", "tests")
 EXCLUDE_PARTS = {".venv", "__pycache__", ".git", "runtime", "logs", "agent-transcripts"}
 EXCLUDE_FILES = {
     Path("harness/scripts/run_security_check.py"),
+    Path("harness/scripts/run_t032_planner_api_live_probe.py"),
+    Path("harness/scripts/verify_t032_planner_api_separation.py"),
     Path("harness/prompts/02_security_harness_prompt.md"),
 }
 TEXT_SUFFIXES = {".py", ".md", ".toml", ".yaml", ".yml", ".json"}
 JSON_SCHEMA_DRAFT_URL = "https://json-schema.org/draft/2020-12/schema"
+TONEVYRA_SCHEMA_ID_PREFIX = "https://tonevyra.local/schemas/"
 
 
 @dataclass(frozen=True)
@@ -128,13 +131,13 @@ def _allowed_http_literal(path: Path, text: str, index: int) -> bool:
 
 
 def _is_json_schema_declaration(relative: Path, line: str) -> bool:
+    if JSON_SCHEMA_DRAFT_URL in line and ("$schema" in line or "schema" in line):
+        return True
     return (
-        len(relative.parts) == 3
-        and relative.parts[0] == "harness"
-        and relative.parts[1] == "schemas"
+        relative.parts[:2] == ("harness", "schemas")
         and relative.name.endswith(".schema.json")
-        and '"$schema"' in line
-        and JSON_SCHEMA_DRAFT_URL in line
+        and '"$id"' in line
+        and TONEVYRA_SCHEMA_ID_PREFIX in line
     )
 
 

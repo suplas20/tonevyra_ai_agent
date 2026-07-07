@@ -12,12 +12,12 @@ from sqlalchemy.orm import Session
 from tonevyra_agent.core.config import Settings, get_settings
 from tonevyra_agent.core.enums import ErrorCode, QualityDecision, Stage, TaskEventType, TaskStatus
 from tonevyra_agent.core.errors import TonevyraError
-from tonevyra_agent.correction.planner import CorrectionPlanner
 from tonevyra_agent.db.database import session_scope
 from tonevyra_agent.db.models import ImageTask
 from tonevyra_agent.db.repositories import ImageTaskRepository, TaskEventRepository
 from tonevyra_agent.images.metadata import create_metadata_and_preview_artifacts
 from tonevyra_agent.lightroom.bridge import LightroomBridge
+from tonevyra_agent.planner_api.remote_planner import RemoteCorrectionPlanner
 from tonevyra_agent.quality.analyzer import QualityGate
 from tonevyra_agent.storage.artifacts import ArtifactRef, ArtifactStorage
 from tonevyra_agent.vision.analyzer import VisionAnalyzer
@@ -58,7 +58,7 @@ class AgentWorker:
         self.task_repository = task_repository or ImageTaskRepository()
         self.event_repository = event_repository or TaskEventRepository()
         self._vision_analyzer: VisionAnalyzer | None = None
-        self.correction_planner = CorrectionPlanner(settings=self.settings, storage=self.storage)
+        self.remote_correction_planner = RemoteCorrectionPlanner(settings=self.settings, storage=self.storage)
         self.lightroom_bridge = LightroomBridge(settings=self.settings, storage=self.storage)
         self.quality_gate = QualityGate(settings=self.settings, storage=self.storage)
 
@@ -90,6 +90,7 @@ class AgentWorker:
             correction_plan = self._run_correction_plan(
                 task_id,
                 vision_artifact=vision_artifacts.structured_artifact,
+                metadata_artifact=metadata_artifact,
                 preview_artifact=preview_artifact,
             )
             request_result = self._write_lightroom_request(task_id, correction_plan_artifact=correction_plan)
@@ -225,17 +226,29 @@ class AgentWorker:
         task_id: UUID,
         *,
         vision_artifact: ArtifactRef,
+        metadata_artifact: ArtifactRef,
         preview_artifact: ArtifactRef | None = None,
     ) -> ArtifactRef:
         with session_scope(self.settings) as session:
             task = self._require_task(session, task_id)
             try:
-                result = self.correction_planner.plan_from_artifact(
-                    session,
-                    task=task,
-                    vision_artifact=vision_artifact,
-                    preview_artifact=preview_artifact,
-                )
+                if (self.settings.planner_api_mode or "api").lower() == "local_test":
+                    from tonevyra_agent.correction.planner import CorrectionPlanner
+
+                    correction_planner = CorrectionPlanner(settings=self.settings, storage=self.storage)
+                    result = correction_planner.plan_from_artifact(
+                        session,
+                        task=task,
+                        vision_artifact=vision_artifact,
+                        preview_artifact=preview_artifact,
+                    )
+                else:
+                    result = self.remote_correction_planner.plan_from_artifact(
+                        session,
+                        task=task,
+                        vision_artifact=vision_artifact,
+                        metadata_artifact=metadata_artifact,
+                    )
                 return result.artifact
             except TonevyraError:
                 session.commit()

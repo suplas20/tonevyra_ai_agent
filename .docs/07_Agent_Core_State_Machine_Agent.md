@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -228,3 +228,7 @@ any live state → STOPPING → STOPPED
 ```
 
 These values must not be written into `image_tasks.status`. Runtime snapshots and task/incident evidence carry them.
+
+## T-032 Planner API State Addendum
+
+No new canonical status is introduced. Transient Planner API attempts occur while the task remains `ANALYSIS_DONE`. Successful validated response transitions to `CORRECTION_PLANNED`. Exhausted/non-retryable failures transition using existing failure policy with explicit `PLANNER_API_*` evidence.

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -10,10 +9,6 @@ from pathlib import Path
 
 def main() -> int:
     project_root = Path(__file__).resolve().parents[2]
-    pyinstaller = shutil.which("pyinstaller")
-    if pyinstaller is None:
-        print("PyInstaller is required to build TonevyraAI.exe.", file=sys.stderr)
-        return 2
 
     icon_path = project_root / "resources" / "branding" / "windows" / "tonevyra_tray.ico"
     entry_path = project_root / "src" / "tonevyra_agent" / "windows" / "app_entry.py"
@@ -21,7 +16,9 @@ def main() -> int:
     work_path = project_root / "runtime" / "build" / "pyinstaller"
 
     command = [
-        pyinstaller,
+        sys.executable,
+        "-m",
+        "PyInstaller",
         "--noconfirm",
         "--onedir",
         "--windowed",
@@ -31,10 +28,34 @@ def main() -> int:
         str(icon_path),
         "--paths",
         str(project_root / "src"),
-        "--paths",
-        str(project_root / ".venv" / "Lib" / "site-packages"),
         "--collect-submodules",
         "tonevyra_agent",
+        "--exclude-module",
+        "tonevyra_planner_service",
+        "--exclude-module",
+        "tonevyra_agent.correction.planner",
+        "--exclude-module",
+        "tonevyra_agent.correction.target_based",
+        "--exclude-module",
+        "torch",
+        "--exclude-module",
+        "torchvision",
+        "--exclude-module",
+        "transformers",
+        "--exclude-module",
+        "sentence_transformers",
+        "--exclude-module",
+        "scipy",
+        "--exclude-module",
+        "pandas",
+        "--exclude-module",
+        "pyarrow",
+        "--exclude-module",
+        "sklearn",
+        "--exclude-module",
+        "matplotlib",
+        "--exclude-module",
+        "nltk",
         "--distpath",
         str(dist_path),
         "--workpath",

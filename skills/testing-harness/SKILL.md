@@ -25,3 +25,7 @@ For T-030, static and reference fixture evidence is necessary but insufficient. 
 ## T-031 cross-platform memory evidence
 
 Require static contract tests, reference lifecycle tests, Windows process-VRAM evidence, and macOS arm64/MPS/FSEvents/Lightroom live evidence. Reference tests must never be reported as strict live completion.
+
+## T-032 Harness Gates
+
+Static tests must verify 51 cumulative skills, request privacy, schemas, docs, and production fallback prohibition. Runtime tests must cover digests, response binding, retry classification, replay/conflict, restart resume, and forbidden response fields. Strict completion additionally requires real HTTPS service evidence, production client build scan, and 3000 sequential requests.

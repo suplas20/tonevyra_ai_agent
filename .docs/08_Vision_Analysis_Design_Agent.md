@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -241,3 +241,7 @@ recommended intent
 ```
 
 It must not emit template IDs, preset paths, Plugin commands, final Lightroom values, or UI coordinates. Geometry must describe the visual target after EXIF orientation is applied.
+
+## T-032 Analysis Export Profile
+
+Vision output remains richer locally than the remote payload. Build a versioned allowlist projection for the Planner API and remove raw prompt/response, paths, filenames, GPS, serials, and customer/device identity. The inference Worker itself remains offline and never handles the Planner API key.

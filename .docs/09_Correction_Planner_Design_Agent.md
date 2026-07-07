@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -204,3 +204,7 @@ semantic target
 ```
 
 Template selection records center distance, coverage, overflow, aspect error, size error, fit score, policy version, and rejection reason. A failed local mask must not be replaced by an unrecorded global correction.
+
+## T-032 Planner Service Addendum
+
+Production Planner execution moves to the server. The local Agent retains only the request/response contracts and independent safety validation. `correction_plan.json` remains the canonical downstream artifact. Production client packages must not contain Planner rule implementations or a selectable local fallback.

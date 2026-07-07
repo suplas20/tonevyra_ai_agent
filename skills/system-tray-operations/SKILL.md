@@ -110,3 +110,7 @@ DPI test notes
 ## T-031 macOS menu bar mapping
 
 Map the Windows tray contract to a macOS NSStatusItem-style menu bar shell. Keep status and allowlisted commands only; use a monochrome template icon and do not load the model in the shell.
+
+## T-032 Planner Connectivity State
+
+Tray/menu bar status may display Planner API connected, retrying, auth error, or unavailable states, but it must not own retry logic or Planner business logic. Operator actions may expose a bounded connectivity test and open logs/status only.

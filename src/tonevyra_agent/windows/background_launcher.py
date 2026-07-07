@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from tonevyra_agent.core.config import PROJECT_ROOT, Settings, get_settings
+from tonevyra_agent.windows.single_instance import SingleInstanceGuard, per_user_mutex_name
 
 
 def build_background_command(executable: Path | None = None, *, frozen: bool | None = None) -> list[str]:
@@ -25,6 +26,13 @@ class BackgroundWorkerLauncher:
 
     settings: Settings | None = None
     process: subprocess.Popen | None = None
+
+    def is_background_running(self) -> bool:
+        """Return True when the per-user background Agent mutex is already owned."""
+
+        config = self.settings or get_settings()
+        with SingleInstanceGuard(per_user_mutex_name("Agent"), config) as guard:
+            return not guard.acquired
 
     def start(self) -> subprocess.Popen:
         if self.process is not None and self.process.poll() is None:

@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t032_sequential_soak.schema.json",
+  "title": "T032 Sequential Soak",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "ticket",
+    "request_count",
+    "success_count",
+    "missing_count",
+    "duplicate_response_ids",
+    "duplicate_external_effects",
+    "server_crashes"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t032.sequential_soak.v1"
+    },
+    "ticket": {
+      "const": "T032"
+    },
+    "request_count": {
+      "const": 3000
+    },
+    "success_count": {
+      "const": 3000
+    },
+    "missing_count": {
+      "const": 0
+    },
+    "duplicate_response_ids": {
+      "const": 0
+    },
+    "duplicate_external_effects": {
+      "const": 0
+    },
+    "server_crashes": {
+      "const": 0
+    }
+  }
+}

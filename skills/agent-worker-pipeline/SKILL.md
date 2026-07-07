@@ -22,3 +22,7 @@ The background Worker owns the processing loop. The Tray Shell may display statu
 ## T-031 inference process boundary
 
 Always-on watcher/queue code must not own model objects. Start one child inference process lazily and terminate it after bounded idle grace. Persist lifecycle evidence and prohibit duplicate workers.
+
+## T-032 Remote Planner Stage
+
+After local analysis, persist a sanitized Planner request artifact and call the remote Planner API. Do not proceed to Lightroom until the response is schema/version/digest/range validated and the correction plan artifact is durable. During transient API retry, keep the task at `ANALYSIS_DONE` and record attempt/events.

@@ -1,8 +1,8 @@
 # Tonevyra AI Agent — AI Coding Agent Rules
 
-Version: v2.2-tonevyra-t031-cross-platform-memory-lifecycle
+Version: v2.3-tonevyra-t032-planner-api-separation
 Target agents: Claude Code, Codex, AI coding agents
-Project type: Local AI photo correction agent
+Project type: Local-first AI photo correction agent with a separated Planner API
 Primary language: Python 3.11
 Primary DB: PostgreSQL
 Primary interfaces in MVP: CLI + thin Windows system tray / macOS menu bar shells
@@ -15,7 +15,7 @@ Legacy project names such as `MW Photo Correction Agent`, `mw_photo_agent`, or `
 
 ## 1. Product Definition
 
-Tonevyra AI Agent is a local, offline-first photo correction automation agent.
+Tonevyra AI Agent is a local-first photo correction automation agent. Original photos, previews, the vision model, Lightroom execution, exports, and quality evaluation remain local. T-032 introduces one explicitly approved remote component: the code-based Correction Planner Service.
 
 Official naming:
 
@@ -81,11 +81,11 @@ Code identifiers, commands, file paths, logs, database object names, environment
 2. Heavy payloads, images, previews, exports, raw model responses, prompts, and detailed quality outputs must not be stored as DB blobs.
 3. Durable outputs must be stored through `storage/artifacts.py` using atomic write, SHA-256 checksum, and DB artifact registration.
 4. The vision model is an analyzer only. It must not directly edit images or bypass the Correction Planner.
-5. No user data may leave the machine: original photos, previews, prompts, metadata, raw responses, structured analyses, correction plans, exports, quality results, feedback records, manual edit deltas, and training candidates are all local-only.
-6. Runtime model loading must be local-only: `local_files_only=True`, offline env vars, no runtime download, no remote API, no external URL image loading, and no `trust_remote_code=True`.
-7. The model worker must be designed so outbound network can be blocked at the OS firewall level.
+5. Original photos, previews, prompts, raw model responses, exports, quality results, feedback records, manual edit deltas, training candidates, local paths, GPS, and device/customer identity remain local-only. T-032 permits only a privacy-scrubbed, allowlisted structured analysis request to the approved Planner API; see Section 35.
+6. Runtime model loading remains local-only: `local_files_only=True`, offline env vars, no model API, no runtime download, no external URL image loading, and no `trust_remote_code=True`. The inference Worker must not hold Planner API credentials or perform network calls.
+7. The model Worker must be designed so outbound network can be blocked at the OS firewall level. Only the separate Planner API client component may access the exact allowlisted Planner host.
 8. Recovery must use PostgreSQL state + artifact records + artifact file existence + checksums + Lightroom response/export file existence. Logs are not a recovery source.
-9. CLI remains the diagnostic/operator interface. T-030 authorizes a thin Windows system tray shell and T-031 adds a thin macOS menu bar shell. Status surfaces expose only allowlisted commands and must not own business logic. React dashboard and FastAPI-first work remain deferred.
+9. CLI remains the diagnostic/operator interface. T-030 authorizes a thin Windows system tray shell and T-031 adds a thin macOS menu bar shell. Status surfaces expose only allowlisted commands and must not own business logic. React dashboard and a FastAPI-first rewrite of the local Agent remain deferred; T-032 authorizes a dedicated FastAPI Planner Service only.
 10. Mock Vision and Fake Lightroom must pass before connecting a real Qwen backend or the real Lightroom Lua plugin.
 11. Every feature must include or update at least one unit test, harness test, smoke test, recovery test, or security check.
 12. Main model and Lightroom worker concurrency is 1 in MVP because GPU/unified memory is shared with Lightroom Classic. The inference model must be lazy-loaded in a separate Worker and unloaded by terminating that Worker after bounded idle grace unless the user explicitly enables keep-warm mode. Bounded parallel file-stability probes are allowed only when they cannot start duplicate processing.
@@ -116,7 +116,8 @@ Code identifiers, commands, file paths, logs, database object names, environment
 - VisionModelBackend interface
 - MockVisionBackend
 - Qwen candidate backend
-- Correction Planner
+- Planner API client and independent CorrectionPlan validator
+- Separate authenticated Correction Planner Service
 - Lightroom Classic file-based JSON bridge
 - Minimal Lightroom Lua plugin PoC
 - Fake Lightroom harness
@@ -133,7 +134,7 @@ Code identifiers, commands, file paths, logs, database object names, environment
 
 ```text
 - Full React dashboard
-- FastAPI-first architecture
+- FastAPI-first rewrite of the local Agent (the dedicated T-032 Planner Service is allowed)
 - Blog automation
 - Instagram automation
 - Homepage inquiry automation
@@ -389,7 +390,7 @@ Required runtime behavior:
 - Use local_files_only=True.
 - Do not use trust_remote_code=True.
 - Do not download model files during photo processing.
-- Do not call remote APIs.
+- The model/inference Worker must not call remote APIs.
 - Do not load images from external URLs.
 - Prefer safetensors or verified GGUF files.
 - Avoid pickle-based model files when possible.
@@ -1571,3 +1572,104 @@ The T-029 baseline contains 43 `SKILL.md` files. T-030 preserves all 43 and adds
 - macOS completion requires real arm64/MPS/FSEvents/Lightroom evidence.
 - Windows VRAM completion requires process-level before/loaded/post-unload evidence.
 ```
+
+## 35. T-032 Planner API Separation Policy
+
+### 35.1 Authorized boundary
+
+T-032 moves production Correction Planner rule execution out of the local Agent and into `tonevyra_planner_service`.
+
+```text
+Local only:
+photos, previews, Qwen/model runtime, raw prompts/responses, file paths,
+PostgreSQL task state, Lightroom, exports, quality, feedback
+
+Approved remote payload:
+allowlisted normalized analysis + minimal non-identifying image context
+
+Remote only:
+Planner rules, policy tables, Planner execution, Planner version metadata
+```
+
+No other remote API is authorized by T-032.
+
+### 35.2 Production client prohibition
+
+The production Agent distribution must not include Planner rule modules, policy tables, hidden local Planner switches, or automatic local fallback. Test-only Fake/Mock Planner implementations must be clearly isolated and impossible to select silently in production.
+
+### 35.3 Contract and integrity
+
+Required endpoint and evidence:
+
+```text
+POST /api/v1/plans
+Authorization Bearer device/customer-scoped key
+X-Request-ID
+Idempotency-Key
+request/response schema versions
+input_digest
+plan_digest
+planner_version
+policy_version
+```
+
+The client independently validates schema, request binding, digest, version, allowed fields, and Lightroom ranges before use.
+
+### 35.4 Privacy
+
+The request is built by allowlist projection. The following are forbidden across the boundary:
+
+```text
+original/preview image bytes
+filename or local path
+GPS/location
+camera serial
+user/customer identity
+prompt or raw model response
+Lightroom catalog/plugin/preset path
+arbitrary command or executable payload
+```
+
+### 35.5 Retry/state
+
+Do not add a new `image_tasks.status` for API waiting. While transient retry is pending, remain at `ANALYSIS_DONE` and record attempts/events. Retry is bounded. Authentication, schema, privacy, digest, version, and idempotency conflicts are not blind retry cases. Retry exhaustion must never silently fall back to a local production Planner.
+
+### 35.6 Idempotency
+
+Persist the sanitized request, request ID, input digest, and idempotency key before sending. Same principal/key/digest returns the committed response. Same key with a different digest is `IDEMPOTENCY_CONFLICT`. Restart/replay must not create duplicate Lightroom effects.
+
+### 35.7 Deployment and completion
+
+Reference deployment uses one Uvicorn worker and one Planner execution concurrency on the 1 OCPU/1GB test server. Production is HTTPS-only, non-root, secret-redacted, body/rate limited, and backed by durable idempotency evidence.
+
+Strict completion requires:
+
+```text
+implementation runtime evidence
+live HTTPS server evidence
+production client build scan
+3000 sequential request soak
+T-019 through T-031 regressions
+```
+
+Reference harness output alone is not completion.
+
+### 35.8 Canonical T-032 references
+
+```text
+.docs/t032/T-032_Planner_Engine_API_Separation_Work_Order.md
+.docs/t032/T-032_Implementation_Specification.md
+.docs/t032/T-032_API_Contract.md
+.docs/t032/T-032_Server_Deployment_Guide.md
+.docs/t032/T-032_Live_Test_Checklist.md
+skills/planner-api-contract/SKILL.md
+skills/planner-api-client/SKILL.md
+skills/planner-api-service/SKILL.md
+skills/planner-api-security/SKILL.md
+harness/CONTRACT_T032_PLANNER_API_SEPARATION.md
+harness/scripts/verify_t032_planner_api_separation.py
+```
+
+T-031 baseline skill count is 47. T-032 adds four skills for a required cumulative total of 51.
+
+The phrase `production local Planner fallback is forbidden` is a hard T-032 rule.

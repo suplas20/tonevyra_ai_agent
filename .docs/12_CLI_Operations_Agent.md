@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -194,3 +194,7 @@ tonevyra-agent startup status
 ```
 
 CLI and Tray use the same validated Worker command interface. CLI must not bypass idempotency, recovery, or audit evidence.
+
+## T-032 CLI Addendum
+
+Add safe operator commands for Planner connectivity/version/health and bounded retry inspection. CLI output must redact keys and payloads. A connectivity test may send a non-photo synthetic contract request, but it must not bypass normal auth/TLS validation.

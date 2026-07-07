@@ -41,7 +41,8 @@ Qwen3-VL-4B can become the commercial/default runtime backend only after license
 ```bash
 tonevyra-agent init
 tonevyra-agent doctor
-tonevyra-agent start
+tonevyra-agent start        # starts the Windows tray shell and background Agent
+tonevyra-agent start --once # diagnostic one-cycle processing run
 tonevyra-agent status
 tonevyra-agent scan
 tonevyra-agent retry TASK_ID

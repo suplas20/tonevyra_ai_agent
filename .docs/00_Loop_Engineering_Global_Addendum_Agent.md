@@ -34,7 +34,7 @@ Deferred from MVP:
 
 ```text
 React dashboard
-FastAPI-first architecture
+FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted)
 Redis / Celery / MinIO / worker pools
 SaaS account system
 2048px multi-crop as default
@@ -257,3 +257,7 @@ sending photos/previews/prompts/metadata/correction results/feedback externally
 ```
 
 The first learning target is Correction Planner calibration and user style profiling. Direct VLM fine-tuning is future-only, offline, opt-in, versioned, benchmarked, and reversible.
+
+## T-032 Planner API Loop Addendum
+
+The Planner call is now a bounded external dependency loop: persist sanitized request → send with stable idempotency key → validate bound response → persist plan. It must have explicit retry budget, progress evidence, failure classification, and no silent local fallback.

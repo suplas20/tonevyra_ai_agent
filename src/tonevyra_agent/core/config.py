@@ -4,7 +4,7 @@ from functools import lru_cache
 import os
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -25,7 +25,7 @@ REQUIRED_DB_VIEWS: tuple[str, ...] = ("v_task_summary",)
 class Settings(BaseSettings):
     """Runtime configuration loaded from TONEVYRA_* variables."""
 
-    model_config = SettingsConfigDict(env_prefix="TONEVYRA_", env_file=".env", extra="ignore")
+    model_config = SettingsConfigDict(env_prefix="TONEVYRA_", env_file=".env", extra="ignore", populate_by_name=True)
 
     database_url: str = "postgresql+psycopg://tonevyra_app:tonevyra_app@localhost:5432/tonevyra_agent"
     database_schema: str = "public"
@@ -56,6 +56,22 @@ class Settings(BaseSettings):
     model_runtime_version: str = "1.0.0"
     vision_review_confidence_threshold: float = 0.7
     planner_review_confidence_threshold: float = 0.7
+    planner_api_mode: str = "api"
+    planner_api_base_url: str = Field(default="", validation_alias=AliasChoices("TONEVYRA_PLANNER_API_BASE_URL", "TONEVYRA_PLANNER_BASE_URL"))
+    planner_api_key: str = ""
+    planner_api_allowed_host: str = Field(default="", validation_alias=AliasChoices("TONEVYRA_PLANNER_API_ALLOWED_HOST", "TONEVYRA_PLANNER_ALLOWED_HOSTS"))
+    planner_api_ca_bundle: Path | None = Field(default=None, validation_alias=AliasChoices("TONEVYRA_PLANNER_API_CA_BUNDLE", "TONEVYRA_PLANNER_CA_BUNDLE"))
+    planner_api_connect_timeout_seconds: float = Field(default=3.0, validation_alias=AliasChoices("TONEVYRA_PLANNER_API_CONNECT_TIMEOUT_SECONDS", "TONEVYRA_PLANNER_CONNECT_TIMEOUT_SECONDS"))
+    planner_api_read_timeout_seconds: float = Field(default=12.0, validation_alias=AliasChoices("TONEVYRA_PLANNER_API_READ_TIMEOUT_SECONDS", "TONEVYRA_PLANNER_READ_TIMEOUT_SECONDS"))
+    planner_api_total_attempts: int = Field(default=3, validation_alias=AliasChoices("TONEVYRA_PLANNER_API_TOTAL_ATTEMPTS", "TONEVYRA_PLANNER_TOTAL_ATTEMPTS"))
+    planner_api_max_retry_after_seconds: float = Field(default=30.0, validation_alias=AliasChoices("TONEVYRA_PLANNER_API_MAX_RETRY_AFTER_SECONDS", "TONEVYRA_PLANNER_MAX_RETRY_AFTER_SECONDS"))
+    planner_api_max_request_body_bytes: int = Field(default=262144, validation_alias=AliasChoices("TONEVYRA_PLANNER_API_MAX_REQUEST_BODY_BYTES", "TONEVYRA_PLANNER_REQUEST_MAX_BYTES"))
+    planner_api_supported_request_schema: str = "t032.planner.request.v1"
+    planner_api_supported_response_schema: str = "t032.planner.response.v1"
+    planner_api_supported_planner_versions: str = "1.0.0,rule-planner-v1,target-planner-v1"
+    planner_api_supported_policy_versions: str = "2026-07-07.1,local-reference"
+    planner_api_style_profile_id: str = "natural-v1"
+    planner_api_device_id_hash: str = ""
     # Correction Planner selection. "legacy" keeps the original rule mapping.
     # "target_based" enables the measurement-driven target planner. Default stays
     # legacy so existing pipelines are unchanged until explicitly opted in.
@@ -79,6 +95,9 @@ class Settings(BaseSettings):
     underwater_red_saturation: float = 55.0
     underwater_red_luminance: float = 42.0
     lightroom_backend: str = "fake"
+    lightroom_classic_process_names: str = "Lightroom.exe,Adobe Lightroom Classic.exe"
+    lightroom_missing_notification_enabled: bool = True
+    lightroom_missing_notification_cooldown_seconds: float = 300.0
     # When enabled, the real Lightroom pipeline sends planner-owned local
     # adjustment plans through the T-029 native mask bridge after global Develop
     # settings are applied and before final export. If the plugin reports skip or
@@ -124,6 +143,12 @@ class Settings(BaseSettings):
     worker_heartbeat_timeout_seconds: float = 20.0
     worker_restart_window_seconds: float = 300.0
     graceful_shutdown_timeout_seconds: float = 20.0
+    inference_idle_grace_seconds: float = 300.0
+    keep_model_warm: bool = False
+    max_inference_workers: int = 1
+    macos_backend: str = "mps"
+    allow_cpu_fallback: bool = False
+    memory_release_threshold_mb: float = 512.0
     preview_long_edge: int = 1024
     lightroom_response_timeout_seconds: int = 300
 

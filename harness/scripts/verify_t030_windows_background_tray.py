@@ -115,8 +115,8 @@ def validate_static(root: Path) -> list[str]:
     skill_dirs = {p.parent.name for p in (root / "skills").glob("*/SKILL.md")}
     if len(skill_dirs) < BASELINE_SKILL_COUNT:
         failures.append(f"baseline skill count too small: {len(skill_dirs)} < {BASELINE_SKILL_COUNT}")
-    if len(skill_dirs) != EXPECTED_SKILL_COUNT:
-        failures.append(f"expected exactly {EXPECTED_SKILL_COUNT} skills, found {len(skill_dirs)}")
+    if len(skill_dirs) < EXPECTED_SKILL_COUNT:
+        failures.append(f"expected at least {EXPECTED_SKILL_COUNT} cumulative skills, found {len(skill_dirs)}")
     missing_skills = sorted(REQUIRED_SKILLS - skill_dirs)
     if missing_skills:
         failures.append(f"missing T-030 skills: {missing_skills}")
@@ -128,8 +128,9 @@ def validate_static(root: Path) -> list[str]:
             failures.append("T030 inventory baseline_skill_count mismatch")
         if inventory.get("expected_total_skill_count") != EXPECTED_SKILL_COUNT:
             failures.append("T030 inventory expected_total_skill_count mismatch")
-        if set(inventory.get("all_skills", [])) != skill_dirs:
-            failures.append("T030 inventory all_skills does not match actual skill directories")
+        inventory_skills = set(inventory.get("all_skills", []))
+        if len(inventory_skills) != EXPECTED_SKILL_COUNT or not inventory_skills.issubset(skill_dirs):
+            failures.append("T030 inventory snapshot is not preserved in current skill directories")
 
     fixture_root = root / "harness" / "fixtures" / "t030_background_tray"
     if not fixture_root.is_dir():

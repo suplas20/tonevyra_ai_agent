@@ -1,0 +1,9 @@
+{
+  "principal_id": "device-001",
+  "idempotency_key": "task-01:attempt-01:b628d21302d0",
+  "first_payload_digest": "sha256:8f2fe13d0cfc247169fb853c1415e0f94634791126ec08f430f7b628d21302d0",
+  "same_payload_expected_replayed": true,
+  "different_payload_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "different_payload_expected_status": 409,
+  "different_payload_expected_code": "IDEMPOTENCY_CONFLICT"
+}

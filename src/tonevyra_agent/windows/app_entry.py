@@ -11,16 +11,21 @@ def _configure_project_root() -> None:
     if os.environ.get("TONEVYRA_PROJECT_ROOT") or not getattr(sys, "frozen", False):
         return
     executable = Path(sys.executable).resolve()
-    try:
-        project_root = executable.parents[3]
-    except IndexError:
-        return
-    if (project_root / "AGENTS.md").exists():
-        os.environ["TONEVYRA_PROJECT_ROOT"] = str(project_root)
+    candidates = [executable.parent]
+    candidates.extend(executable.parents[:4])
+    for project_root in candidates:
+        if (project_root / "AGENTS.md").exists() or (project_root / "resources" / "branding").exists():
+            os.environ["TONEVYRA_PROJECT_ROOT"] = str(project_root)
+            return
+    os.environ["TONEVYRA_PROJECT_ROOT"] = str(executable.parent)
 
 
 def main() -> None:
     _configure_project_root()
+    if len(sys.argv) > 1 and sys.argv[1] == "inference-worker":
+        from tonevyra_agent.inference.worker_process import main as worker_main
+
+        raise SystemExit(worker_main(["run", *sys.argv[2:]]))
     from tonevyra_agent.cli import app
 
     if len(sys.argv) == 1:

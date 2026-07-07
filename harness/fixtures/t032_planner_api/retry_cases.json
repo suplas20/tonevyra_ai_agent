@@ -1,0 +1,35 @@
+{
+  "total_attempts": 3,
+  "retryable": [
+    {
+      "kind": "timeout"
+    },
+    {
+      "http_status": 503
+    },
+    {
+      "http_status": 429,
+      "retry_after_seconds": 2
+    }
+  ],
+  "non_retryable": [
+    {
+      "http_status": 401
+    },
+    {
+      "http_status": 403
+    },
+    {
+      "http_status": 409
+    },
+    {
+      "http_status": 422
+    }
+  ],
+  "backoff_seconds": [
+    1,
+    2,
+    4
+  ],
+  "max_retry_after_seconds": 30
+}

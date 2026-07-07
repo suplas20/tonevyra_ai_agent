@@ -42,7 +42,7 @@
 - No user data leaves the machine.
 - Model input is `1024px sRGB JPEG preview + EXIF/basic metadata`.
 - Worker concurrency is `1` in MVP.
-- Do not add React dashboard, FastAPI-first architecture, Redis, Celery, MinIO, message brokers, or worker pools.
+- Do not add React dashboard, FastAPI-first local Agent architecture (dedicated T-032 Planner Service excepted), Redis, Celery, MinIO, message brokers, or worker pools.
 
 ## Model Policy
 
@@ -214,3 +214,16 @@ Required cumulative count: **45** `SKILL.md` files. The authoritative inventory 
 - `inference-worker-memory-lifecycle`
 
 T-031 expected total: 47 skills.
+
+## T-032 additions
+
+T-032 preserves all 47 T-031 skills and adds:
+
+```text
+planner-api-contract
+planner-api-client
+planner-api-service
+planner-api-security
+```
+
+Required cumulative total: **51** `SKILL.md` files. The authoritative inventory is `skills/T032_SKILL_INVENTORY.json`.

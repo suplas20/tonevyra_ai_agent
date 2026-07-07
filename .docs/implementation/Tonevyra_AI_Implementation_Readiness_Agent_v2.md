@@ -465,3 +465,7 @@ Required readiness checks:
 ```
 
 Do not claim readiness from a tray mock alone. Actual Windows live testing is a completion prerequisite.
+
+## T-032 Readiness Addendum
+
+Before implementation, inventory current Planner imports, rule files, output contracts, direct call sites, tests, and packaging inclusions. Confirm API request privacy allowlist, secret source, TLS hostname, durable idempotency backend, deployment path, and evidence output locations. Missing client build separation or live server access blocks strict completion.

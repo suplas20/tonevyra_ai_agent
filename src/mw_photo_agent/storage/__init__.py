@@ -1,2 +1,0 @@
-"""Local artifact storage layer."""
-

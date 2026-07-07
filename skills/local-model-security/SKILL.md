@@ -50,3 +50,7 @@ Use existing error codes only:
 - `MODEL_LOAD_FAILED`
 - `MODEL_INFERENCE_FAILED`
 - `SECURITY_NETWORK_ACCESS_BLOCKED`
+
+## T-032 Network Exception
+
+The local model remains offline/local-only. T-032 authorizes network access only from the dedicated Planner API client after analysis. The inference Worker must still be network-blockable; it must not receive API credentials or send model/image data directly.

@@ -15,7 +15,7 @@ missing=[x for x in required if not (ROOT/x).is_file()]
 skills=sorted(p.parent.name for p in (ROOT/'skills').glob('*/SKILL.md'))
 errors=[]
 if missing: errors.append('missing:'+','.join(missing))
-if len(skills)!=47: errors.append(f'skill_count={len(skills)} expected=47')
+if len(skills)<47: errors.append(f'skill_count={len(skills)} expected_at_least=47')
 if 'macos-apple-silicon-runtime' not in skills or 'inference-worker-memory-lifecycle' not in skills: errors.append('new_skills_missing')
 ref=ROOT/'runtime/evidence/t031/reference_runtime_evidence.json'
 if ref.exists():
