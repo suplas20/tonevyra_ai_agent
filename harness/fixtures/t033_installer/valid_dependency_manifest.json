@@ -1,0 +1,23 @@
+{
+  "schema_version": "t033.dependency_manifest.v1",
+  "ticket": "T-033",
+  "python": {
+    "distribution": "bundled",
+    "required_version": "3.11.9",
+    "version_policy": "exact",
+    "system_path_mutation": false
+  },
+  "postgresql": {
+    "distribution": "download",
+    "bundled": false,
+    "channel": "latest-stable",
+    "prerelease_allowed": false,
+    "metadata_signature_required": true,
+    "installer_signature_required": true
+  },
+  "lightroom_classic": {
+    "distribution": "external-user-managed",
+    "required_for_base_install": false,
+    "automatic_install": false
+  }
+}

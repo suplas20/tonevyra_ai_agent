@@ -303,3 +303,17 @@ T-030 is complete only after actual Windows live evidence proves the tray, stabl
 ## T-032 Milestone Addendum
 
 T-032 is complete only after Planner extraction, API client/service implementation, secure deployment, client build rule exclusion, live HTTPS/idempotency/restart evidence, 3000 sequential soak, and T-019~T-031 regressions. Otherwise report the exact BLOCKED gate.
+
+## T-033 — Cross-platform Installer Packaging
+
+```text
+Windows x64 installer
+macOS Apple Silicon arm64 PKG/DMG
+bundled Python 3.11.9
+PostgreSQL latest stable download/bootstrap
+Lightroom detection/plugin install
+signing/notarization
+repair/upgrade/uninstall
+```
+
+T-033 does not change the image task state machine or T-032 Planner boundary. PostgreSQL installers are not bundled. Strict completion requires real platform installation evidence.

@@ -60,3 +60,7 @@ Supervise the inference child with heartbeat, bounded restart, idle timeout, cra
 ## T-032 Planner Service Operations
 
 Monitor API liveness/readiness, request latency, status/error classes, replay/conflict counts, rate limits, idempotency backend health, certificate expiry, and Planner/policy/schema versions. Do not log API keys or full private payloads. Client and server restart/replay tests are mandatory.
+
+## T-033 Install Reliability
+
+Install, upgrade and repair operations require durable receipts, redacted logs, rollback boundaries and post-operation doctor checks. Partial downloads and failed component installs must not damage an existing Agent or database. Uninstall preserves user data by default.

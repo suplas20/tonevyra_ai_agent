@@ -56,3 +56,7 @@ PostgreSQL 상태 영속화, 로컬 아티팩트 저장, 대시보드 불필요,
 ## T-032 Scope Exception
 
 The product remains local-first for image/model/Lightroom processing. T-032 introduces one approved remote component: the code-based Correction Planner Service. This does not authorize image upload, remote model inference, general FastAPI migration of the Agent, SaaS billing, or browser dashboard work.
+
+## T-033 Product Packaging Scope
+
+T-033 adds Windows/macOS product installers without changing the photo-processing state machine. Python 3.11.9 is bundled. PostgreSQL is downloaded at install time. Lightroom remains user-managed. Planner rules remain server-only under T-032.

@@ -245,3 +245,7 @@ Headless reference tests do not replace Windows live evidence. Production comple
 ## T-032 QA Addendum
 
 Add static privacy/schema/build-separation checks, deterministic digest and idempotency fixtures, transient/non-retryable classification tests, restart replay, HTTPS/auth checks, forbidden response tests, production client build scan, and a 3000 sequential request soak. Reference harness evidence is not strict completion.
+
+## T-033 Installer QA
+
+T-033 QA requires clean and coexistence tests on real Windows x64 and Apple Silicon macOS, negative download/signature tests, Lightroom absent/present tests, upgrade/repair/uninstall data-preservation tests, Windows Authenticode evidence, and macOS signing/notarization/stapling/Gatekeeper evidence.

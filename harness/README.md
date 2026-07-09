@@ -221,3 +221,13 @@ python harness/scripts/run_t032_planner_api_reference.py --project-root .
 ```
 
 Reference evidence proves only the contract/fixtures. Strict completion additionally requires implementation runtime, live HTTPS server, production client build scan, and 3000 sequential soak evidence.
+
+## T-033 Cross-platform installer packaging
+
+```text
+python harness/scripts/verify_t033_cross_platform_installer.py --project-root .
+python harness/scripts/run_t033_installer_reference.py --project-root . --output runtime/evidence/t033/reference_runtime_evidence.json
+python harness/scripts/verify_t033_cross_platform_installer.py --project-root . --runtime-evidence runtime/evidence/t033/reference_runtime_evidence.json
+```
+
+The reference runner checks policy fixtures only. Strict completion additionally requires a real signed Windows installation, real signed/notarized/stapled macOS installation, and final package scan proving Python 3.11.9 is bundled and no PostgreSQL installer or local Planner rules are bundled.

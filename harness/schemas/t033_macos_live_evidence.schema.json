@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T033 macOS Live Evidence",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "ticket",
+    "platform",
+    "architecture",
+    "developer_id_application_valid",
+    "developer_id_installer_valid",
+    "notarization_accepted",
+    "staple_valid",
+    "gatekeeper_accepted",
+    "python_3119_bundled",
+    "postgres_installer_downloaded",
+    "postgres_installer_not_bundled",
+    "database_ok",
+    "agent_ok",
+    "uninstall_data_preserved"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t033.macos.live.v1"
+    },
+    "ticket": {
+      "const": "T033"
+    },
+    "platform": {
+      "const": "macos"
+    },
+    "architecture": {
+      "const": "arm64"
+    }
+  }
+}

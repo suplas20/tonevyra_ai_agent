@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T033 Final Artifact Scan",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "ticket",
+    "artifact_sha256",
+    "postgres_installer_bundled",
+    "planner_rules_bundled",
+    "system_python_dependency",
+    "python_version",
+    "license_inventory_complete"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t033.artifact_scan.v1"
+    },
+    "ticket": {
+      "const": "T033"
+    },
+    "artifact_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "postgres_installer_bundled": {
+      "const": false
+    },
+    "planner_rules_bundled": {
+      "const": false
+    },
+    "system_python_dependency": {
+      "const": false
+    },
+    "python_version": {
+      "const": "3.11.9"
+    },
+    "license_inventory_complete": {
+      "const": true
+    }
+  }
+}

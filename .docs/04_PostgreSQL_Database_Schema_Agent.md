@@ -321,3 +321,7 @@ Expected DB/user:
 ```text
 tonevyra_agent | tonevyra_app
 ```
+
+## T-033 PostgreSQL Provisioning
+
+The PostgreSQL installer is downloaded at installation time from an approved official source; it is not bundled. After verified installation, T-033 creates or validates `tonevyra_agent`, `tonevyra_app`, required extensions and the Alembic migration head without destructive reset.

@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "t033_dependency_manifest.schema.json",
+  "title": "T033 Dependency Manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "ticket",
+    "python",
+    "postgresql",
+    "lightroom_classic"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t033.dependency_manifest.v1"
+    },
+    "ticket": {
+      "const": "T-033"
+    },
+    "python": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distribution",
+        "required_version",
+        "version_policy",
+        "system_path_mutation"
+      ],
+      "properties": {
+        "distribution": {
+          "const": "bundled"
+        },
+        "required_version": {
+          "const": "3.11.9"
+        },
+        "version_policy": {
+          "const": "exact"
+        },
+        "system_path_mutation": {
+          "const": false
+        }
+      }
+    },
+    "postgresql": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distribution",
+        "bundled",
+        "channel",
+        "prerelease_allowed",
+        "metadata_signature_required",
+        "installer_signature_required"
+      ],
+      "properties": {
+        "distribution": {
+          "const": "download"
+        },
+        "bundled": {
+          "const": false
+        },
+        "channel": {
+          "const": "latest-stable"
+        },
+        "prerelease_allowed": {
+          "const": false
+        },
+        "metadata_signature_required": {
+          "const": true
+        },
+        "installer_signature_required": {
+          "const": true
+        }
+      }
+    },
+    "lightroom_classic": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "distribution",
+        "required_for_base_install",
+        "automatic_install"
+      ],
+      "properties": {
+        "distribution": {
+          "const": "external-user-managed"
+        },
+        "required_for_base_install": {
+          "const": false
+        },
+        "automatic_install": {
+          "const": false
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "ticket": "T-033",
+  "baseline": "T-032",
+  "added_docs": [
+    ".docs/t033"
+  ],
+  "added_contract": "harness/CONTRACT_T033_CROSS_PLATFORM_INSTALLER.md",
+  "added_skills": [
+    "bundled-runtime-distribution",
+    "cross-platform-installer-packaging",
+    "dependency-detection-compatibility",
+    "installer-download-integrity",
+    "installer-upgrade-repair-uninstall",
+    "platform-signing-notarization",
+    "postgresql-bootstrap-installation"
+  ],
+  "expected_skill_count": 58,
+  "distribution_policy": {
+    "python": "bundled exact 3.11.9",
+    "postgresql": "not bundled; download latest stable",
+    "lightroom": "external user managed"
+  },
+  "strict_evidence": [
+    "implementation_runtime",
+    "windows_live_install",
+    "macos_signed_notarized_install",
+    "final_artifact_scan",
+    "prior_ticket_regressions"
+  ],
+  "forbidden_claim": "Reference harness evidence is not T-033 strict completion."
+}

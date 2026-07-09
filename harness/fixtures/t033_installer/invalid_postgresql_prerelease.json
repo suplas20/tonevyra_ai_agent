@@ -1,0 +1,13 @@
+{
+  "schema_version": "t033.postgresql.resolution.v1",
+  "expected_validation": "FAIL",
+  "channel": "latest-stable",
+  "release_status": "beta",
+  "version": "100.0-beta1",
+  "platform": "windows-x64",
+  "url": "https://example.invalid/postgresql-beta.exe",
+  "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "metadata_signature_verified": false,
+  "installer_signature_required": true,
+  "prerelease": true
+}

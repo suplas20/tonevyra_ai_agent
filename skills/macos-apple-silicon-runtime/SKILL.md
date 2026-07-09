@@ -37,3 +37,7 @@ MPS inference evidence
 Lightroom bridge evidence
 10-image memory soak
 ```
+
+## T-033 macOS Distribution Boundary
+
+The arm64 application contains its own Python 3.11.9 runtime. Release artifacts require nested signing, Developer ID signatures, notarization acceptance, stapling and Gatekeeper evidence. PostgreSQL is downloaded separately and Lightroom remains user-managed.

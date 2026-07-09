@@ -231,3 +231,7 @@ Forced process termination is not the normal shutdown path. After abnormal termi
 ## T-032 Recovery Addendum
 
 Recover from the persisted Planner request and stable idempotency key. Do not regenerate a changed request under the same key. Network/408/429/5xx may retry within policy; auth/schema/privacy/digest/version/conflict failures require explicit remediation or a new valid attempt.
+
+## T-033 Installer Failure Recovery
+
+Installer download, prerequisite, migration and payload replacement failures use stable `T033-*` error codes, redacted logs and bounded rollback. Existing application and database state must remain usable or explicitly reported as requiring manual recovery.

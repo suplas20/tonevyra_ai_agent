@@ -239,3 +239,7 @@ Safety requirements:
 ## T-032 Product Boundary Addendum
 
 Tonevyra remains local-first for photos, model inference, Lightroom, exports, and quality. The production Correction Planner is provided by an authenticated Planner API. The product must communicate that Planner connectivity is required for new plans while protecting photos from upload.
+
+## T-033 Distribution Requirement
+
+Tonevyra AI must be installable on supported Windows x64 and Apple Silicon macOS systems without requiring the user to prepare a Python development environment. Exact Python 3.11.9 is bundled. PostgreSQL is detected and, when required, the latest stable GA installer is downloaded and verified. Lightroom Classic remains an external licensed prerequisite for Lightroom integration but does not block base installation.

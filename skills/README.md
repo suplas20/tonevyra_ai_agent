@@ -227,3 +227,19 @@ planner-api-security
 ```
 
 Required cumulative total: **51** `SKILL.md` files. The authoritative inventory is `skills/T032_SKILL_INVENTORY.json`.
+
+## T-033 additions
+
+T-033 preserves the 51-skill T-032 baseline and adds:
+
+```text
+cross-platform-installer-packaging
+dependency-detection-compatibility
+bundled-runtime-distribution
+postgresql-bootstrap-installation
+installer-download-integrity
+platform-signing-notarization
+installer-upgrade-repair-uninstall
+```
+
+Required cumulative total: **58** `SKILL.md` files. The authoritative inventory is `skills/T033_SKILL_INVENTORY.json`.

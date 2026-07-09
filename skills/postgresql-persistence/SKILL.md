@@ -20,3 +20,7 @@ View: `v_task_summary`.
 - `current_user` is `tonevyra_app`.
 - Required tables and view exist.
 - DB smoke test can create/read/delete test rows.
+
+## T-033 Installation Lifecycle
+
+The PostgreSQL installer is not bundled. T-033 downloads the latest stable GA installer from an approved official source after signed metadata, hash and publisher/package-signature verification. Existing clusters and data are protected. DB bootstrap is idempotent, localhost-only, least-privileged and migration-driven. Major version upgrades are never silent.

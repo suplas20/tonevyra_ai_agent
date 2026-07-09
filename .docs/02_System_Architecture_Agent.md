@@ -236,3 +236,18 @@ The Tray Shell and Worker are separate logical responsibilities. UI code cannot 
 ## T-032 Architecture Addendum
 
 Insert `PlannerApiClient` between local vision analysis and the correction plan artifact. Run Planner rules only in `tonevyra_planner_service`. The local pipeline keeps independent response validation and all Lightroom/quality stages. The dedicated FastAPI service is an exception to the deferred FastAPI-first local Agent architecture.
+
+## T-033 Installer Architecture
+
+```text
+Platform installer
+→ prerequisite detector
+→ bundled runtime verifier
+→ PostgreSQL stable resolver/downloader/verifier
+→ DB bootstrap/migrations
+→ Agent/plugin installation
+→ startup registration
+→ post-install doctor
+```
+
+Installer state is separate from `image_tasks.status`. Python is app-local. PostgreSQL installer files are not part of the shipped payload.

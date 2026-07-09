@@ -1,0 +1,37 @@
+{
+  "schema_version": "t033.install_scenarios.v1",
+  "ticket": "T033",
+  "scenarios": [
+    {
+      "id": "windows_clean",
+      "expected_python": "bundled-3.11.9",
+      "expected_postgres": "download-stable",
+      "lightroom": "pending"
+    },
+    {
+      "id": "windows_existing_user_postgres",
+      "expected_existing_postgres_modified": false,
+      "expected_tonevyra_data_preserved": true
+    },
+    {
+      "id": "macos_clean_arm64",
+      "expected_python": "bundled-3.11.9",
+      "expected_notarization": true,
+      "expected_postgres": "download-stable"
+    },
+    {
+      "id": "offline_postgres",
+      "expected_result": "recoverable_failure",
+      "partial_download_retained": false
+    },
+    {
+      "id": "hash_mismatch",
+      "expected_execution": false
+    },
+    {
+      "id": "uninstall_default",
+      "expected_database_preserved": true,
+      "expected_results_preserved": true
+    }
+  ]
+}

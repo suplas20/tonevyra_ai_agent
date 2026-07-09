@@ -134,3 +134,7 @@ agent_runtime_snapshot.json
 ## T-031 idle model lifecycle
 
 The Windows background agent stays resident, but the model worker does not. Use lazy start and bounded idle termination so Lightroom can reclaim GPU capacity when no Tonevyra job is active.
+
+## T-033 Windows Installation Boundary
+
+The Windows Agent remains per-user and non-service. Machine elevation is limited to prerequisites such as PostgreSQL. The installer must preserve single-instance, startup and shutdown behavior and prove Authenticode status in release evidence.

@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T033 Runtime Evidence",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "ticket",
+    "evidence_source",
+    "completed",
+    "checks"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t033.runtime.evidence.v1"
+    },
+    "ticket": {
+      "const": "T033"
+    },
+    "evidence_source": {
+      "enum": [
+        "reference_harness",
+        "implementation"
+      ]
+    },
+    "completed": {
+      "type": "boolean"
+    },
+    "checks": {
+      "type": "object"
+    }
+  }
+}

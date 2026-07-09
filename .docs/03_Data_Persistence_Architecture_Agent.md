@@ -200,3 +200,7 @@ The first learning use case is Correction Planner calibration and user style pro
 ## T-032 Persistence Addendum
 
 Persist `planner_request.json`, `planner_response.json`, `planner_api_attempts.json`, and `correction_plan.json` atomically with checksums. Do not persist API keys or Authorization headers. Request ID, input digest, idempotency key hash/reference, attempt count, result/error class, and Planner/policy versions must be recoverable.
+
+## T-033 Database Installation and Preservation
+
+T-033 bootstraps the existing PostgreSQL contract idempotently. Installation, repair and uninstall must preserve the database by default. Existing user-managed clusters are never reset. PostgreSQL major upgrades require a separate backup/migration/rollback gate.

@@ -1,0 +1,12 @@
+{
+  "schema_version": "t033.postgresql.resolution.v1",
+  "channel": "latest-stable",
+  "release_status": "stable",
+  "version": "99.4",
+  "platform": "windows-x64",
+  "url": "https://get.enterprisedb.com/postgresql/postgresql-99.4-windows-x64.exe",
+  "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "metadata_signature_verified": true,
+  "installer_signature_required": true,
+  "prerelease": false
+}

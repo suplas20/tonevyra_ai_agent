@@ -29,3 +29,7 @@ Require static contract tests, reference lifecycle tests, Windows process-VRAM e
 ## T-032 Harness Gates
 
 Static tests must verify 51 cumulative skills, request privacy, schemas, docs, and production fallback prohibition. Runtime tests must cover digests, response binding, retry classification, replay/conflict, restart resume, and forbidden response fields. Strict completion additionally requires real HTTPS service evidence, production client build scan, and 3000 sequential requests.
+
+## T-033 Installer Evidence
+
+T-033 separates static contract, deterministic reference, implementation runtime, Windows live installation, macOS signed/notarized installation and final artifact-scan evidence. Reference output cannot satisfy strict completion. Negative tests must cover bundled PostgreSQL, floating Python, prerelease PostgreSQL, invalid metadata signatures, hash mismatch and non-allowlisted redirects.

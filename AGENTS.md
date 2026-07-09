@@ -1673,3 +1673,60 @@ harness/scripts/verify_t032_planner_api_separation.py
 T-031 baseline skill count is 47. T-032 adds four skills for a required cumulative total of 51.
 
 The phrase `production local Planner fallback is forbidden` is a hard T-032 rule.
+
+## 36. T-033 Cross-platform Installer Packaging Policy
+
+### 36.1 Distribution boundary
+
+```text
+Bundled:
+Tonevyra application, Python 3.11.9 runtime, reviewed locked dependencies,
+DB migrations, Lightroom plugin, license notices
+
+Downloaded during install:
+PostgreSQL latest stable GA installer from approved official sources
+
+External/user-managed:
+Lightroom Classic, Adobe Creative Cloud, GPU drivers
+```
+
+The PostgreSQL installer must not be bundled in any Windows EXE, macOS PKG/DMG, nested archive, cache seed, or offline payload.
+
+### 36.2 Python
+
+Production packages use the bundled Python 3.11.9 runtime only. Do not inspect PATH to choose another Python, mutate PATH, register file associations, install global packages, or download a newer interpreter during install/first launch.
+
+### 36.3 PostgreSQL
+
+```text
+channel = latest-stable
+prerelease = forbidden
+signed metadata = required
+official host = required
+SHA-256 = required
+publisher/package signature = required
+existing user clusters = protected
+silent major upgrade = forbidden
+```
+
+A new upstream stable major version still requires the Tonevyra DB compatibility gate. If that gate is unavailable, stop safely instead of executing an unverified installer.
+
+### 36.4 Platform release gates
+
+Windows release artifacts require Authenticode evidence. macOS release artifacts require Developer ID signing, notarization acceptance, stapling and Gatekeeper evidence. Reference harness output is never live release evidence.
+
+### 36.5 Canonical T-033 references
+
+```text
+.docs/t033/T-033_Cross_Platform_Installer_Packaging_Work_Order.md
+.docs/t033/T-033_Implementation_Specification.md
+.docs/t033/T-033_Dependency_Distribution_and_License_Policy.md
+.docs/t033/T-033_Windows_Installer_Guide.md
+.docs/t033/T-033_macOS_Installer_Guide.md
+.docs/t033/T-033_Live_Test_Checklist.md
+skills/T033_SKILL_INVENTORY.json
+harness/CONTRACT_T033_CROSS_PLATFORM_INSTALLER.md
+harness/scripts/verify_t033_cross_platform_installer.py
+```
+
+T-032 baseline skill count is 51. T-033 preserves all 51 and adds seven skills for a cumulative total of 58.

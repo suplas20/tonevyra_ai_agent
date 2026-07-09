@@ -419,3 +419,50 @@ python .\harness\scripts\verify_t032_planner_api_separation.py --project-root . 
 ```
 
 Do not claim strict completion from reference harness output.
+
+## Required reading for T-033
+
+Before modifying packaging, prerequisite detection, bundled runtimes, PostgreSQL bootstrap, installer downloads, signing, notarization, upgrade, repair or uninstall behavior, read:
+
+```text
+AGENTS.md
+.docs/t033/T-033_Cross_Platform_Installer_Packaging_Work_Order.md
+.docs/t033/T-033_Implementation_Specification.md
+.docs/t033/T-033_Dependency_Distribution_and_License_Policy.md
+.docs/t033/T-033_Windows_Installer_Guide.md
+.docs/t033/T-033_macOS_Installer_Guide.md
+.docs/t033/T-033_Live_Test_Checklist.md
+skills/cross-platform-installer-packaging/SKILL.md
+skills/dependency-detection-compatibility/SKILL.md
+skills/bundled-runtime-distribution/SKILL.md
+skills/postgresql-bootstrap-installation/SKILL.md
+skills/installer-download-integrity/SKILL.md
+skills/platform-signing-notarization/SKILL.md
+skills/installer-upgrade-repair-uninstall/SKILL.md
+harness/CONTRACT_T033_CROSS_PLATFORM_INSTALLER.md
+```
+
+T-033 implementation rules:
+
+```text
+- Preserve all 51 T-032 skills and add seven T-033 skills; total 58.
+- Bundle exact Python 3.11.9 and reviewed locked dependencies.
+- Do not use or modify system Python.
+- Do not bundle a PostgreSQL installer under any name or archive.
+- Download only latest stable GA PostgreSQL through signed metadata and approved official hosts.
+- Reject prerelease, hash mismatch, signature mismatch and unapproved redirects.
+- Preserve existing PostgreSQL data and avoid silent major upgrades.
+- Keep Lightroom Classic external and allow base install without it.
+- Keep Planner rules/service out of the client package.
+- Require Windows signing and macOS signing/notarization/stapling live evidence.
+```
+
+Canonical commands:
+
+```text
+python harness/scripts/verify_t033_cross_platform_installer.py --project-root .
+python harness/scripts/run_t033_installer_reference.py --project-root . --output runtime/evidence/t033/reference_runtime_evidence.json
+python harness/scripts/verify_t033_cross_platform_installer.py --project-root . --runtime-evidence runtime/evidence/t033/reference_runtime_evidence.json
+```
+
+Do not claim strict completion from reference evidence.

@@ -27,14 +27,15 @@ def validate_static(root:Path)->list[str]:
     missing=[x for x in REQUIRED_FILES if not (root/x).is_file()]
     if missing: f.extend('missing:'+x for x in missing)
     skills=sorted(p.parent.name for p in (root/'skills').glob('*/SKILL.md'))
-    if len(skills)!=EXPECTED_SKILLS: f.append(f'skill_count={len(skills)} expected={EXPECTED_SKILLS}')
+    if len(skills)<EXPECTED_SKILLS: f.append(f'skill_count={len(skills)} expected_at_least={EXPECTED_SKILLS}')
     for s in REQUIRED_SKILLS:
         if s not in skills: f.append('missing_skill:'+s)
     inv=root/'skills/T032_SKILL_INVENTORY.json'
     if inv.exists():
         d=load(inv)
         if d.get('expected_total_skill_count')!=EXPECTED_SKILLS: f.append('inventory total mismatch')
-        if sorted(d.get('all_skills',[]))!=skills: f.append('inventory skill list mismatch')
+        snapshot=sorted(d.get('all_skills',[]))
+        if len(snapshot)!=EXPECTED_SKILLS or not set(snapshot).issubset(set(skills)): f.append('inventory skill snapshot mismatch')
     reqp=root/'harness/fixtures/t032_planner_api/valid_request.json'
     if reqp.exists():
         req=load(reqp); bad=sorted({k.lower() for k in walk_keys(req)} & FORBIDDEN_REQUEST_KEYS)

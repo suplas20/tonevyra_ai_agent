@@ -1,0 +1,11 @@
+# T-033 installer harness environment
+TONEVYRA_T033_RELEASE_VERSION=0.0.0
+TONEVYRA_T033_PYTHON_VERSION=3.11.9
+TONEVYRA_T033_POSTGRES_CHANNEL=latest-stable
+TONEVYRA_T033_POSTGRES_METADATA_URL=https://example.invalid/signed/postgresql-channel.json
+TONEVYRA_T033_ALLOWED_POSTGRES_HOSTS=postgresql.org,enterprisedb.com,get.enterprisedb.com
+TONEVYRA_T033_WINDOWS_INSTALLER=
+TONEVYRA_T033_MACOS_PKG=
+TONEVYRA_T033_MACOS_DMG=
+TONEVYRA_T033_EVIDENCE_DIR=runtime/evidence/t033
+# Signing/notary secrets must not be stored in this file.
