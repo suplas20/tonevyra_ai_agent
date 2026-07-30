@@ -59,4 +59,4 @@ The product remains local-first for image/model/Lightroom processing. T-032 intr
 
 ## T-033 Product Packaging Scope
 
-T-033 adds Windows/macOS product installers without changing the photo-processing state machine. Python 3.11.9 is bundled. PostgreSQL is downloaded at install time. Lightroom remains user-managed. Planner rules remain server-only under T-032.
+T-033 adds one-click Windows/macOS all-in-one product installers without changing the photo-processing state machine. Python 3.11.9 is bundled. PostgreSQL is downloaded, verified and installed unattended; the Tonevyra Role, database and Alembic schema are configured automatically. Lightroom remains user-managed. Planner rules remain server-only under T-032.

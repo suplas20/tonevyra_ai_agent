@@ -127,6 +127,8 @@ def _allowed_http_literal(path: Path, text: str, index: int) -> bool:
         return True
     if _is_remote_detection_test_code(relative, line):
         return True
+    if _is_approved_network_contract_literal(relative, line):
+        return True
     return False
 
 
@@ -156,6 +158,33 @@ def _is_remote_detection_test_code(relative: Path, line: str) -> bool:
         and "model_root" in line
         and "startswith" in line
     )
+
+
+def _is_approved_network_contract_literal(relative: Path, line: str) -> bool:
+    """Allow only explicit T-032 Planner and T-033 installer network contracts."""
+
+    planner_test_files = {
+        Path("tests/test_t032_planner_api_contract.py"),
+        Path("tests/test_local_planner_server.py"),
+    }
+    if relative in planner_test_files and (
+        "planner.example.test" in line or "http://127.0.0.1:8000" in line
+    ):
+        return True
+
+    postgres_fixture_files = {
+        Path("harness/fixtures/t033_installer/invalid_postgresql_prerelease.json"),
+        Path("harness/fixtures/t033_installer/valid_postgresql_resolution_macos.json"),
+        Path("harness/fixtures/t033_installer/valid_postgresql_resolution_windows.json"),
+        Path("tests/test_t033_installer_common.py"),
+    }
+    if relative in postgres_fixture_files and "postgresql" in line:
+        return True
+    if relative == Path("harness/scripts/build_tonevyra_windows_installer.py"):
+        return "$PinnedPostgresUrl" in line and "get.enterprisedb.com/postgresql/" in line
+    if relative == Path("harness/scripts/verify_t033_cross_platform_installer.py"):
+        return "PostgreSQL URL must use HTTPS" in line and 'startswith("https://")' in line
+    return False
 
 
 def _check_env_contract(root: Path, *, strict_env: bool) -> list[str]:

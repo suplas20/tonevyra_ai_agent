@@ -38,6 +38,11 @@ def main() -> int:
     _add_src_to_path(root)
 
     from tonevyra_agent.packaging.common.dependency_manifest import load_dependency_manifest
+    from tonevyra_agent.packaging.common.evidence import (
+        all_in_one_runtime_checks,
+        load_all_in_one_install_evidence,
+        load_database_bootstrap_evidence,
+    )
     from tonevyra_agent.packaging.common.postgres_resolver import load_postgresql_resolution
     from tonevyra_agent.packaging.common.runtime_evidence import build_runtime_evidence
 
@@ -47,6 +52,9 @@ def main() -> int:
     fixtures = root / "harness/fixtures/t033_installer"
     windows_resolution = load_postgresql_resolution(fixtures / "valid_postgresql_resolution_windows.json", allowed_hosts=allowed_hosts)
     macos_resolution = load_postgresql_resolution(fixtures / "valid_postgresql_resolution_macos.json", allowed_hosts=allowed_hosts)
+    all_in_one = load_all_in_one_install_evidence(fixtures / "valid_all_in_one_install_evidence.json")
+    database = load_database_bootstrap_evidence(fixtures / "valid_database_bootstrap_evidence.json")
+    all_in_one_checks = all_in_one_runtime_checks(all_in_one, database)
     scenarios = _scenario_ids(fixtures / "install_scenarios.json")
     lifecycle_scenarios = {
         "windows_existing_user_postgres",
@@ -64,6 +72,11 @@ def main() -> int:
         evidence_source="implementation",
         repair_upgrade_uninstall_defined=lifecycle_scenarios.issubset(scenarios),
         planner_rules_excluded=not any(path.exists() for path in planner_rule_paths),
+        one_click_all_in_one_defined=all_in_one_checks["one_click_all_in_one_defined"],
+        postgres_unattended_install_defined=all_in_one_checks["postgres_unattended_install_defined"],
+        database_bootstrap_automatic_defined=all_in_one_checks["database_bootstrap_automatic_defined"],
+        schema_migration_and_verification_defined=all_in_one_checks["schema_migration_and_verification_defined"],
+        post_install_doctor_required=all_in_one_checks["post_install_doctor_required"],
         limitations=[
             "Policy implementation evidence only; no software was installed.",
             "No Windows Authenticode signature was verified.",

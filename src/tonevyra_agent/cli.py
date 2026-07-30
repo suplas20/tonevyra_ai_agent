@@ -8,6 +8,7 @@ import platform
 import subprocess
 import sys
 import tempfile
+import time
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
@@ -44,10 +45,12 @@ feedback_app = typer.Typer(no_args_is_help=True, help="Capture explicit local fe
 ops_app = typer.Typer(no_args_is_help=True, help="Inspect T-028 local operations evidence.")
 watch_app = typer.Typer(no_args_is_help=True, help="Control T-030 background watching.")
 startup_app = typer.Typer(no_args_is_help=True, help="Manage current-user Windows autostart.")
+installer_db_app = typer.Typer(no_args_is_help=True, help="T-033 installer database bootstrap gates.")
 app.add_typer(feedback_app, name="feedback")
 app.add_typer(ops_app, name="ops")
 app.add_typer(watch_app, name="watch")
 app.add_typer(startup_app, name="startup")
+app.add_typer(installer_db_app, name="installer-db")
 
 
 @dataclass(frozen=True)
@@ -207,6 +210,58 @@ def db_smoke_test() -> None:
     typer.echo("[OK] db smoke test: created image_task, created task_event, read back, deleted task")
     typer.echo(f"task_id={result.task_id}")
     typer.echo(f"event_id={result.event_id}")
+
+
+@installer_db_app.command("verify")
+def installer_db_verify(
+    output: Path = typer.Option(
+        Path("runtime/evidence/t033/database_bootstrap_evidence.json"),
+        "--output",
+        help="Write T-033 database bootstrap evidence JSON.",
+    ),
+    credential_store_verified: bool = typer.Option(
+        False,
+        "--credential-store-verified/--credential-store-unverified",
+        help="Set true only after DPAPI/Credential Manager or Keychain storage succeeds.",
+    ),
+) -> None:
+    """Verify the T-033 DB bootstrap gate and write evidence."""
+
+    from tonevyra_agent.packaging.common.db_bootstrap import write_database_bootstrap_evidence
+    from tonevyra_agent.packaging.common.errors import T033ValidationError
+
+    settings = get_settings()
+    evidence_path = output if output.is_absolute() else settings.project_path(output)
+    try:
+        evidence = write_database_bootstrap_evidence(
+            evidence_path,
+            settings,
+            credential_store_verified=credential_store_verified,
+        )
+    except T033ValidationError as exc:
+        typer.echo(f"[FAIL] installer-db verify: {exc}", err=True)
+        raise typer.Exit(1) from exc
+
+    marker = "OK" if evidence.completed else "BLOCKED"
+    typer.echo(f"[{marker}] installer-db evidence: {evidence_path}")
+    typer.echo(f"completed={evidence.completed}")
+    if not evidence.completed:
+        raise typer.Exit(1)
+
+
+@installer_db_app.command("bootstrap-schema")
+def installer_db_bootstrap_schema() -> None:
+    """Create the current baseline DB schema without dropping existing data."""
+
+    from tonevyra_agent.packaging.common.schema_bootstrap import bootstrap_baseline_schema
+    from tonevyra_agent.packaging.common.errors import T033ValidationError
+
+    try:
+        revision = bootstrap_baseline_schema(get_settings())
+    except Exception as exc:
+        typer.echo(f"[FAIL] installer-db bootstrap-schema: {exc.__class__.__name__}", err=True)
+        raise typer.Exit(1) from exc
+    typer.echo(f"[OK] installer-db baseline schema ready: {revision}")
 
 
 @app.command()
@@ -540,6 +595,78 @@ def test_vision() -> None:
     create_vision_backend(get_settings())
     _run_harness_script("run_vision_mock_test.py")
     _run_harness_script("run_qwen_backend_test.py")
+
+
+@app.command("model-runtime-check", hidden=True)
+def model_runtime_check(
+    output: Path = typer.Option(..., "--output", help="Write frozen model runtime evidence JSON."),
+) -> None:
+    """Load the configured local model and record frozen-runtime evidence."""
+
+    from tonevyra_agent.core.errors import TonevyraError
+    from tonevyra_agent.vision.model import create_vision_backend
+
+    started = time.monotonic()
+    backend = None
+    payload: dict[str, Any] = {
+        "schema_version": "tonevyra.model_runtime_check.v1",
+        "status": "failed",
+    }
+    try:
+        import torch
+        import transformers
+
+        settings = get_settings()
+        backend = create_vision_backend(settings)
+        payload.update(
+            {
+                "status": "passed",
+                "vision_backend": settings.vision_backend,
+                "model_path": str(settings.project_path(settings.qwen3_model_path).resolve()),
+                "torch_version": torch.__version__,
+                "transformers_version": transformers.__version__,
+                "cuda_available": bool(torch.cuda.is_available()),
+                "cuda_device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else None,
+                "model_loaded": True,
+            }
+        )
+    except Exception as exc:  # noqa: BLE001 - evidence must capture import/load failures
+        payload.update(
+            {
+                "error_type": type(exc).__name__,
+                "error_code": exc.code.value if isinstance(exc, TonevyraError) else None,
+                "error_message": exc.message if isinstance(exc, TonevyraError) else str(exc),
+            }
+        )
+    finally:
+        close = getattr(backend, "close", None)
+        if callable(close):
+            close()
+        payload["elapsed_seconds"] = round(time.monotonic() - started, 3)
+        output = output.resolve()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        temp_output = output.with_name(f".{output.name}.tmp")
+        temp_output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        os.replace(temp_output, output)
+
+    if payload["status"] != "passed":
+        raise typer.Exit(1)
+
+
+@app.command("installer-requeue-legacy-model-tasks", hidden=True)
+def installer_requeue_legacy_model_tasks(
+    output: Path = typer.Option(..., "--output", help="Write bounded installer repair evidence JSON."),
+) -> None:
+    """Requeue terminal tasks created by the broken mock-model installer."""
+
+    from tonevyra_agent.agent.install_repair import requeue_legacy_mock_tasks
+
+    payload = requeue_legacy_mock_tasks(get_settings()).to_dict()
+    output = output.resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    temp_output = output.with_name(f".{output.name}.tmp")
+    temp_output.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    os.replace(temp_output, output)
 
 
 @app.command("loop-events")

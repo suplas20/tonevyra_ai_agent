@@ -29,7 +29,12 @@ def main() -> int:
             "download_integrity_required": dep["postgresql"]["metadata_signature_required"] and dep["postgresql"]["installer_signature_required"],
             "lightroom_external": dep["lightroom_classic"]["distribution"] == "external-user-managed",
             "repair_upgrade_uninstall_defined": True,
-            "planner_rules_excluded": True
+            "planner_rules_excluded": True,
+            "one_click_all_in_one_defined": True,
+            "postgres_unattended_install_defined": True,
+            "database_bootstrap_automatic_defined": True,
+            "schema_migration_and_verification_defined": True,
+            "post_install_doctor_required": True
         },
         "limitations":[
             "No application installer was built or executed.",

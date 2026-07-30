@@ -19,6 +19,8 @@ REQUIRED_SKILLS = {
 REQUIRED_FILES = [
     ".docs/t033/T-033_Cross_Platform_Installer_Packaging_Work_Order.md",
     ".docs/t033/T-033_Implementation_Specification.md",
+    ".docs/t033/T-033_All_In_One_Installer_Orchestration.md",
+    ".docs/t033/T-033_Database_Bootstrap_and_Schema_Automation.md",
     ".docs/t033/T-033_Dependency_Distribution_and_License_Policy.md",
     ".docs/t033/T-033_Windows_Installer_Guide.md",
     ".docs/t033/T-033_macOS_Installer_Guide.md",
@@ -33,6 +35,8 @@ REQUIRED_FILES = [
     "harness/schemas/t033_macos_live_evidence.schema.json",
     "harness/schemas/t033_artifact_scan.schema.json",
     "harness/schemas/t033_postgresql_resolution.schema.json",
+    "harness/schemas/t033_all_in_one_install_evidence.schema.json",
+    "harness/schemas/t033_database_bootstrap_evidence.schema.json",
     "harness/fixtures/t033_installer/valid_dependency_manifest.json",
     "harness/fixtures/t033_installer/valid_postgresql_resolution_windows.json",
     "harness/fixtures/t033_installer/valid_postgresql_resolution_macos.json",
@@ -40,6 +44,10 @@ REQUIRED_FILES = [
     "harness/fixtures/t033_installer/invalid_bundled_postgresql_manifest.json",
     "harness/fixtures/t033_installer/invalid_postgresql_prerelease.json",
     "harness/fixtures/t033_installer/install_scenarios.json",
+    "harness/fixtures/t033_installer/valid_all_in_one_install_evidence.json",
+    "harness/fixtures/t033_installer/valid_database_bootstrap_evidence.json",
+    "harness/fixtures/t033_installer/invalid_manual_database_install_evidence.json",
+    "harness/scripts/verify_t033_all_in_one_install.py",
     "harness/scripts/run_t033_installer_reference.py",
     "harness/scripts/run_t033_windows_installer_probe.ps1",
     "harness/scripts/run_t033_macos_installer_probe.sh",
@@ -103,10 +111,24 @@ def validate_static(root: Path) -> list[str]:
     prerelease = root / "harness/fixtures/t033_installer/invalid_postgresql_prerelease.json"
     if prerelease.is_file() and not validate_resolution(load(prerelease)): failures.append("prerelease fixture unexpectedly valid")
     agents = (root / "AGENTS.md").read_text(encoding="utf-8")
-    for needle in ("T-033 Cross-platform Installer Packaging Policy", "PostgreSQL installer must not be bundled", "58"):
+    for needle in ("T-033 Cross-platform Installer Packaging Policy", "PostgreSQL installer must not be bundled", "one Install action", "Alembic upgrade head", "58"):
         if needle not in agents: failures.append("AGENTS missing T033 rule:" + needle)
     claude = (root / "CLAUDE.md").read_text(encoding="utf-8")
     if "Required reading for T-033" not in claude: failures.append("CLAUDE missing T033 reading section")
+    for needle in ("one-click all-in-one install", "run Alembic to head", "post-install doctor"):
+        if needle not in claude: failures.append("CLAUDE missing T033 all-in-one rule:" + needle)
+    all_in_one = root / "harness/fixtures/t033_installer/valid_all_in_one_install_evidence.json"
+    database = root / "harness/fixtures/t033_installer/valid_database_bootstrap_evidence.json"
+    if all_in_one.is_file():
+        d = load(all_in_one)
+        for key, value in {"single_install_session":True,"manual_prerequisite_steps":0,"manual_database_steps":0,"postgres_unattended_install":True,"database_bootstrap_automatic":True,"post_install_doctor_passed":True,"completed":True}.items():
+            if d.get(key) != value: failures.append("all-in-one fixture mismatch:" + key)
+    if database.is_file():
+        d = load(database)
+        required = {"image_tasks","task_artifacts","task_events","stage_results","quality_results","feedback_records","learning_samples","v_task_summary","alembic_version"}
+        if not required.issubset(set(d.get("required_objects", []))): failures.append("database bootstrap fixture missing required objects")
+        for key in ("postgres_service_ready","role_exists","database_exists","runtime_role_non_superuser","localhost_only","alembic_head_matches","read_write_smoke_rolled_back","credential_store_verified","completed"):
+            if d.get(key) is not True: failures.append("database bootstrap fixture mismatch:" + key)
     return failures
 
 
@@ -115,7 +137,7 @@ def validate_runtime(path: Path, strict: bool) -> list[str]:
     if d.get("schema_version") != "t033.runtime.evidence.v1" or d.get("ticket") != TICKET: failures.append("runtime schema/ticket mismatch")
     if d.get("completed") is not True: failures.append("runtime not completed")
     checks = d.get("checks", {})
-    required = ["python_exact_3119_bundled","system_python_unused","postgres_not_bundled","postgres_latest_stable_policy","postgres_prerelease_rejected","download_integrity_required","lightroom_external","repair_upgrade_uninstall_defined","planner_rules_excluded"]
+    required = ["python_exact_3119_bundled","system_python_unused","postgres_not_bundled","postgres_latest_stable_policy","postgres_prerelease_rejected","download_integrity_required","lightroom_external","repair_upgrade_uninstall_defined","planner_rules_excluded","one_click_all_in_one_defined","postgres_unattended_install_defined","database_bootstrap_automatic_defined","schema_migration_and_verification_defined","post_install_doctor_required"]
     for key in required:
         if checks.get(key) is not True: failures.append("runtime check failed:" + key)
     if strict and d.get("evidence_source") != "implementation": failures.append("strict runtime evidence must be implementation")
@@ -148,6 +170,43 @@ def validate_artifact_scan(path: Path) -> list[str]:
     return failures
 
 
+
+def validate_all_in_one(path: Path) -> list[str]:
+    d = load(path); failures: list[str] = []
+    expected = {
+        "schema_version":"t033.all_in_one.install.v1", "ticket":"T033",
+        "single_install_session":True, "manual_prerequisite_steps":0,
+        "manual_database_steps":0, "os_elevation_only":True,
+        "postgres_unattended_install":True, "database_bootstrap_automatic":True,
+        "startup_registration_automatic":True, "post_install_doctor_passed":True,
+        "completed":True,
+    }
+    for key, value in expected.items():
+        if d.get(key) != value: failures.append(f"all-in-one evidence {key} mismatch")
+    if d.get("platform") not in {"windows", "macos"}: failures.append("all-in-one evidence platform mismatch")
+    return failures
+
+
+def validate_database_bootstrap(path: Path) -> list[str]:
+    d = load(path); failures: list[str] = []
+    expected_true = [
+        "postgres_service_ready", "role_exists", "database_exists",
+        "runtime_role_non_superuser", "localhost_only", "alembic_head_matches",
+        "read_write_smoke_rolled_back", "credential_store_verified", "completed",
+    ]
+    if d.get("schema_version") != "t033.database.bootstrap.v1" or d.get("ticket") != "T033":
+        failures.append("database bootstrap identity mismatch")
+    for key in expected_true:
+        if d.get(key) is not True: failures.append("database bootstrap field must be true:" + key)
+    required = {
+        "image_tasks", "task_artifacts", "task_events", "stage_results",
+        "quality_results", "feedback_records", "learning_samples",
+        "v_task_summary", "alembic_version",
+    }
+    missing = required - set(d.get("required_objects", []))
+    if missing: failures.append("database bootstrap missing objects:" + ",".join(sorted(missing)))
+    return failures
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--project-root", type=Path, default=Path(__file__).resolve().parents[2])
@@ -155,6 +214,8 @@ def main() -> int:
     ap.add_argument("--windows-evidence", type=Path)
     ap.add_argument("--macos-evidence", type=Path)
     ap.add_argument("--artifact-scan", type=Path)
+    ap.add_argument("--all-in-one-evidence", type=Path)
+    ap.add_argument("--database-evidence", type=Path)
     ap.add_argument("--strict", action="store_true")
     a = ap.parse_args(); root = a.project_root.resolve()
     failures = validate_static(root)
@@ -166,6 +227,10 @@ def main() -> int:
     elif a.strict: failures.append("strict requires --macos-evidence")
     if a.artifact_scan: failures += validate_artifact_scan(a.artifact_scan.resolve())
     elif a.strict: failures.append("strict requires --artifact-scan")
+    if a.all_in_one_evidence: failures += validate_all_in_one(a.all_in_one_evidence.resolve())
+    elif a.strict: failures.append("strict requires --all-in-one-evidence")
+    if a.database_evidence: failures += validate_database_bootstrap(a.database_evidence.resolve())
+    elif a.strict: failures.append("strict requires --database-evidence")
     if failures:
         print("FAIL: T033"); [print("- " + f) for f in failures]; return 1
     print("PASS: T033 static contract, skills, schemas, and fixtures")
@@ -173,6 +238,8 @@ def main() -> int:
     if a.windows_evidence: print("PASS: T033 Windows live evidence")
     if a.macos_evidence: print("PASS: T033 macOS live evidence")
     if a.artifact_scan: print("PASS: T033 final artifact scan")
+    if a.all_in_one_evidence: print("PASS: T033 all-in-one install evidence")
+    if a.database_evidence: print("PASS: T033 database bootstrap evidence")
     if a.strict: print("PASS: T033 strict completion gate")
     return 0
 

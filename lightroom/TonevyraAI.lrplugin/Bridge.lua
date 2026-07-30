@@ -1,10 +1,14 @@
 local LrFileUtils = import "LrFileUtils"
 local LrPathUtils = import "LrPathUtils"
+local BridgeConfig = require "BridgeConfig"
 
 local Bridge = {}
 
-Bridge.plugin_version = "t029-native-mask-bridge-20260629"
-Bridge.root = "F:\\tonevyra_ai_agent\\runtime\\bridge"
+Bridge.plugin_version = "t029-native-mask-bridge-20260727"
+Bridge.root = BridgeConfig.root
+if type(Bridge.root) ~= "string" or Bridge.root == "" then
+  error("Tonevyra BridgeConfig.root is missing")
+end
 Bridge.request_dir = Bridge.root .. "\\lightroom_apply_requests"
 Bridge.processing_dir = Bridge.root .. "\\lightroom_apply_processing"
 Bridge.processed_dir = Bridge.root .. "\\lightroom_apply_processed"

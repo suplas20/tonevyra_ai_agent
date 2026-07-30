@@ -61,3 +61,27 @@ xcrun stapler validate TonevyraAI.pkg
 ```
 
 `--deep`은 검증 보조용이며 서명 전략을 대신하지 않는다. 실제 서명은 내부 구성요소부터 수행한다.
+
+## 8. macOS 올인원 설치 흐름
+
+사용자는 PKG 실행, 설치 클릭, macOS 관리자 인증 외에 별도 설정을 하지 않는다.
+
+```text
+signed/notarized PKG verification
+→ app payload install
+→ bundled Python 3.11.9 verification
+→ PostgreSQL detection
+→ approved stable PostgreSQL package download and signature/hash verification
+→ unattended/installer-controlled PostgreSQL installation
+→ service readiness wait
+→ automatic Role/DB creation
+→ Alembic upgrade head
+→ schema/read-write verification
+→ Keychain credential storage
+→ Lightroom detection/plugin install or PENDING
+→ LaunchAgent/Login Item registration
+→ post-install doctor
+→ receipt commit
+```
+
+Homebrew 설치나 Terminal 명령 실행을 사용자에게 요구하지 않는다.

@@ -9,3 +9,7 @@ TONEVYRA_T033_MACOS_PKG=
 TONEVYRA_T033_MACOS_DMG=
 TONEVYRA_T033_EVIDENCE_DIR=runtime/evidence/t033
 # Signing/notary secrets must not be stored in this file.
+
+# T-033 all-in-one evidence
+T033_ALL_IN_ONE_EVIDENCE=runtime/evidence/t033/all_in_one_install_evidence.json
+T033_DATABASE_BOOTSTRAP_EVIDENCE=runtime/evidence/t033/database_bootstrap_evidence.json

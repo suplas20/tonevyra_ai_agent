@@ -6,6 +6,7 @@ T-033은 애플리케이션 기능을 변경하는 티켓이 아니라, T-032까
 
 ```text
 Application payload
+One-click installer orchestrator
 Installer bootstrapper
 Dependency detector
 Bundled runtime verifier
@@ -22,12 +23,18 @@ Signing/notarization/release evidence
 ```text
 packaging/
 ├─ common/
+│  ├─ installer_orchestrator.py
+│  ├─ installer_adapters.py
 │  ├─ dependency_manifest.py
 │  ├─ dependency_detector.py
 │  ├─ integrity.py
 │  ├─ license_inventory.py
 │  ├─ postgres_resolver.py
 │  ├─ postgres_bootstrap.py
+│  ├─ database_migrator.py
+│  ├─ database_verifier.py
+│  ├─ credential_store.py
+│  ├─ post_install_doctor.py
 │  ├─ install_state.py
 │  └─ redaction.py
 ├─ windows/
@@ -56,15 +63,24 @@ packaging/
 NOT_STARTED
 PREFLIGHT
 PAYLOAD_VERIFIED
+APP_INSTALLING
+APP_PAYLOAD_INSTALLED
 BUNDLED_RUNTIME_VERIFIED
 POSTGRES_REQUIRED
+POSTGRES_RESOLVING
 POSTGRES_DOWNLOADING
 POSTGRES_VERIFIED
 POSTGRES_INSTALLING
-DATABASE_BOOTSTRAPPING
-APP_INSTALLING
+POSTGRES_READY
+DB_ROLE_CREATING
+DB_DATABASE_CREATING
+DB_MIGRATING
+DB_SCHEMA_VERIFYING
+DB_CREDENTIAL_STORING
 PLUGIN_INSTALLING
+STARTUP_REGISTERING
 POST_INSTALL_CHECK
+COMMITTING
 COMPLETED
 FAILED_RECOVERABLE
 FAILED_TERMINAL
@@ -210,18 +226,39 @@ Avoid passwords in process arguments. If the third-party installer requires a co
 
 ## 8. Database bootstrap
 
+DB bootstrap is part of the same installer session and must not require manual SQL or database tooling.
+
 ```text
+wait for PostgreSQL readiness
+acquire install/bootstrap lock
 create role only if absent
 create database only if absent
 set least privilege
 restrict network to localhost
-apply Alembic migrations
-validate required tables/view/functions
-persist schema revision
-run read/write smoke transaction
+connect with application role
+apply Alembic migrations to head
+validate required tables/view/indexes/constraints
+persist schema revision in install receipt
+run read/write smoke transaction and rollback
+store app credential in DPAPI/Credential Manager or Keychain
+release bootstrap lock
 ```
 
-Never run destructive reset on an existing database during normal install or repair.
+Required product objects:
+
+```text
+image_tasks
+task_artifacts
+task_events
+stage_results
+quality_results
+feedback_records
+learning_samples
+v_task_summary
+alembic_version
+```
+
+Never run destructive reset on an existing database during normal install or repair. The Agent must not start until DB bootstrap and schema verification pass.
 
 ## 9. Windows implementation
 
@@ -328,3 +365,25 @@ reference harness evidence
 ```
 
 Strict completion requires all categories and prior-ticket regression evidence.
+
+## 15. One-click orchestration contract
+
+The installer must expose a single high-level operation:
+
+```text
+install_all()
+```
+
+This operation coordinates platform adapters but does not expose prerequisite wizards to the user. Normal install evidence must prove:
+
+```text
+single_install_session
+manual_prerequisite_steps == 0
+manual_database_steps == 0
+postgres_unattended_install
+schema_migration_automatic
+startup_registration_automatic
+post_install_doctor_passed
+```
+
+Idempotent re-entry is required. A second invocation after partial failure resumes or repairs completed Tonevyra-owned components rather than reinstalling or resetting them.

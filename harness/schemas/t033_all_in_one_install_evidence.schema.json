@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T033 All-in-One Install Evidence",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "ticket",
+    "platform",
+    "single_install_session",
+    "manual_prerequisite_steps",
+    "manual_database_steps",
+    "os_elevation_only",
+    "postgres_unattended_install",
+    "database_bootstrap_automatic",
+    "startup_registration_automatic",
+    "post_install_doctor_passed",
+    "completed"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t033.all_in_one.install.v1"
+    },
+    "ticket": {
+      "const": "T033"
+    },
+    "platform": {
+      "enum": [
+        "windows",
+        "macos"
+      ]
+    },
+    "single_install_session": {
+      "const": true
+    },
+    "manual_prerequisite_steps": {
+      "const": 0
+    },
+    "manual_database_steps": {
+      "const": 0
+    },
+    "os_elevation_only": {
+      "const": true
+    },
+    "postgres_unattended_install": {
+      "const": true
+    },
+    "database_bootstrap_automatic": {
+      "const": true
+    },
+    "startup_registration_automatic": {
+      "const": true
+    },
+    "post_install_doctor_passed": {
+      "const": true
+    },
+    "completed": {
+      "const": true
+    }
+  }
+}

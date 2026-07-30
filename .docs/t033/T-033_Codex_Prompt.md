@@ -7,6 +7,8 @@ AGENTS.md
 CLAUDE.md
 .docs/t033/T-033_Cross_Platform_Installer_Packaging_Work_Order.md
 .docs/t033/T-033_Implementation_Specification.md
+.docs/t033/T-033_All_In_One_Installer_Orchestration.md
+.docs/t033/T-033_Database_Bootstrap_and_Schema_Automation.md
 .docs/t033/T-033_Dependency_Distribution_and_License_Policy.md
 .docs/t033/T-033_Windows_Installer_Guide.md
 .docs/t033/T-033_macOS_Installer_Guide.md
@@ -24,6 +26,7 @@ Windows x64와 macOS Apple Silicon arm64에서 Tonevyra AI를 설치·복구·�
 ```text
 - Preserve every T-032 file and all 51 baseline skills.
 - Add exactly seven T-033 skills; cumulative total 58.
+- Deliver a one-click all-in-one install: installer launch, OS elevation, one Install action, automatic configuration.
 - Bundle Python 3.11.9 and locked dependencies.
 - Never depend on or mutate system Python.
 - Do not bundle any PostgreSQL installer/package.
@@ -31,6 +34,9 @@ Windows x64와 macOS Apple Silicon arm64에서 Tonevyra AI를 설치·복구·�
 - Reject alpha/beta/RC/snapshot/nightly releases.
 - Verify signed channel metadata, URL host, SHA-256 and publisher/package signature.
 - Preserve existing PostgreSQL installations and user data.
+- Install PostgreSQL unattended; do not expose its wizard or require DB settings from the user.
+- Automatically wait for DB readiness, create/verify tonevyra_app and tonevyra_agent, run Alembic upgrade head, verify required schema objects, store credentials securely, and run a DB smoke transaction.
+- Do not show installation success until Agent/DB/post-install doctor passes.
 - Do not bundle or automate Adobe Lightroom Classic installation.
 - Keep T-032 Planner service/rules out of the client package.
 - Sign Windows release artifacts.
@@ -45,14 +51,15 @@ Windows x64와 macOS Apple Silicon arm64에서 Tonevyra AI를 설치·복구·�
 3. 공통 dependency/install state 모듈
 4. Python 3.11.9 bundled build
 5. PostgreSQL stable resolver/downloader/verifier
-6. DB bootstrap/migration/receipt
-7. Windows bootstrapper and release signing
-8. macOS bundle/PKG/DMG signing and notarization
-9. Lightroom detection/plugin installation
-10. repair/upgrade/uninstall
-11. deterministic harness evidence
-12. real Windows/macOS live evidence
-13. T-019..T-032 regression execution
+6. one-click installer orchestrator and resumable install state
+7. DB bootstrap/migration/schema verification/credential receipt
+8. Windows bootstrapper and release signing
+9. macOS bundle/PKG/DMG signing and notarization
+10. Lightroom detection/plugin installation
+11. repair/upgrade/uninstall
+12. deterministic harness evidence
+13. real Windows/macOS live evidence including all-in-one and DB bootstrap proof
+14. T-019..T-032 regression execution
 
 ## 완료 전 실행
 
@@ -71,6 +78,8 @@ python harness/scripts/verify_t033_cross_platform_installer.py \
   --windows-evidence <windows-live.json> \
   --macos-evidence <macos-live.json> \
   --artifact-scan <artifact-scan.json> \
+  --all-in-one-evidence <all-in-one-live.json> \
+  --database-evidence <database-bootstrap-live.json> \
   --strict
 ```
 

@@ -11,6 +11,8 @@ Primary result: end-user installable Tonevyra AI packages
 
 이 문서는 T-032 완료 상태를 기준으로 Tonevyra AI Agent를 일반 사용자가 개발 도구나 명령어 없이 설치·복구·제거할 수 있도록 패키징하는 작업을 정의한다.
 
+T-033의 최우선 사용자 경험은 **설치 파일 실행 → 운영체제 관리자 승인 → 설치 버튼 1회 → 전체 자동 구성 → 실행**이다. Python, PostgreSQL, DB 계정, DB 스키마, 플러그인, 자동 시작 및 진단을 사용자에게 별도 작업으로 요구하지 않는다.
+
 기존 문서, 스킬, 하네스, 계약, 상태 머신, Planner API 경계 및 보안 규칙을 삭제하거나 약화하지 않는다.
 
 ## 2. 확정된 제품 정책
@@ -105,23 +107,33 @@ Intel Mac은 별도 검증 전까지 지원 대상으로 표시하지 않는다.
 
 ## 5. 설치 단계
 
+정상 경로에서 사용자는 설치 버튼과 운영체제 관리자 승인 외에 별도 입력을 하지 않는다.
+
 ```text
 installer launch
 → OS/architecture/version preflight
 → disk/network/permission preflight
 → package signature and payload integrity verification
-→ bundled Python runtime verification
-→ installed Lightroom Classic detection
+→ Tonevyra application payload installation
+→ bundled Python 3.11.9 runtime verification
 → existing PostgreSQL/Tonevyra DB detection
-→ if needed, resolve latest PostgreSQL stable installer
+→ if needed, resolve latest approved PostgreSQL stable installer
 → official download + integrity/signature validation
 → PostgreSQL unattended installation
-→ Tonevyra-owned DB/bootstrap/migration
-→ Tonevyra application and plugin installation
+→ wait until PostgreSQL service is ready
+→ automatically create/verify Tonevyra DB role and database
+→ automatically run Alembic upgrade head
+→ verify tables/view/indexes/privileges and DB read/write smoke transaction
+→ store DB credentials in OS credential storage
+→ installed Lightroom Classic detection
+→ Tonevyra Lightroom plugin automatic install or PENDING
 → background startup registration
-→ post-install doctor
-→ installation evidence and user-facing summary
+→ Agent/DB/Planner API post-install doctor
+→ commit installation receipt/evidence
+→ launch Tonevyra AI
 ```
+
+사용자에게 PostgreSQL 설치 마법사, DB 비밀번호, DB 이름, 포트, SQL 실행 또는 Alembic 명령을 노출하지 않는다.
 
 ## 6. Python 정책
 
@@ -291,4 +303,28 @@ storing DB passwords in logs or plain text
 bundling Lightroom Classic or Creative Cloud
 claiming macOS completion without notarization/Gatekeeper evidence
 claiming completion from reference harness output only
+```
+
+## 11. 올인원 설치 완료 조건
+
+```text
+manual_prerequisite_steps = 0
+manual_database_steps = 0
+python_3119_bundled = true
+postgres_unattended_install = true
+database_bootstrap_automatic = true
+alembic_head_verified = true
+required_schema_objects_verified = true
+credential_store_verified = true
+agent_startup_registered = true
+post_install_doctor_passed = true
+```
+
+Lightroom Classic 미설치는 base install 실패가 아니라 `PENDING`이지만, PostgreSQL·DB 스키마·Agent doctor 실패는 설치 성공으로 처리하지 않는다.
+
+상세 오케스트레이션과 DB bootstrap은 다음 문서를 따른다.
+
+```text
+.docs/t033/T-033_All_In_One_Installer_Orchestration.md
+.docs/t033/T-033_Database_Bootstrap_and_Schema_Automation.md
 ```

@@ -17,10 +17,14 @@ from tonevyra_agent.db.models import ImageTask
 from tonevyra_agent.db.repositories import ImageTaskRepository, TaskEventRepository
 from tonevyra_agent.images.metadata import create_metadata_and_preview_artifacts
 from tonevyra_agent.lightroom.bridge import LightroomBridge
+from tonevyra_agent.lightroom.user_messages import is_lightroom_error, lightroom_error_message
 from tonevyra_agent.planner_api.remote_planner import RemoteCorrectionPlanner
+from tonevyra_agent.planner_api.user_messages import is_planner_api_error, planner_error_message
+from tonevyra_agent.vision.user_messages import is_model_error, model_error_message
 from tonevyra_agent.quality.analyzer import QualityGate
 from tonevyra_agent.storage.artifacts import ArtifactRef, ArtifactStorage
 from tonevyra_agent.vision.analyzer import VisionAnalyzer
+from tonevyra_agent.windows.user_notifications import show_error_message
 
 
 PROCESSING_LOOP_NAME = "processing_loop"
@@ -126,6 +130,15 @@ class AgentWorker:
                 response_path = self._wait_for_lightroom_response(task_id, request_id=request_result.payload.request_id)
                 response_result = self._ingest_lightroom_response(task_id, response_path=response_path)
         except TonevyraError as exc:
+            if is_planner_api_error(exc):
+                show_error_message("Tonevyra AI - 플래너 서버 오류", planner_error_message(exc))
+            elif is_model_error(exc):
+                show_error_message("Tonevyra AI - 로컬 AI 모델 오류", model_error_message(exc))
+            elif is_lightroom_error(exc):
+                show_error_message(
+                    "Tonevyra AI - Lightroom 보정 오류",
+                    lightroom_error_message(exc),
+                )
             self._mark_failed_if_needed(
                 task_id,
                 error_code=exc.code,

@@ -32,6 +32,23 @@
       "id": "uninstall_default",
       "expected_database_preserved": true,
       "expected_results_preserved": true
+    },
+    {
+      "id": "windows_all_in_one_clean",
+      "expected_manual_prerequisite_steps": 0,
+      "expected_manual_database_steps": 0,
+      "expected_post_install_doctor": true
+    },
+    {
+      "id": "database_schema_automatic",
+      "expected_alembic_head": true,
+      "expected_required_objects": 9,
+      "expected_user_sql_steps": 0
+    },
+    {
+      "id": "partial_install_resume",
+      "expected_database_reset": false,
+      "expected_resume_completed_steps": true
     }
   ]
 }

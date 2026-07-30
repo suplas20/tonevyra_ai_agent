@@ -11,20 +11,27 @@ Database prerequisite: machine-level PostgreSQL service when required
 
 ## 2. 설치 순서
 
+사용자는 EXE 실행, UAC 승인, 설치 버튼 1회 외에 별도 설정을 하지 않는다.
+
 ```text
 verify bootstrapper Authenticode
 → detect OS/architecture
 → verify bundled application/Python payload hashes
-→ detect Lightroom Classic
-→ detect Tonevyra PostgreSQL instance
-→ resolve/download latest stable PostgreSQL if absent
-→ verify downloaded Authenticode/hash/publisher
-→ elevate and install PostgreSQL
-→ initialize/migrate DB
 → install application per-user
-→ install Lightroom plugin if possible
+→ detect Tonevyra PostgreSQL instance
+→ resolve/download latest approved stable PostgreSQL if absent
+→ verify downloaded Authenticode/hash/publisher
+→ elevate and install PostgreSQL unattended
+→ wait PostgreSQL service ready
+→ create/verify tonevyra_app role and tonevyra_agent DB
+→ run Alembic upgrade head automatically
+→ verify required schema objects and read/write smoke transaction
+→ store DB credential with DPAPI/Credential Manager
+→ detect Lightroom Classic
+→ install Lightroom plugin if possible or mark PENDING
 → register startup
-→ launch doctor
+→ run Agent/DB/Planner doctor
+→ commit receipt and launch Tonevyra AI
 ```
 
 ## 3. 권한 경계
@@ -75,3 +82,18 @@ uninstaller registration
 ## 8. 복구/제거
 
 복구는 Tonevyra 파일과 설정만 복구한다. 기존 PostgreSQL을 무조건 재설치하지 않는다. 제거는 기본적으로 데이터베이스와 사용자 결과물을 보존한다.
+
+## 9. Windows 올인원 UI 규칙
+
+정상 설치 화면에서 Python/PostgreSQL/DB 설정 마법사를 노출하지 않는다. 상세 진행은 사용자 친화적 구성요소 이름으로만 표시한다.
+
+```text
+Tonevyra 실행 환경
+로컬 데이터베이스
+데이터베이스 초기화
+Lightroom 연동
+백그라운드 에이전트
+최종 검사
+```
+
+PostgreSQL 제3자 라이선스와 설치 사실은 고지하되 DB 비밀번호·포트·Role 입력을 요구하지 않는다.

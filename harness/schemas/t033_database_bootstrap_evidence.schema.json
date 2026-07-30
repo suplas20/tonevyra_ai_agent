@@ -1,0 +1,106 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "T033 Database Bootstrap Evidence",
+  "type": "object",
+  "additionalProperties": true,
+  "required": [
+    "schema_version",
+    "ticket",
+    "postgres_service_ready",
+    "role_exists",
+    "database_exists",
+    "runtime_role_non_superuser",
+    "localhost_only",
+    "alembic_head_matches",
+    "required_objects",
+    "read_write_smoke_rolled_back",
+    "credential_store_verified",
+    "completed"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "t033.database.bootstrap.v1"
+    },
+    "ticket": {
+      "const": "T033"
+    },
+    "postgres_service_ready": {
+      "const": true
+    },
+    "role_exists": {
+      "const": true
+    },
+    "database_exists": {
+      "const": true
+    },
+    "runtime_role_non_superuser": {
+      "const": true
+    },
+    "localhost_only": {
+      "const": true
+    },
+    "alembic_head_matches": {
+      "const": true
+    },
+    "required_objects": {
+      "type": "array",
+      "uniqueItems": true,
+      "allOf": [
+        {
+          "contains": {
+            "const": "image_tasks"
+          }
+        },
+        {
+          "contains": {
+            "const": "task_artifacts"
+          }
+        },
+        {
+          "contains": {
+            "const": "task_events"
+          }
+        },
+        {
+          "contains": {
+            "const": "stage_results"
+          }
+        },
+        {
+          "contains": {
+            "const": "quality_results"
+          }
+        },
+        {
+          "contains": {
+            "const": "feedback_records"
+          }
+        },
+        {
+          "contains": {
+            "const": "learning_samples"
+          }
+        },
+        {
+          "contains": {
+            "const": "v_task_summary"
+          }
+        },
+        {
+          "contains": {
+            "const": "alembic_version"
+          }
+        }
+      ]
+    },
+    "read_write_smoke_rolled_back": {
+      "const": true
+    },
+    "credential_store_verified": {
+      "const": true
+    },
+    "completed": {
+      "const": true
+    }
+  }
+}

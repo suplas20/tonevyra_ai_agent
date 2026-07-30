@@ -428,6 +428,8 @@ Before modifying packaging, prerequisite detection, bundled runtimes, PostgreSQL
 AGENTS.md
 .docs/t033/T-033_Cross_Platform_Installer_Packaging_Work_Order.md
 .docs/t033/T-033_Implementation_Specification.md
+.docs/t033/T-033_All_In_One_Installer_Orchestration.md
+.docs/t033/T-033_Database_Bootstrap_and_Schema_Automation.md
 .docs/t033/T-033_Dependency_Distribution_and_License_Policy.md
 .docs/t033/T-033_Windows_Installer_Guide.md
 .docs/t033/T-033_macOS_Installer_Guide.md
@@ -446,12 +448,16 @@ T-033 implementation rules:
 
 ```text
 - Preserve all 51 T-032 skills and add seven T-033 skills; total 58.
+- Implement a one-click all-in-one install; only OS elevation/admin authentication may interrupt the normal install flow.
 - Bundle exact Python 3.11.9 and reviewed locked dependencies.
 - Do not use or modify system Python.
 - Do not bundle a PostgreSQL installer under any name or archive.
 - Download only latest stable GA PostgreSQL through signed metadata and approved official hosts.
 - Reject prerelease, hash mismatch, signature mismatch and unapproved redirects.
 - Preserve existing PostgreSQL data and avoid silent major upgrades.
+- Install PostgreSQL unattended without exposing its wizard or DB inputs.
+- Automatically wait for DB readiness, create/verify `tonevyra_app` and `tonevyra_agent`, run Alembic to head, verify required schema objects and privileges, run a rollback smoke transaction, and store credentials with OS credential storage.
+- Do not start Agent or show success until the post-install doctor passes.
 - Keep Lightroom Classic external and allow base install without it.
 - Keep Planner rules/service out of the client package.
 - Require Windows signing and macOS signing/notarization/stapling live evidence.
@@ -463,6 +469,7 @@ Canonical commands:
 python harness/scripts/verify_t033_cross_platform_installer.py --project-root .
 python harness/scripts/run_t033_installer_reference.py --project-root . --output runtime/evidence/t033/reference_runtime_evidence.json
 python harness/scripts/verify_t033_cross_platform_installer.py --project-root . --runtime-evidence runtime/evidence/t033/reference_runtime_evidence.json
+python harness/scripts/verify_t033_all_in_one_install.py --all-in-one-evidence harness/fixtures/t033_installer/valid_all_in_one_install_evidence.json --database-evidence harness/fixtures/t033_installer/valid_database_bootstrap_evidence.json
 ```
 
 Do not claim strict completion from reference evidence.

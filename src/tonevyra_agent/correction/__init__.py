@@ -1,6 +1,10 @@
-"""Correction Planner public API."""
+"""Correction plan schemas with optional local-test planner exports.
 
-from tonevyra_agent.correction.planner import CorrectionPlanner, create_correction_plan, plan_task_correction
+Production clients use the remote Planner API and intentionally do not package
+the local planner implementation. Keep those exports lazy so importing the
+shared correction schema never requires server-side planner code.
+"""
+
 from tonevyra_agent.correction.schemas import ADJUSTMENT_RANGES, CorrectionPlan
 
 __all__ = [
@@ -13,8 +17,10 @@ __all__ = [
 
 
 def __getattr__(name: str):  # pragma: no cover - thin lazy re-export
-    # Lazy access keeps optional pixel deps (cv2/numpy) out of the import path for
-    # callers that only need the legacy planner.
+    if name in {"CorrectionPlanner", "create_correction_plan", "plan_task_correction"}:
+        from tonevyra_agent.correction import planner
+
+        return getattr(planner, name)
     if name in {"TargetBasedPlanner", "plan_with_targets"}:
         from tonevyra_agent.correction import target_based
 

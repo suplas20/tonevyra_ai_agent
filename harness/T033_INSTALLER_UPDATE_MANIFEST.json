@@ -22,10 +22,28 @@
   },
   "strict_evidence": [
     "implementation_runtime",
+    "all_in_one_install",
+    "database_bootstrap_schema",
     "windows_live_install",
     "macos_signed_notarized_install",
     "final_artifact_scan",
     "prior_ticket_regressions"
   ],
-  "forbidden_claim": "Reference harness evidence is not T-033 strict completion."
+  "forbidden_claim": "Reference harness evidence is not T-033 strict completion.",
+  "updated_docs": [
+    ".docs/t033/T-033_All_In_One_Installer_Orchestration.md",
+    ".docs/t033/T-033_Database_Bootstrap_and_Schema_Automation.md"
+  ],
+  "all_in_one_policy": {
+    "normal_user_actions": [
+      "launch_installer",
+      "approve_os_elevation",
+      "click_install"
+    ],
+    "manual_prerequisite_steps": 0,
+    "manual_database_steps": 0,
+    "postgresql_install": "automatic unattended download/install",
+    "database_bootstrap": "automatic role/database/alembic/schema verification",
+    "success_gate": "post-install doctor required"
+  }
 }

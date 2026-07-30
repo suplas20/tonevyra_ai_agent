@@ -122,6 +122,73 @@ class PlannerApiClient:
             failed_stage=Stage.CORRECTION_PLAN.value,
         )
 
+    def check_readiness(self) -> dict[str, Any]:
+        """Verify the configured Planner Service readiness endpoint once."""
+
+        self._validate_config()
+        request = Request(
+            f"{self.base_url}/health/ready",
+            method="GET",
+            headers={
+                "Authorization": f"Bearer {self.settings.planner_api_key}",
+                "Accept": "application/json",
+            },
+        )
+        timeout = max(0.5, float(self.settings.planner_api_connect_timeout_seconds))
+        try:
+            with self._opener.open(request, timeout=timeout) as response:
+                content_type = response.headers.get("Content-Type", "")
+                raw = response.read(self.settings.planner_api_max_request_body_bytes + 1)
+                if "application/json" not in content_type.lower():
+                    raise TonevyraError(
+                        code=ErrorCode.PLANNER_API_RESPONSE_INVALID,
+                        message=f"Planner readiness endpoint returned non-JSON content type: {content_type}",
+                        failed_stage=Stage.CORRECTION_PLAN.value,
+                    )
+                payload = json.loads(raw.decode("utf-8"))
+                if not isinstance(payload, dict):
+                    raise TonevyraError(
+                        code=ErrorCode.PLANNER_API_RESPONSE_INVALID,
+                        message="Planner readiness endpoint returned an invalid response body.",
+                        failed_stage=Stage.CORRECTION_PLAN.value,
+                    )
+                if payload.get("ready") is False or str(payload.get("status", "")).lower() in {
+                    "not_ready",
+                    "unavailable",
+                }:
+                    raise TonevyraError(
+                        code=ErrorCode.PLANNER_SERVICE_NOT_READY,
+                        message="Planner readiness endpoint reported that the service is not ready.",
+                        failed_stage=Stage.CORRECTION_PLAN.value,
+                    )
+                return payload
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            raise TonevyraError(
+                code=ErrorCode.PLANNER_API_RESPONSE_INVALID,
+                message="Planner readiness endpoint returned invalid JSON.",
+                failed_stage=Stage.CORRECTION_PLAN.value,
+            ) from exc
+        except HTTPError as exc:
+            failure = self._http_failure(exc)
+            code = ErrorCode.PLANNER_SERVICE_NOT_READY if exc.code == 503 else failure.error_code
+            raise TonevyraError(
+                code=code,
+                message=failure.message,
+                failed_stage=Stage.CORRECTION_PLAN.value,
+            ) from exc
+        except (TimeoutError, socket.timeout) as exc:
+            raise TonevyraError(
+                code=ErrorCode.PLANNER_API_TIMEOUT,
+                message=f"Planner readiness check timed out: {exc}",
+                failed_stage=Stage.CORRECTION_PLAN.value,
+            ) from exc
+        except URLError as exc:
+            raise TonevyraError(
+                code=ErrorCode.PLANNER_API_UNAVAILABLE,
+                message=f"Planner API is unavailable: {exc.reason}",
+                failed_stage=Stage.CORRECTION_PLAN.value,
+            ) from exc
+
     def _send_once(self, *, body: bytes, request: PlannerRequest, idempotency_key: str) -> dict[str, Any]:
         http_request = Request(
             f"{self.base_url}/api/v1/plans",
@@ -202,10 +269,12 @@ class PlannerApiClient:
                 failed_stage=Stage.CORRECTION_PLAN.value,
             )
         parsed = urlparse(self.base_url)
-        if parsed.scheme != "https":
+        local_server_mode = (self.settings.planner_api_mode or "api").lower() == "local_server"
+        loopback_http = parsed.scheme == "http" and parsed.hostname in {"127.0.0.1", "localhost", "::1"}
+        if parsed.scheme != "https" and not (local_server_mode and loopback_http):
             raise TonevyraError(
                 code=ErrorCode.SECURITY_NETWORK_ACCESS_BLOCKED,
-                message="Planner API base URL must use HTTPS.",
+                message="Planner API base URL must use HTTPS; local_server mode permits loopback HTTP only.",
                 failed_stage=Stage.CORRECTION_PLAN.value,
             )
         allowed_hosts = {
@@ -222,7 +291,8 @@ class PlannerApiClient:
 
     def _build_opener(self) -> OpenerDirector:
         cafile = None
-        if self.settings.planner_api_ca_bundle is not None:
+        parsed = urlparse(self.base_url)
+        if parsed.scheme == "https" and self.settings.planner_api_ca_bundle is not None:
             cafile = str(self.settings.project_path(self.settings.planner_api_ca_bundle).resolve())
         context = ssl.create_default_context(cafile=cafile)
         return build_opener(NoRedirectHttpsHandler(context=context))

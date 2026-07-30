@@ -1,0 +1,24 @@
+{
+  "schema_version": "t033.database.bootstrap.v1",
+  "ticket": "T033",
+  "postgres_service_ready": true,
+  "role_exists": true,
+  "database_exists": true,
+  "runtime_role_non_superuser": true,
+  "localhost_only": true,
+  "alembic_head_matches": true,
+  "required_objects": [
+    "image_tasks",
+    "task_artifacts",
+    "task_events",
+    "stage_results",
+    "quality_results",
+    "feedback_records",
+    "learning_samples",
+    "v_task_summary",
+    "alembic_version"
+  ],
+  "read_write_smoke_rolled_back": true,
+  "credential_store_verified": true,
+  "completed": true
+}

@@ -13,6 +13,7 @@ from harness.scripts.build_tonevyra_windows_installer import (
     _resolve_model_bundle_source,
     _uninstall_script,
 )
+from harness.scripts.build_tonevyra_windows_native_installer import PLUGIN_SRC
 
 
 def test_install_script_uses_per_user_install_location() -> None:
@@ -25,19 +26,74 @@ def test_install_script_uses_per_user_install_location() -> None:
     assert "Windows\\CurrentVersion\\Run" not in script
 
 
-def test_install_script_blocks_until_prerequisites_exist() -> None:
+def test_native_inno_installer_creates_desktop_shortcut() -> None:
+    script = Path("installer/windows/TonevyraAI.iss").read_text(encoding="utf-8")
+
+    assert 'Name: "{autodesktop}\\Tonevyra AI"' in script
+    assert 'Filename: "{app}\\TonevyraAI.exe"' in script
+    assert 'Parameters: "tray"' in script
+
+
+def test_native_installer_packages_complete_lightroom_adapter() -> None:
+    assert PLUGIN_SRC == Path("lightroom/TonevyraAI.lrplugin").resolve()
+    assert (PLUGIN_SRC / "Bridge.lua").is_file()
+    assert (PLUGIN_SRC / "BridgeConfig.lua").is_file()
+    assert (PLUGIN_SRC / "Worker.lua").is_file()
+
+    bridge = (PLUGIN_SRC / "Bridge.lua").read_text(encoding="utf-8")
+    worker = (PLUGIN_SRC / "Worker.lua").read_text(encoding="utf-8")
+    assert 'Bridge.root = BridgeConfig.root' in bridge
+    assert "lightroom_apply_requests" in bridge
+    assert "lightroom_export_requests" in bridge
+    assert "local function applyRequest" in worker
+    assert "local function exportRequest" in worker
+
+
+def test_frozen_app_includes_local_qwen_runtime() -> None:
+    script = Path("harness/scripts/build_tonevyra_windows_exe.py").read_text(encoding="utf-8")
+
+    assert '"transformers.models.qwen3_vl"' in script
+    assert '"--exclude-module",\n        "torch",' not in script
+    assert '"--exclude-module",\n        "torchvision",' not in script
+    assert '"--exclude-module",\n        "transformers",' not in script
+
+
+def test_provisioning_selects_real_model_and_lightroom_backends() -> None:
+    script = Path("installer/windows/Invoke-TonevyraProvision.ps1").read_text(encoding="utf-8")
+
+    assert 'TONEVYRA_VISION_BACKEND=qwen3vl' in script
+    assert 'TONEVYRA_LIGHTROOM_BACKEND=lightroom' in script
+    assert '[Environment]::GetFolderPath([Environment+SpecialFolder]::MyDocuments)' in script
+    assert 'Join-Path $documentsDir "TonevyraAI\\input"' in script
+    assert '"TONEVYRA_INPUT_DIR=$inputDir"' in script
+    assert "New-Object System.Text.UTF8Encoding($false)" in script
+    assert 'TONEVYRA_PLANNER_API_BASE_URL=http://127.0.0.1:8000' in script
+    assert 'function Read-DatabaseUrl' in script
+    assert 'Write-EnvFile $existingUrl' in script
+    assert 'installer-requeue-legacy-model-tasks' in script
+    assert 'legacy_model_task_repair.json' in script
+    assert 'BridgeConfig.lua' in script
+    assert r'runtime\bridge' in script
+    assert 'RESTART_REQUIRED' in script
+
+
+def test_install_script_orchestrates_all_in_one_prerequisites() -> None:
     script = _install_script("0.1.0")
 
-    assert "Assert-TonevyraPrerequisites" in script
-    assert "Test-TonevyraPython" in script
-    assert '$RequiredPython = "3.11"' in script
-    assert 'Python $RequiredPython' in script
-    assert "Test-TonevyraPostgreSQL" in script
+    assert "Assert-TonevyraPrerequisites" not in script
+    assert '$RequiredPython = "3.11.9"' in script
+    assert "Assert-TonevyraBundledRuntime" in script
+    assert "Get-TonevyraPostgreSQLResolution" in script
+    assert "Install-TonevyraPostgreSQLUnattended" in script
+    assert "Initialize-TonevyraDatabase" in script
+    assert '@("installer-db", "bootstrap-schema")' in script
+    assert '@("installer-db", "verify", "--credential-store-verified"' in script
+    assert '@("doctor")' in script
+    assert '"post-install doctor"' in script
     assert "Test-TonevyraLightroomClassic" in script
-    assert "System.Windows.Forms.MessageBox" in script
-    assert "Missing prerequisites" in script
-    assert "python.org/downloads/windows/" in script
-    assert "postgresql.org/download/windows/" in script
+    assert "Missing prerequisites" not in script
+    assert "python.org/downloads/windows/" not in script
+    assert "postgresql.org/download/windows/" not in script
 
 
 def test_install_script_requires_bundled_model_manifest() -> None:

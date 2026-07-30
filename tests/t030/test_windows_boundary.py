@@ -10,6 +10,7 @@ from tonevyra_agent.agent.runtime_state import AgentRuntimeState
 from tonevyra_agent.cli import _tray_startup_command
 from tonevyra_agent.core.config import Settings
 from tonevyra_agent.windows import tray_shell
+from tonevyra_agent.windows.app_entry import _notify_planner_startup_issue
 from tonevyra_agent.windows.background_launcher import build_background_command
 from tonevyra_agent.windows.shell_worker_ipc import TrayCommand, TrayCommandName, TrayCommandProcessor
 from tonevyra_agent.windows.single_instance import SingleInstanceGuard
@@ -100,6 +101,33 @@ def test_tray_startup_command_uses_frozen_executable_directly() -> None:
 
     assert executable == "TonevyraAI.exe"
     assert args == ["tray"]
+
+
+def test_planner_startup_failure_is_shown_as_korean_user_error(monkeypatch) -> None:
+    shown: dict[str, str] = {}
+
+    def fail_readiness(_self):
+        from tonevyra_agent.core.enums import ErrorCode, Stage
+        from tonevyra_agent.core.errors import TonevyraError
+
+        raise TonevyraError(
+            code=ErrorCode.PLANNER_API_UNAVAILABLE,
+            message="connection refused",
+            failed_stage=Stage.CORRECTION_PLAN.value,
+        )
+
+    monkeypatch.setattr("tonevyra_agent.core.config.get_settings", lambda: Settings(planner_api_mode="api"))
+    monkeypatch.setattr("tonevyra_agent.planner_api.client.PlannerApiClient.check_readiness", fail_readiness)
+    monkeypatch.setattr(
+        "tonevyra_agent.windows.user_notifications.show_error_message",
+        lambda title, message: shown.update(title=title, message=message) or True,
+    )
+
+    _notify_planner_startup_issue()
+
+    assert "플래너 서버 오류" in shown["title"]
+    assert "플래너 서버에 연결할 수 없습니다" in shown["message"]
+    assert "PLANNER_API_UNAVAILABLE" in shown["message"]
 
 
 def test_tray_shell_skips_worker_launch_when_background_is_already_running(monkeypatch, tmp_path: Path) -> None:

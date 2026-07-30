@@ -87,3 +87,18 @@ no forbidden component in client
 PostgreSQL installer absent from packaged payload
 license inventory generated reproducibly
 ```
+
+## 9. 올인원 설치와 제3자 설치 고지
+
+PostgreSQL 설치 파일은 Tonevyra payload에 포함하지 않지만, Tonevyra 설치 프로그램이 같은 설치 세션에서 공식 배포본을 자동 다운로드·검증·무인 설치할 수 있다.
+
+사용자에게 PostgreSQL 설치 마법사를 직접 조작하도록 요구하지 않는다. 설치 전 다음 사실과 적용 라이선스를 고지한다.
+
+```text
+- PostgreSQL은 제3자 오픈소스 데이터베이스 구성요소다.
+- 공식 배포처에서 설치 중 다운로드된다.
+- 로컬 Tonevyra 작업 복구와 운영 메타데이터에 사용된다.
+- 외부 네트워크에 DB 포트를 공개하지 않는다.
+```
+
+다운로드와 자동 설치는 재배포와 구분되며, 설치 파일은 검증 후 실행하고 성공 후 임시 저장소에서 삭제한다.

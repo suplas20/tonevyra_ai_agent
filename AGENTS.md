@@ -1676,7 +1676,19 @@ The phrase `production local Planner fallback is forbidden` is a hard T-032 rule
 
 ## 36. T-033 Cross-platform Installer Packaging Policy
 
-### 36.1 Distribution boundary
+### 36.1 One-click product contract
+
+```text
+User action:
+installer launch → OS elevation/admin authentication → one Install action
+
+Automatic:
+application payload → bundled Python → PostgreSQL download/install → DB Role/Database → Alembic schema → credential storage → Lightroom plugin/PENDING → startup registration → final doctor → launch
+```
+
+Normal installation must require zero manual prerequisite steps and zero manual database steps. Do not expose a PostgreSQL wizard, DB credentials, SQL execution, Alembic commands, PATH changes or plugin file copying to the user.
+
+### 36.2 Distribution boundary
 
 ```text
 Bundled:
@@ -1692,11 +1704,11 @@ Lightroom Classic, Adobe Creative Cloud, GPU drivers
 
 The PostgreSQL installer must not be bundled in any Windows EXE, macOS PKG/DMG, nested archive, cache seed, or offline payload.
 
-### 36.2 Python
+### 36.3 Python
 
 Production packages use the bundled Python 3.11.9 runtime only. Do not inspect PATH to choose another Python, mutate PATH, register file associations, install global packages, or download a newer interpreter during install/first launch.
 
-### 36.3 PostgreSQL
+### 36.4 PostgreSQL
 
 ```text
 channel = latest-stable
@@ -1711,15 +1723,33 @@ silent major upgrade = forbidden
 
 A new upstream stable major version still requires the Tonevyra DB compatibility gate. If that gate is unavailable, stop safely instead of executing an unverified installer.
 
-### 36.4 Platform release gates
+### 36.5 Database bootstrap and completion
+
+```text
+PostgreSQL unattended install
+→ service readiness
+→ tonevyra_app Role
+→ tonevyra_agent DB
+→ Alembic upgrade head
+→ required object/privilege verification
+→ read/write smoke rollback
+→ DPAPI/Credential Manager or Keychain
+→ Agent/DB doctor
+```
+
+Do not report installation success or start the Agent before this gate passes. Existing databases must not be reset during install or repair.
+
+### 36.6 Platform release gates
 
 Windows release artifacts require Authenticode evidence. macOS release artifacts require Developer ID signing, notarization acceptance, stapling and Gatekeeper evidence. Reference harness output is never live release evidence.
 
-### 36.5 Canonical T-033 references
+### 36.7 Canonical T-033 references
 
 ```text
 .docs/t033/T-033_Cross_Platform_Installer_Packaging_Work_Order.md
 .docs/t033/T-033_Implementation_Specification.md
+.docs/t033/T-033_All_In_One_Installer_Orchestration.md
+.docs/t033/T-033_Database_Bootstrap_and_Schema_Automation.md
 .docs/t033/T-033_Dependency_Distribution_and_License_Policy.md
 .docs/t033/T-033_Windows_Installer_Guide.md
 .docs/t033/T-033_macOS_Installer_Guide.md
@@ -1727,6 +1757,7 @@ Windows release artifacts require Authenticode evidence. macOS release artifacts
 skills/T033_SKILL_INVENTORY.json
 harness/CONTRACT_T033_CROSS_PLATFORM_INSTALLER.md
 harness/scripts/verify_t033_cross_platform_installer.py
+harness/scripts/verify_t033_all_in_one_install.py
 ```
 
 T-032 baseline skill count is 51. T-033 preserves all 51 and adds seven skills for a cumulative total of 58.

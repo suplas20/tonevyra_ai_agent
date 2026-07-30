@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import subprocess
+import sys
 from uuid import uuid4
 
 import pytest
@@ -10,6 +12,7 @@ from tonevyra_agent.core.config import Settings
 from tonevyra_agent.core.enums import ErrorCode
 from tonevyra_agent.core.errors import TonevyraError
 from tonevyra_agent.planner_api.client import PlannerApiClient
+from tonevyra_agent.planner_api.user_messages import planner_error_message
 from tonevyra_agent.planner_api.contracts import (
     build_planner_request,
     forbidden_key_paths,
@@ -182,7 +185,12 @@ def test_planner_api_client_requires_https() -> None:
 def test_planner_api_client_accepts_configured_ca_bundle(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     ca_bundle = tmp_path / "planner-ca.pem"
     ca_bundle.write_text("", encoding="utf-8")
-    settings = Settings(planner_api_ca_bundle=ca_bundle)
+    settings = Settings(
+        planner_api_mode="api",
+        planner_api_base_url="https://planner.example.test",
+        planner_api_allowed_host="planner.example.test",
+        planner_api_ca_bundle=ca_bundle,
+    )
     seen: dict[str, str | None] = {}
 
     class _Handler:
@@ -203,3 +211,71 @@ def test_planner_api_client_accepts_configured_ca_bundle(tmp_path: Path, monkeyp
 
     assert client.settings.planner_api_ca_bundle == ca_bundle
     assert seen["cafile"] == str(ca_bundle.resolve())
+
+
+def test_remote_client_import_does_not_require_local_planner_module() -> None:
+    code = """
+import importlib.abc
+import sys
+
+class BlockLocalPlanner(importlib.abc.MetaPathFinder):
+    def find_spec(self, fullname, path=None, target=None):
+        if fullname == 'tonevyra_agent.correction.planner' or fullname.startswith('tonevyra_agent.correction.target_based'):
+            raise ModuleNotFoundError(f'blocked production-only import: {fullname}')
+        return None
+
+sys.meta_path.insert(0, BlockLocalPlanner())
+from tonevyra_agent.planner_api.remote_planner import RemoteCorrectionPlanner
+assert RemoteCorrectionPlanner is not None
+"""
+
+    result = subprocess.run([sys.executable, "-c", code], text=True, capture_output=True)
+
+    assert result.returncode == 0, result.stderr
+
+
+def test_planner_connection_error_has_clear_korean_user_message() -> None:
+    error = TonevyraError(
+        code=ErrorCode.PLANNER_API_UNAVAILABLE,
+        message="connection refused",
+        failed_stage="correction_plan",
+    )
+
+    message = planner_error_message(error)
+
+    assert "플래너 서버에 연결할 수 없습니다" in message
+    assert "PLANNER_API_UNAVAILABLE" in message
+    assert "connection refused" in message
+
+
+def test_planner_readiness_uses_documented_endpoint() -> None:
+    settings = Settings(
+        planner_api_base_url="https://planner.example.test",
+        planner_api_key="secret",
+        planner_api_allowed_host="planner.example.test",
+    )
+    client = PlannerApiClient(settings)
+    seen: dict[str, object] = {}
+
+    class Response:
+        headers = {"Content-Type": "application/json"}
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return None
+
+        def read(self, _limit: int) -> bytes:
+            return b'{"ready": true}'
+
+    class Opener:
+        def open(self, request, *, timeout: float):
+            seen["url"] = request.full_url
+            seen["timeout"] = timeout
+            return Response()
+
+    client._opener = Opener()  # type: ignore[assignment]
+
+    assert client.check_readiness() == {"ready": True}
+    assert seen["url"] == "https://planner.example.test/health/ready"

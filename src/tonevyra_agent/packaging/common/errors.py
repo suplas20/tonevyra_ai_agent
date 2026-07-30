@@ -26,6 +26,15 @@ class T033ErrorCode(StrEnum):
     UPGRADE = "T033-UPGRADE-013"
     REPAIR = "T033-REPAIR-014"
     UNINSTALL = "T033-UNINSTALL-015"
+    DB_READY = "T033-DB-READY-016"
+    DB_ROLE = "T033-DB-ROLE-017"
+    DB_CREATE = "T033-DB-CREATE-018"
+    DB_MIGRATION = "T033-DB-MIGRATION-019"
+    DB_SCHEMA = "T033-DB-SCHEMA-020"
+    DB_SMOKE = "T033-DB-SMOKE-021"
+    DB_CREDENTIAL = "T033-DB-CREDENTIAL-022"
+    DB_BACKUP = "T033-DB-BACKUP-023"
+    DB_RESTORE = "T033-DB-RESTORE-024"
 
 
 @dataclass
@@ -37,4 +46,3 @@ class T033ValidationError(Exception):
     def __str__(self) -> str:
         field = f" field={self.field}" if self.field else ""
         return f"{self.code.value}:{field} {self.message}"
-

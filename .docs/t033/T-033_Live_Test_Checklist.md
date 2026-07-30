@@ -113,3 +113,38 @@ evidence/T-033/
 ```
 
 Reference harness output is not accepted as strict live evidence.
+
+## I. 올인원 설치 UX 및 DB 자동화
+
+- [ ] user launches one installer artifact
+- [ ] only OS elevation/admin authentication is required
+- [ ] manual prerequisite installation steps = 0
+- [ ] manual PostgreSQL wizard steps = 0
+- [ ] manual DB password/name/port input = 0
+- [ ] manual SQL/Alembic commands = 0
+- [ ] PostgreSQL unattended install completes
+- [ ] PostgreSQL readiness is awaited before bootstrap
+- [ ] tonevyra_app Role is created/verified automatically
+- [ ] tonevyra_agent DB is created/verified automatically
+- [ ] Alembic upgrade head runs automatically
+- [ ] image_tasks exists
+- [ ] task_artifacts exists
+- [ ] task_events exists
+- [ ] stage_results exists
+- [ ] quality_results exists
+- [ ] feedback_records exists
+- [ ] learning_samples exists
+- [ ] v_task_summary exists
+- [ ] runtime Role is non-superuser and least-privileged
+- [ ] DB read/write smoke transaction succeeds and rolls back
+- [ ] DB credential is stored in OS credential storage
+- [ ] Agent startup registration is automatic
+- [ ] post-install doctor passes before success screen
+- [ ] partial failure re-run resumes without DB reset
+
+Strict evidence additions:
+
+```text
+evidence/T-033/all_in_one_install_evidence.json
+evidence/T-033/database_bootstrap_evidence.json
+```

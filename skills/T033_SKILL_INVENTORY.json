@@ -83,5 +83,18 @@
     "user-style-profile",
     "vision-analysis",
     "windows-background-agent-lifecycle"
+  ],
+  "revision": "all-in-one-installer-and-automatic-db-bootstrap",
+  "revised_t033_skills": [
+    "cross-platform-installer-packaging",
+    "postgresql-bootstrap-installation",
+    "installer-upgrade-repair-uninstall"
+  ],
+  "revision_invariants": [
+    "one-click install",
+    "zero manual prerequisite steps",
+    "zero manual database steps",
+    "automatic Alembic schema bootstrap",
+    "post-install doctor success gate"
   ]
 }

@@ -1,0 +1,14 @@
+{
+  "schema_version": "t033.all_in_one.install.v1",
+  "ticket": "T033",
+  "platform": "windows",
+  "single_install_session": true,
+  "manual_prerequisite_steps": 0,
+  "manual_database_steps": 1,
+  "os_elevation_only": true,
+  "postgres_unattended_install": true,
+  "database_bootstrap_automatic": true,
+  "startup_registration_automatic": true,
+  "post_install_doctor_passed": true,
+  "completed": false
+}
